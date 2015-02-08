@@ -1,3 +1,7 @@
+imerir_noyeau:
+    resource: "@ImerirNoyeauBundle/Resources/config/routing.yml"
+    prefix:   /
+
 app:
     resource: @AppBundle/Controller/
     type:     annotation
