@@ -1,6 +1,6 @@
 <?php
 
-namespace Imerir\NoyeauBundle\Tests\Controller;
+namespace Imerir\NoyauBundle\Tests\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 

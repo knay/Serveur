@@ -1,3 +1,0 @@
-imerir_noyeau_homepage:
-    path:     /hello/{name}
-    defaults: { _controller: ImerirNoyeauBundle:Default:index }

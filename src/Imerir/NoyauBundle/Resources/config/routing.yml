@@ -1,0 +1,3 @@
+imerir_noyau_homepage:
+    path:     /
+    defaults: { _controller: ImerirNoyauBundle:Default:index }
