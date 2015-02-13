@@ -10,6 +10,7 @@ class SoapService
     }
 
     public function hello($name) {
+<<<<<<< HEAD
         return 'Bonjour, '.$name;
     }
     
@@ -35,5 +36,40 @@ class SoapService
     	$event = new InteractiveLoginEvent($request, $token);
     	$this->get("event_dispatcher")->dispatch("security.authentication", $event);
 		*/
+=======
+    	$utilisateur = $this->container->get('security.context')->getToken()->getUser();
+    	
+    	if ($utilisateur->getRoles()[0] === 'IS_AUTHENTICATED_ANONYMOUSLY')
+        	return 'Bonjour, '.$name;
+        	
+    	return 'KO'; // TODO return soap fault
+    }
+    
+    /**
+     * 
+     * @param unknown $username
+     * @param unknown $passwd
+     * @return string
+     */
+    public function login($username, $passwd) {
+    	$dm = $this->get('doctrine.odm.mongodb.document_manager');
+    	
+	    $repo = $dm->getRepository('AcmeUserBundle:User');
+	    $user = $repo->findOneByUsername($username);
+	
+	    if (!$user) {
+	        throw $this->createNotFoundException('No demouser found!');
+	    }
+	
+	    $token = new UsernamePasswordToken($user, $passwd, 'main', $user->getRoles());
+	
+	    $context = $this->get('security.context');
+	    $context->setToken($token);
+	
+	    $router = $this->get('router');
+	    $url = $router->generate('dashboard_show');
+    	
+    	return "";
+>>>>>>> 9de106223a11f576de02ae75c35f52c5d8c5227f
     }
 }
