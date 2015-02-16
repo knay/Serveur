@@ -18,6 +18,7 @@
       <parameter key="SensioFrameworkExtraBundle">Sensio\Bundle\FrameworkExtraBundle\SensioFrameworkExtraBundle</parameter>
       <parameter key="ImerirNoyauBundle">Imerir\NoyauBundle\ImerirNoyauBundle</parameter>
       <parameter key="FOSUserBundle">FOS\UserBundle\FOSUserBundle</parameter>
+      <parameter key="BeSimpleSoapBundle">BeSimple\SoapBundle\BeSimpleSoapBundle</parameter>
       <parameter key="DebugBundle">Symfony\Bundle\DebugBundle\DebugBundle</parameter>
       <parameter key="WebProfilerBundle">Symfony\Bundle\WebProfilerBundle\WebProfilerBundle</parameter>
       <parameter key="SensioDistributionBundle">Sensio\Bundle\DistributionBundle\SensioDistributionBundle</parameter>
@@ -620,6 +621,35 @@
       <parameter>ResetPassword</parameter>
       <parameter>Default</parameter>
     </parameter>
+    <parameter key="besimple.soap.request_format.listener.class">BeSimple\SoapBundle\EventListener\RequestFormatListener</parameter>
+    <parameter key="besimple.soap.definition.loader.resolver.class">Symfony\Component\Config\Loader\LoaderResolver</parameter>
+    <parameter key="besimple.soap.definition.loader.class">Symfony\Component\Config\Loader\DelegatingLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_dir.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationDirectoryLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_file.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationFileLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_class.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationClassLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_complextype.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationComplexTypeLoader</parameter>
+    <parameter key="besimple.soap.converter.collection.class">BeSimple\SoapCommon\Converter\TypeConverterCollection</parameter>
+    <parameter key="besimple.soap.converter.date_time.class">BeSimple\SoapCommon\Converter\DateTimeTypeConverter</parameter>
+    <parameter key="besimple.soap.converter.date.class">BeSimple\SoapCommon\Converter\DateTypeConverter</parameter>
+    <parameter key="besimple.soap.response.class">BeSimple\SoapBundle\Soap\SoapResponse</parameter>
+    <parameter key="besimple.soap.response.listener.class">BeSimple\SoapBundle\EventListener\SoapResponseListener</parameter>
+    <parameter key="besimple.soap.exception_listener.class">BeSimple\SoapBundle\EventListener\SoapExceptionListener</parameter>
+    <parameter key="besimple.soap.context.class">BeSimple\SoapBundle\WebServiceContext</parameter>
+    <parameter key="besimple.soap.binder.request_header.rpcliteral.class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestHeaderMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.request.rpcliteral.class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.response.rpcliteral.class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralResponseMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.request.documentwrapped.class">BeSimple\SoapBundle\ServiceBinding\DocumentLiteralWrappedRequestMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.request_header.documentwrapped.class">BeSimple\SoapBundle\ServiceBinding\DocumentLiteralWrappedRequestHeaderMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.response.documentwrapped.class">BeSimple\SoapBundle\ServiceBinding\DocumentLiteralWrappedResponseMessageBinder</parameter>
+    <parameter key="besimple.soap.type.repository.class">BeSimple\SoapCommon\Definition\Type\TypeRepository</parameter>
+    <parameter key="besimple.soap.server.classmap.class">BeSimple\SoapServer\Classmap</parameter>
+    <parameter key="besimple.soap.cache.class">BeSimple\SoapBundle\Cache</parameter>
+    <parameter key="besimple.soap.cache.dir">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/besimple/soap</parameter>
+    <parameter key="besimple.soap.cache.type">1</parameter>
+    <parameter key="besimple.soap.cache.lifetime">null</parameter>
+    <parameter key="besimple.soap.cache.limit">null</parameter>
+    <parameter key="besimple.soap.definition.dumper.options.stylesheet">null</parameter>
+    <parameter key="besimple.soap.exception_listener.controller">BeSimpleSoapBundle:SoapWebService:exception</parameter>
     <parameter key="web_profiler.controller.profiler.class">Symfony\Bundle\WebProfilerBundle\Controller\ProfilerController</parameter>
     <parameter key="web_profiler.controller.router.class">Symfony\Bundle\WebProfilerBundle\Controller\RouterController</parameter>
     <parameter key="web_profiler.controller.exception.class">Symfony\Bundle\WebProfilerBundle\Controller\ExceptionController</parameter>
@@ -1718,6 +1748,22 @@
         </argument>
         <argument>0</argument>
       </call>
+      <call method="addListenerService">
+        <argument>kernel.request</argument>
+        <argument type="collection">
+          <argument>besimple.soap.request_format.listener</argument>
+          <argument>onKernelRequest</argument>
+        </argument>
+        <argument>0</argument>
+      </call>
+      <call method="addListenerService">
+        <argument>kernel.view</argument>
+        <argument type="collection">
+          <argument>besimple.soap.response.listener</argument>
+          <argument>onKernelView</argument>
+        </argument>
+        <argument>0</argument>
+      </call>
       <call method="addSubscriberService">
         <argument>response_listener</argument>
         <argument>Symfony\Component\HttpKernel\EventListener\ResponseListener</argument>
@@ -1807,6 +1853,10 @@
         <argument>Sensio\Bundle\FrameworkExtraBundle\EventListener\SecurityListener</argument>
       </call>
       <call method="addSubscriberService">
+        <argument>besimple.soap.exception_listener</argument>
+        <argument>BeSimple\SoapBundle\EventListener\SoapExceptionListener</argument>
+      </call>
+      <call method="addSubscriberService">
         <argument>debug.dump_listener</argument>
         <argument>Symfony\Component\HttpKernel\EventListener\DumpListener</argument>
       </call>
@@ -1850,7 +1900,7 @@
         </argument>
         <argument type="service">
           <service class="Symfony\Component\Security\Core\Authentication\Provider\AnonymousAuthenticationProvider" public="false">
-            <argument>54de102a12742</argument>
+            <argument>54e1a6bc7de38</argument>
           </service>
         </argument>
       </argument>
@@ -2129,7 +2179,7 @@
         <argument type="service">
           <service class="Symfony\Component\Security\Http\Firewall\AnonymousAuthenticationListener" public="false">
             <argument type="service" id="security.context"/>
-            <argument>54de102a12742</argument>
+            <argument>54e1a6bc7de38</argument>
             <argument type="service" id="monolog.logger.security" on-invalid="null"/>
             <argument type="service" id="security.authentication.manager"/>
           </service>
@@ -2846,6 +2896,134 @@
     </service>
     <service id="fos_user.resetting.form.type" class="FOS\UserBundle\Form\Type\ResettingFormType">
       <tag name="form.type" alias="fos_user_resetting"/>
+    </service>
+    <service id="besimple.soap.request_format.listener" class="BeSimple\SoapBundle\EventListener\RequestFormatListener">
+      <tag name="kernel.event_listener" event="kernel.request" method="onKernelRequest"/>
+    </service>
+    <service id="besimple.soap.definition.loader" class="Symfony\Component\Config\Loader\DelegatingLoader">
+      <argument type="service">
+        <service class="Symfony\Component\Config\Loader\LoaderResolver" public="false">
+          <call method="addLoader">
+            <argument type="service">
+              <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationFileLoader" public="false">
+                <tag name="besimple.soap.definition.loader"/>
+                <argument type="service" id="file_locator"/>
+                <argument type="service">
+                  <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationClassLoader" public="false">
+                    <tag name="besimple.soap.definition.loader"/>
+                    <argument type="service" id="annotation_reader"/>
+                    <argument type="service" id="besimple.soap.type.repository"/>
+                  </service>
+                </argument>
+              </service>
+            </argument>
+          </call>
+          <call method="addLoader">
+            <argument type="service">
+              <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationClassLoader" public="false">
+                <tag name="besimple.soap.definition.loader"/>
+                <argument type="service" id="annotation_reader"/>
+                <argument type="service" id="besimple.soap.type.repository"/>
+              </service>
+            </argument>
+          </call>
+          <call method="addLoader">
+            <argument type="service">
+              <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationComplexTypeLoader" public="false">
+                <tag name="besimple.soap.definition.loader"/>
+                <argument type="service" id="annotation_reader"/>
+                <argument type="service" id="besimple.soap.type.repository"/>
+              </service>
+            </argument>
+          </call>
+        </service>
+      </argument>
+    </service>
+    <service id="besimple.soap.converter.collection" class="BeSimple\SoapCommon\Converter\TypeConverterCollection">
+      <call method="add">
+        <argument type="service">
+          <service class="BeSimple\SoapCommon\Converter\DateTimeTypeConverter" public="false">
+            <tag name="besimple.soap.converter"/>
+          </service>
+        </argument>
+      </call>
+      <call method="add">
+        <argument type="service">
+          <service class="BeSimple\SoapCommon\Converter\DateTypeConverter" public="false">
+            <tag name="besimple.soap.converter"/>
+          </service>
+        </argument>
+      </call>
+    </service>
+    <service id="besimple.soap.response" class="BeSimple\SoapBundle\Soap\SoapResponse"/>
+    <service id="besimple.soap.response.listener" class="BeSimple\SoapBundle\EventListener\SoapResponseListener">
+      <tag name="kernel.event_listener" event="kernel.view" method="onKernelView"/>
+      <argument type="service" id="besimple.soap.response"/>
+    </service>
+    <service id="besimple.soap.exception_listener" class="BeSimple\SoapBundle\EventListener\SoapExceptionListener">
+      <tag name="kernel.event_subscriber"/>
+      <tag name="monolog.logger" channel="request"/>
+      <argument type="service" id="service_container"/>
+      <argument>BeSimpleSoapBundle:SoapWebService:exception</argument>
+      <argument type="service" id="monolog.logger.request" on-invalid="null"/>
+    </service>
+    <service id="besimple.soap.type.repository" class="BeSimple\SoapCommon\Definition\Type\TypeRepository">
+      <argument type="service">
+        <service class="BeSimple\SoapServer\Classmap" public="false"/>
+      </argument>
+      <call method="addXmlNamespace">
+        <argument>xsd</argument>
+        <argument>http://www.w3.org/2001/XMLSchema</argument>
+      </call>
+      <call method="addType">
+        <argument>string</argument>
+        <argument>xsd:string</argument>
+      </call>
+      <call method="addType">
+        <argument>boolean</argument>
+        <argument>xsd:boolean</argument>
+      </call>
+      <call method="addType">
+        <argument>int</argument>
+        <argument>xsd:int</argument>
+      </call>
+      <call method="addType">
+        <argument>float</argument>
+        <argument>xsd:float</argument>
+      </call>
+      <call method="addType">
+        <argument>date</argument>
+        <argument>xsd:date</argument>
+      </call>
+      <call method="addType">
+        <argument>dateTime</argument>
+        <argument>xsd:dateTime</argument>
+      </call>
+    </service>
+    <service id="besimple.soap.cache" class="BeSimple\SoapBundle\Cache">
+      <argument>true</argument>
+      <argument>1</argument>
+      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/besimple/soap/cache</argument>
+      <argument>null</argument>
+      <argument>null</argument>
+    </service>
+    <service id="besimple.soap.context.demoapi" class="BeSimple\SoapBundle\WebServiceContext">
+      <argument type="service" id="besimple.soap.definition.loader"/>
+      <argument type="service" id="besimple.soap.converter.collection"/>
+      <argument type="collection">
+        <argument key="cache_dir">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/besimple/soap</argument>
+        <argument key="debug">true</argument>
+        <argument key="cache_type">null</argument>
+        <argument key="binder_request_header_class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestHeaderMessageBinder</argument>
+        <argument key="binder_request_class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestMessageBinder</argument>
+        <argument key="binder_response_class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralResponseMessageBinder</argument>
+        <argument key="wsdl_stylesheet">null</argument>
+        <argument key="namespace">http://localhost/alba/web/app_dev.php/ws</argument>
+        <argument key="resource">@ImerirNoyauBundle\Controller\SoapController.php</argument>
+        <argument key="resource_type">annotation</argument>
+        <argument key="name">DemoApi</argument>
+      </argument>
+      <argument type="service" id="besimple.soap.cache"/>
     </service>
     <service id="data_collector.dump" class="Symfony\Component\HttpKernel\DataCollector\DumpDataCollector">
       <tag name="data_collector" id="dump" template="@Debug/Profiler/dump.html.twig"/>
