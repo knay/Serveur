@@ -2,6 +2,7 @@
 
 namespace Imerir\NoyauBundle\Controller;
 
+use BeSimple\SoapServer\Exception\SenderSoapFault;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
@@ -44,6 +45,7 @@ class SoapController extends ContainerAware
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function loginAction($username, $passwd) {
+		//TODO securité SQL
 		//recupere la classe Utilisateur mappé à la table User dans la base de données
 		$dm = $this->container->get('doctrine')->getEntityManager();
 
@@ -62,13 +64,20 @@ class SoapController extends ContainerAware
 		$queryUser = $dm->createQuery($sql)->setParameters(array('username'=>$username,'passwd'=>$hash));
 		//on récupère toutes les lignes de la requête
 		$users = $queryUser->getResult();
-		//on lit la première ligne
-		$u = $users[0];
+		//on teste si il y a bien un utilisateur username avec le mot de passe passwd
+		if(!empty($users)){
+			//on lit la première ligne
+			$u = $users[0];
 
-		$token = new UsernamePasswordToken($u->getUsername(), $u->getPassword(), 'main', $u->getRoles());
-		$context = $this->container->get('security.context');
-		$context->setToken($token);
-		
-		return $u->getRoles()[0];
+			$token = new UsernamePasswordToken($u->getUsername(), $u->getPassword(), 'main', $u->getRoles());
+			$context = $this->container->get('security.context');
+			$context->setToken($token);
+			//TODO controler le phpsessid
+			$retourJson = array('token'=>$this->container->get('request')->cookies->get('PHPSESSID'),'username'=>$username,'role'=>$u->getRoles()[0]);
+			return json_encode($retourJson);
+		}
+		else{
+			return new SoapFault("Server","Vos identifiants de connexion sont invalides");
+		}
 	}
 }
