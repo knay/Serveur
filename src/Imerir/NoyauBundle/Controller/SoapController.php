@@ -48,7 +48,9 @@ class SoapController extends ContainerAware
 		$hash = hash('sha512',$passwd);
 		
 		// TODO Tester la sécurité
-    	$queryUser = $dm->createQuery('SELECT u FROM ImerirNoyauBundle:Utilisateur u ');
+		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username and u.password = :passwd ";
+    	//$queryUser = $dm->createQuery('SELECT u FROM ImerirNoyauBundle:Utilisateur u ');
+		$queryUser = $dm->createQuery($sql)->setParameters(array('username'=>$username,'passwd'=>$passwd));
     	$users = $queryUser->getResult();
     	$u = $users[0];
 		
