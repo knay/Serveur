@@ -51,10 +51,7 @@ class SoapController extends ContainerAware
         $user = $repo->findOneByUsername($username);
 		*/
 		//requête mysql
-		$sql = "SELECT username FROM mydb.user WHERE username='".$username."'";
-		$query= $dm->createquery(
-			'SELECT username FROM mydb.user WHERE username= :username'
-		)->setParameters;
+		$this->getDoctrine()->getRepository('AcmeStoreBundle:Product')->find($username);
 
 
         if (!$user) {
