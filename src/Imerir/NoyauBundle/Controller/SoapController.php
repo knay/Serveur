@@ -51,10 +51,12 @@ class SoapController extends ContainerAware
         $user = $repo->findOneByUsername($username);
 		*/
 		//requête mysql
-		$this->getDoctrine()->getRepository('AcmeStoreBundle:Product')->find($username);
+		$user = $this->getDoctrine()->getRepository('ImerirEntity:Utilisateur')->find($username);
+
+		$mdp = $this->getDoctrine()->getRepository('ImerirEntity:Utilisateur')->find($passwd);
 
 
-        if (!$user) {
+        if (!$user && !mdp) {
             throw $this->createNotFoundException('No demouser found!');
         }
 
