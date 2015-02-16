@@ -1,9 +1,9 @@
 # This file is auto-generated during the composer install
 parameters:
     database_driver: pdo_mysql
-    database_host: 192.168.1.60
+    database_host: localhost
     database_port: null
-    database_name: mydb
+    database_name: alba
     database_user: alba
     database_password: alba
     mailer_transport: smtp
