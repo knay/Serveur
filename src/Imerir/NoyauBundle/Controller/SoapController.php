@@ -44,20 +44,31 @@ class SoapController extends ContainerAware
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function loginAction($username, $passwd) {
+		//recupere la classe Utilisateur mappé à la table User dans la base de données
 		$dm = $this->container->get('doctrine')->getEntityManager();
-		$hash = hash('sha512',$passwd);
+
+		//on récupère l'encoder du password dans la base de données pour ensuite hasher le mot de passe et tester
+		//si le mot de passe est le même
+		$userManager = $this->container->get('fos_user.user_manager');
+		$user = $userManager->loadUserByUsername($username);
+		$encoder = $this->container->get('security.encoder_factory')->getEncoder($user);
+		$hash = $encoder->encodePassword($passwd, $user->getSalt());
+
+		//DEBUG
+		echo $hash;
+
+		//DQL langage doctrine les paramètres sont mis dans un tableau
+		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username AND u.password = :passwd";
+		$queryUser = $dm->createQuery($sql)->setParameters(array('username'=>$username,'passwd'=>$hash));
+		//on récupère toutes les lignes de la requête
+		$users = $queryUser->getResult();
+		//on lit la première ligne
+		$u = $users[0];
+
+		$token = new UsernamePasswordToken($u->getUsername(), $u->getPassword(), 'main', $u->getRoles());
+		$context = $this->container->get('security.context');
+		$context->setToken($token);
 		
-		// TODO Tester la sécurité
-		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username and u.password = :passwd ";
-    	//$queryUser = $dm->createQuery('SELECT u FROM ImerirNoyauBundle:Utilisateur u ');
-		$queryUser = $dm->createQuery($sql)->setParameters(array('username'=>$username,'passwd'=>$passwd));
-    	$users = $queryUser->getResult();
-    	$u = $users[0];
-		
-    	$token = new UsernamePasswordToken($u->getUsername(), $u->getPassword(), 'main', $u->getRoles());
-    	$context = $this->container->get('security.context');
-    	$context->setToken($token);
-    	
 		return $u->getRoles()[0];
 	}
 }
