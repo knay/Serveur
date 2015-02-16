@@ -78,9 +78,10 @@ fos_user:
     user_class: Imerir\NoyauBundle\Entity\Utilisateur
 
 be_simple_soap:
-        services:
-            DemoApi:
-                namespace:     http://localhost/alba/web/app_dev.php/ws
-                binding:       rpc-literal
-                resource:      "@Imerir\NoyauBundle\Controller\SoapController.php"
-                resource_type: annotation
+    services:
+        Soap:
+            namespace:     http://localhost/serveur/web/app_dev.php/soap
+            binding:       rpc-literal
+            resource:      "@ImerirNoyauBundle/Controller/SoapController.php"
+            resource_type: annotation
+                
