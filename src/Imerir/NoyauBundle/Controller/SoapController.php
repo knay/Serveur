@@ -7,6 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 use BeSimple\SoapBundle\ServiceDefinition\Annotation as Soap;
 use Symfony\Component\DependencyInjection\ContainerAware;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
 class SoapController extends ContainerAware
 {
@@ -42,39 +43,19 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("passwd",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function loginAction($username,$passwd) {
-		//$dm = $this->getDoctrine()->getManager();
-
-		$dm = $this->getEntityManager();
-		$queryUser = $dm->createQuery('SELECT username FROM ImerirNoyauBundle:Utilisateur');
-		//requête mango
-		/*
-        $repo = $dm->getRepository('AcmeUserBundle:User');
-        $user = $repo->findOneByUsername($username);
-		*/
-		//requête mysql
-		/*
-		$user = $this->getDoctrine()->getRepository('ImerirEntity:Utilisateur')->find($username);
+	public function loginAction($username, $passwd) {
+		$dm = $this->container->get('doctrine')->getEntityManager();
 		$hash = hash('sha512',$passwd);
-		$mdp = $this->getDoctrine()->getRepository('ImerirEntity:Utilisateur')->find($hash);
-
-		*/
-		$hash = hash('sha512',$passwd);
-		return $hash;
-		/*
-        if (!$user && !mdp) {
-            throw $this->createNotFoundException('No demouser found!');
-        }
-
-        $token = new UsernamePasswordToken($user, $passwd, 'main', $user->getRoles());
-
-        $context = $this->get('security.context');
-        $context->setToken($token);
-
-        $router = $this->get('router');
-        $url = $router->generate('dashboard_show');
-
-		return "";
-		*/
+		
+		// TODO Tester la sécurité
+    	$queryUser = $dm->createQuery('SELECT u FROM ImerirNoyauBundle:Utilisateur u ');
+    	$users = $queryUser->getResult();
+    	$u = $users[0];
+		
+    	$token = new UsernamePasswordToken($u->getUsername(), $u->getPassword(), 'main', $u->getRoles());
+    	$context = $this->container->get('security.context');
+    	$context->setToken($token);
+    	
+		return $u->getRoles()[0];
 	}
 }

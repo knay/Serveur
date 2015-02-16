@@ -1,6 +1,6 @@
 imerir_noyau_homepage:
-    path:     /
-    defaults: { _controller: ImerirNoyauBundle:Soap:index }
+    path:     /toto
+    defaults: { _controller: ImerirNoyauBundle:Home:index }
 
 imerir_noyau_userpage:
     path:    /user
