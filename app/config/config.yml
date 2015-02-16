@@ -82,5 +82,5 @@ be_simple_soap:
             DemoApi:
                 namespace:     http://localhost/alba/web/app_dev.php/ws
                 binding:       rpc-literal
-                resource:      "@Imerir\NoyauBundle\Controller\SoapController.php"
+                resource:      "@ImerirNoyauBundle\Controller\SoapController.php"
                 resource_type: annotation
