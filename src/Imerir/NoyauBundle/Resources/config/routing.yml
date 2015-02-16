@@ -2,3 +2,6 @@ imerir_noyau_homepage:
     path:     /
     defaults: { _controller: ImerirNoyauBundle:Soap:index }
 
+imerir_noyau_userpage:
+    path:    /user
+    defaults: { _controller: ImerirNoyauBundle:Soap:login }

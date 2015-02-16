@@ -48,7 +48,11 @@ class appDevDebugProjectContainer extends Container
             'assetic.filter_manager' => 'getAssetic_FilterManagerService',
             'assetic.request_listener' => 'getAssetic_RequestListenerService',
             'besimple.soap.cache' => 'getBesimple_Soap_CacheService',
+<<<<<<< HEAD
             'besimple.soap.context.soap' => 'getBesimple_Soap_Context_SoapService',
+=======
+            'besimple.soap.context.demoapi' => 'getBesimple_Soap_Context_DemoapiService',
+>>>>>>> 86655825e0cdb8436e76ab78a3739bfc80f9bcfd
             'besimple.soap.converter.collection' => 'getBesimple_Soap_Converter_CollectionService',
             'besimple.soap.definition.loader' => 'getBesimple_Soap_Definition_LoaderService',
             'besimple.soap.exception_listener' => 'getBesimple_Soap_ExceptionListenerService',
@@ -417,16 +421,26 @@ class appDevDebugProjectContainer extends Container
     }
 
     /**
+<<<<<<< HEAD
      * Gets the 'besimple.soap.context.soap' service.
+=======
+     * Gets the 'besimple.soap.context.demoapi' service.
+>>>>>>> 86655825e0cdb8436e76ab78a3739bfc80f9bcfd
      *
      * This service is shared.
      * This method always returns the same instance of the service.
      *
      * @return \BeSimple\SoapBundle\WebServiceContext A BeSimple\SoapBundle\WebServiceContext instance.
      */
+<<<<<<< HEAD
     protected function getBesimple_Soap_Context_SoapService()
     {
         return $this->services['besimple.soap.context.soap'] = new \BeSimple\SoapBundle\WebServiceContext($this->get('besimple.soap.definition.loader'), $this->get('besimple.soap.converter.collection'), array('cache_dir' => (__DIR__.'/besimple/soap'), 'debug' => true, 'cache_type' => NULL, 'binder_request_header_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestHeaderMessageBinder', 'binder_request_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestMessageBinder', 'binder_response_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralResponseMessageBinder', 'wsdl_stylesheet' => NULL, 'namespace' => 'http://localhost/serveur/web/app_dev.php/soap', 'resource' => '@ImerirNoyauBundle/Controller/SoapController.php', 'resource_type' => 'annotation', 'name' => 'Soap'), $this->get('besimple.soap.cache'));
+=======
+    protected function getBesimple_Soap_Context_DemoapiService()
+    {
+        return $this->services['besimple.soap.context.demoapi'] = new \BeSimple\SoapBundle\WebServiceContext($this->get('besimple.soap.definition.loader'), $this->get('besimple.soap.converter.collection'), array('cache_dir' => (__DIR__.'/besimple/soap'), 'debug' => true, 'cache_type' => NULL, 'binder_request_header_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestHeaderMessageBinder', 'binder_request_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestMessageBinder', 'binder_response_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralResponseMessageBinder', 'wsdl_stylesheet' => NULL, 'namespace' => 'http://localhost/alba/web/app_dev.php/ws', 'resource' => '@ImerirNoyauBundle\\Controller\\SoapController.php', 'resource_type' => 'annotation', 'name' => 'DemoApi'), $this->get('besimple.soap.cache'));
+>>>>>>> 86655825e0cdb8436e76ab78a3739bfc80f9bcfd
     }
 
     /**
@@ -2504,7 +2518,11 @@ class appDevDebugProjectContainer extends Container
         $o = new \Symfony\Component\Security\Http\Authentication\DefaultAuthenticationFailureHandler($e, $l, array(), $a);
         $o->setOptions(array('login_path' => '/login', 'failure_path' => NULL, 'failure_forward' => false, 'failure_path_parameter' => '_failure_path'));
 
+<<<<<<< HEAD
         return $this->services['security.firewall.map.context.main'] = new \Symfony\Bundle\SecurityBundle\Security\FirewallContext(array(0 => new \Symfony\Component\Security\Http\Firewall\ChannelListener($k, new \Symfony\Component\Security\Http\EntryPoint\RetryAuthenticationEntryPoint(80, 443), $a), 1 => new \Symfony\Component\Security\Http\Firewall\ContextListener($b, array(0 => $this->get('fos_user.user_provider.username')), 'main', $a, $c), 2 => $m, 3 => new \Symfony\Component\Security\Http\Firewall\UsernamePasswordFormAuthenticationListener($b, $f, $this->get('security.authentication.session_strategy'), $l, 'main', $n, $o, array('check_path' => '/login_check', 'use_forward' => false, 'require_previous_session' => true, 'username_parameter' => '_username', 'password_parameter' => '_password', 'csrf_parameter' => '_csrf_token', 'intention' => 'authenticate', 'post_only' => true), $a, $c, $this->get('form.csrf_provider')), 4 => new \Symfony\Component\Security\Http\Firewall\AnonymousAuthenticationListener($b, '54e1b9a1d1cdb', $a, $f), 5 => new \Symfony\Component\Security\Http\Firewall\AccessListener($b, $this->get('security.access.decision_manager'), $k, $f)), new \Symfony\Component\Security\Http\Firewall\ExceptionListener($b, $this->get('security.authentication.trust_resolver'), $l, 'main', new \Symfony\Component\Security\Http\EntryPoint\FormAuthenticationEntryPoint($e, $l, '/login', false), NULL, NULL, $a));
+=======
+        return $this->services['security.firewall.map.context.main'] = new \Symfony\Bundle\SecurityBundle\Security\FirewallContext(array(0 => new \Symfony\Component\Security\Http\Firewall\ChannelListener($k, new \Symfony\Component\Security\Http\EntryPoint\RetryAuthenticationEntryPoint(80, 443), $a), 1 => new \Symfony\Component\Security\Http\Firewall\ContextListener($b, array(0 => $this->get('fos_user.user_provider.username')), 'main', $a, $c), 2 => $m, 3 => new \Symfony\Component\Security\Http\Firewall\UsernamePasswordFormAuthenticationListener($b, $f, $this->get('security.authentication.session_strategy'), $l, 'main', $n, $o, array('check_path' => '/login_check', 'use_forward' => false, 'require_previous_session' => true, 'username_parameter' => '_username', 'password_parameter' => '_password', 'csrf_parameter' => '_csrf_token', 'intention' => 'authenticate', 'post_only' => true), $a, $c, $this->get('form.csrf_provider')), 4 => new \Symfony\Component\Security\Http\Firewall\AnonymousAuthenticationListener($b, '54e1a6bc7de38', $a, $f), 5 => new \Symfony\Component\Security\Http\Firewall\AccessListener($b, $this->get('security.access.decision_manager'), $k, $f)), new \Symfony\Component\Security\Http\Firewall\ExceptionListener($b, $this->get('security.authentication.trust_resolver'), $l, 'main', new \Symfony\Component\Security\Http\EntryPoint\FormAuthenticationEntryPoint($e, $l, '/login', false), NULL, NULL, $a));
+>>>>>>> 86655825e0cdb8436e76ab78a3739bfc80f9bcfd
     }
 
     /**
@@ -3994,7 +4012,11 @@ class appDevDebugProjectContainer extends Container
      */
     protected function getSecurity_Authentication_ManagerService()
     {
+<<<<<<< HEAD
         $this->services['security.authentication.manager'] = $instance = new \Symfony\Component\Security\Core\Authentication\AuthenticationProviderManager(array(0 => new \Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider($this->get('fos_user.user_provider.username'), $this->get('security.user_checker'), 'main', $this->get('security.encoder_factory'), true), 1 => new \Symfony\Component\Security\Core\Authentication\Provider\AnonymousAuthenticationProvider('54e1b9a1d1cdb')), true);
+=======
+        $this->services['security.authentication.manager'] = $instance = new \Symfony\Component\Security\Core\Authentication\AuthenticationProviderManager(array(0 => new \Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider($this->get('fos_user.user_provider.username'), $this->get('security.user_checker'), 'main', $this->get('security.encoder_factory'), true), 1 => new \Symfony\Component\Security\Core\Authentication\Provider\AnonymousAuthenticationProvider('54e1a6bc7de38')), true);
+>>>>>>> 86655825e0cdb8436e76ab78a3739bfc80f9bcfd
 
         $instance->setEventDispatcher($this->get('debug.event_dispatcher'));
 

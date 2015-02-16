@@ -35,4 +35,40 @@ class SoapController extends ContainerAware
 	{
 		return sprintf('Hello %s!', $name);
 	}
+
+	/**
+	 * @Soap\Method("login")
+	 * @Soap\Param("username",phpType="string")
+	 * @Soap\Param("passwd",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function loginAction($username,$passwd) {
+		$dm = $this->getDoctrine()->getManager();
+
+		//requête mango
+		/*
+        $repo = $dm->getRepository('AcmeUserBundle:User');
+        $user = $repo->findOneByUsername($username);
+		*/
+		//requête mysql
+		$sql = "SELECT username FROM mydb.user WHERE username='".$username."'";
+		$query= $dm->createquery(
+			'SELECT username FROM mydb.user WHERE username= :username'
+		)->setParameters;
+
+
+        if (!$user) {
+            throw $this->createNotFoundException('No demouser found!');
+        }
+
+        $token = new UsernamePasswordToken($user, $passwd, 'main', $user->getRoles());
+
+        $context = $this->get('security.context');
+        $context->setToken($token);
+
+        $router = $this->get('router');
+        $url = $router->generate('dashboard_show');
+
+		return "";
+	}
 }
