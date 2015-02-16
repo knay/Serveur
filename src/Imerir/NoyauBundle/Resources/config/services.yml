@@ -2,3 +2,4 @@ services:
     soap_service:
         class: Imerir\NoyauBundle\Services\SoapService
         arguments: ['@service_container']
+

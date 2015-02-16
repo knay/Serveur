@@ -9,24 +9,29 @@
      xmlns="http://schemas.xmlsoap.org/wsdl/"
      targetNamespace="urn:helloservicewsdl">
   <types>
+  
    <xsd:schema targetNamespace="urn:hellowsdl">
     <xsd:import namespace="http://schemas.xmlsoap.org/soap/encoding/" />
     <xsd:import namespace="http://schemas.xmlsoap.org/wsdl/" />
    </xsd:schema>
   </types>
+    
   <message name="helloRequest">
    <part name="name" type="xsd:string" />
   </message>
   <message name="helloResponse">
    <part name="return" type="xsd:string" />
   </message>
+  
   <portType name="hellowsdlPortType">
-   <operation name="hello">
-    <documentation>Hello World</documentation>
-    <input message="tns:helloRequest"/>
-    <output message="tns:helloResponse"/>
-   </operation>
+    <operation name="hello">
+     <documentation>Hello World</documentation>
+     <input message="tns:helloRequest"/>
+     <output message="tns:helloResponse"/>
+    </operation>
   </portType>
+  
+  
   <binding name="hellowsdlBinding" type="tns:hellowsdlPortType">
   <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
   <operation name="hello">
@@ -41,10 +46,14 @@
    </output>
   </operation>
  </binding>
+ 
+ 
  <service name="hellowsdl">
   <port name="hellowsdlPort" binding="tns:hellowsdlBinding">
   <!-- TODO CHANGER CETTE ADRESSE -->
    <soap:address location="http://192.168.1.60/serveur/web/app_dev.php/" />
   </port>
  </service>
+ 
+ 
 </definitions>

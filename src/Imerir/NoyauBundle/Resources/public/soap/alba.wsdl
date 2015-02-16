@@ -15,39 +15,20 @@
     <xsd:import namespace="http://schemas.xmlsoap.org/wsdl/" />
    </xsd:schema>
   </types>
-  
-  
+
   <message name="helloRequest">
    <part name="name" type="xsd:string" />
   </message>
   <message name="helloResponse">
    <part name="return" type="xsd:string" />
   </message>
-
-  <message name="loginRequest">
-      <part name="username" type="xsd:string"/>
-      <part name="passwd" type="xsd:string"/>
-  </message>
-  <message name="loginResponse">
-      <part name="jeton" type="xsd:string"/>
-  </message>
   
   <portType name="hellowsdlPortType">
-
-    <operation name="login">
-        <documentation>
-            permet de se connecter à notre application ALBA
-        </documentation>
-        <input message="tns:loginRequest"/>
-        <input message="tns:loginResponse"/>
-    </operation>
-
     <operation name="hello">
      <documentation>Hello World</documentation>
      <input message="tns:helloRequest"/>
      <output message="tns:helloResponse"/>
     </operation>
-
   </portType>
   
   

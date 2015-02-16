@@ -76,3 +76,11 @@ fos_user:
     db_driver: orm # other valid values are 'mongodb', 'couchdb' and 'propel'
     firewall_name: main
     user_class: Imerir\NoyauBundle\Entity\Utilisateur
+
+be_simple_soap:
+        services:
+            DemoApi:
+                namespace:     http://localhost/alba/web/app_dev.php/ws
+                binding:       rpc-literal
+                resource:      "@Imerir\NoyauBundle\Controller\SoapController.php"
+                resource_type: annotation

@@ -6,6 +6,9 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
+    'ass\\XmlSecurity' => array($vendorDir . '/ass/xmlsecurity/src'),
+    'Zend\\Stdlib\\' => array($vendorDir . '/zendframework/zend-stdlib'),
+    'Zend\\Mime\\' => array($vendorDir . '/zendframework/zend-mime'),
     'Twig_Extensions_' => array($vendorDir . '/twig/extensions/lib'),
     'Twig_' => array($vendorDir . '/twig/twig/lib'),
     'Symfony\\' => array($vendorDir . '/symfony/symfony/src'),
@@ -26,6 +29,9 @@ return array(
     'Doctrine\\Common\\Annotations\\' => array($vendorDir . '/doctrine/annotations/lib'),
     'Doctrine\\Common\\' => array($vendorDir . '/doctrine/common/lib'),
     'Doctrine\\Bundle\\DoctrineCacheBundle' => array($vendorDir . '/doctrine/doctrine-cache-bundle'),
+    'BeSimple\\SoapWsdl' => array($vendorDir . '/besimple/soap-wsdl'),
+    'BeSimple\\SoapCommon' => array($vendorDir . '/besimple/soap-common'),
+    'BeSimple\\SoapBundle' => array($vendorDir . '/besimple/soap-bundle'),
     'Assetic' => array($vendorDir . '/kriswallsmith/assetic/src'),
     '' => array($baseDir . '/src'),
 );

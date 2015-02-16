@@ -1,5 +1,6 @@
 <?php namespace Imerir\NoyauBundle\Services;
 
+
 class SoapService
 {
 	private $container;

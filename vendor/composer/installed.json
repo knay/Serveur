@@ -1768,5 +1768,337 @@
         "keywords": [
             "User management"
         ]
+    },
+    {
+        "name": "zendframework/zend-stdlib",
+        "version": "2.1.6",
+        "version_normalized": "2.1.6.0",
+        "target-dir": "Zend/Stdlib",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/zendframework/Component_ZendStdlib.git",
+            "reference": "e646729f2274f4552b6a92e38d8e458efe08ebc5"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/zendframework/Component_ZendStdlib/zipball/e646729f2274f4552b6a92e38d8e458efe08ebc5",
+            "reference": "e646729f2274f4552b6a92e38d8e458efe08ebc5",
+            "shasum": ""
+        },
+        "require": {
+            "php": ">=5.3.3"
+        },
+        "suggest": {
+            "zendframework/zend-eventmanager": "To support aggregate hydrator usage",
+            "zendframework/zend-servicemanager": "To support hydrator plugin manager usage"
+        },
+        "time": "2014-01-04 13:00:28",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "2.2-dev",
+                "dev-develop": "2.3-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-0": {
+                "Zend\\Stdlib\\": ""
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "BSD-3-Clause"
+        ],
+        "keywords": [
+            "stdlib",
+            "zf2"
+        ]
+    },
+    {
+        "name": "zendframework/zend-mime",
+        "version": "2.1.6",
+        "version_normalized": "2.1.6.0",
+        "target-dir": "Zend/Mime",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/zendframework/Component_ZendMime.git",
+            "reference": "35ae58792d036828122a168f2e3fc5bd9f3f38c2"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/zendframework/Component_ZendMime/zipball/35ae58792d036828122a168f2e3fc5bd9f3f38c2",
+            "reference": "35ae58792d036828122a168f2e3fc5bd9f3f38c2",
+            "shasum": ""
+        },
+        "require": {
+            "php": ">=5.3.3",
+            "zendframework/zend-stdlib": "self.version"
+        },
+        "time": "2014-03-03 23:00:16",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "2.2-dev",
+                "dev-develop": "2.3-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-0": {
+                "Zend\\Mime\\": ""
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "BSD-3-Clause"
+        ],
+        "keywords": [
+            "mime",
+            "zf2"
+        ]
+    },
+    {
+        "name": "ass/xmlsecurity",
+        "version": "v1.1.0",
+        "version_normalized": "1.1.0.0",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/aschamberger/XmlSecurity.git",
+            "reference": "d0bb2ec4cab4c203629cb4310f73bb1492525773"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/aschamberger/XmlSecurity/zipball/d0bb2ec4cab4c203629cb4310f73bb1492525773",
+            "reference": "d0bb2ec4cab4c203629cb4310f73bb1492525773",
+            "shasum": ""
+        },
+        "require": {
+            "ext-openssl": "*",
+            "lib-openssl": ">=0.9.0",
+            "php": ">=5.3.0"
+        },
+        "suggest": {
+            "ext-mcrypt": "*"
+        },
+        "time": "2014-03-23 16:59:35",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "1.0.x-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-0": {
+                "ass\\XmlSecurity": "src/"
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "BSD-3-Clause"
+        ],
+        "authors": [
+            {
+                "name": "Robert Richards",
+                "email": "rrichards@cdatazone.org"
+            },
+            {
+                "name": "Andreas Schamberger",
+                "email": "mail@andreass.net"
+            }
+        ],
+        "description": "The XmlSecurity library is written in PHP for working with XML Encryption and Signatures",
+        "homepage": "https://github.com/aschamberger/XmlSecurity",
+        "keywords": [
+            "encryption",
+            "security",
+            "signature",
+            "xml"
+        ]
+    },
+    {
+        "name": "besimple/soap-wsdl",
+        "version": "v0.2.5",
+        "version_normalized": "0.2.5.0",
+        "target-dir": "BeSimple/SoapWsdl",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/BeSimple/BeSimpleSoapWsdl.git",
+            "reference": "8c1063fecc329066d90d0577347d9523afe65791"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapWsdl/zipball/8c1063fecc329066d90d0577347d9523afe65791",
+            "reference": "8c1063fecc329066d90d0577347d9523afe65791",
+            "shasum": ""
+        },
+        "require": {
+            "php": ">=5.3.0"
+        },
+        "time": "2014-08-14 11:39:12",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "0.2-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-0": {
+                "BeSimple\\SoapWsdl": ""
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Christian Kerl",
+                "email": "christian-kerl@web.de"
+            },
+            {
+                "name": "Francis Besset",
+                "email": "francis.besset@gmail.com"
+            }
+        ],
+        "description": "Build and consume SOAP Common based web services",
+        "homepage": "https://github.com/BeSimple/BeSimpleSoapWsdl",
+        "keywords": [
+            "soap",
+            "soap-wsdl"
+        ]
+    },
+    {
+        "name": "besimple/soap-common",
+        "version": "v0.2.5",
+        "version_normalized": "0.2.5.0",
+        "target-dir": "BeSimple/SoapCommon",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/BeSimple/BeSimpleSoapCommon.git",
+            "reference": "08aa78c7f1cae4b23cce5e8928dca7243ca4e4fa"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapCommon/zipball/08aa78c7f1cae4b23cce5e8928dca7243ca4e4fa",
+            "reference": "08aa78c7f1cae4b23cce5e8928dca7243ca4e4fa",
+            "shasum": ""
+        },
+        "require": {
+            "ass/xmlsecurity": "~1.0",
+            "ext-soap": "*",
+            "php": ">=5.3.0"
+        },
+        "require-dev": {
+            "ext-mcrypt": "*",
+            "mikey179/vfsstream": "~1.0"
+        },
+        "time": "2014-08-14 19:40:13",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "0.2-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-0": {
+                "BeSimple\\SoapCommon": ""
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Andreas Schamberger",
+                "email": "mail@andreass.net"
+            },
+            {
+                "name": "Christian Kerl",
+                "email": "christian-kerl@web.de"
+            },
+            {
+                "name": "Francis Besset",
+                "email": "francis.besset@gmail.com"
+            }
+        ],
+        "description": "Build and consume SOAP Common based web services",
+        "homepage": "https://github.com/BeSimple/BeSimpleSoapCommon",
+        "keywords": [
+            "soap",
+            "soap-common"
+        ]
+    },
+    {
+        "name": "besimple/soap-bundle",
+        "version": "0.2.x-dev",
+        "version_normalized": "0.2.9999999.9999999-dev",
+        "target-dir": "BeSimple/SoapBundle",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/BeSimple/BeSimpleSoapBundle.git",
+            "reference": "af19f56ce7a684639a2d308101d4ee8a78c00433"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapBundle/zipball/af19f56ce7a684639a2d308101d4ee8a78c00433",
+            "reference": "af19f56ce7a684639a2d308101d4ee8a78c00433",
+            "shasum": ""
+        },
+        "require": {
+            "ass/xmlsecurity": "~1.0",
+            "besimple/soap-common": "0.2.*",
+            "besimple/soap-wsdl": "0.2.*",
+            "ext-soap": "*",
+            "php": ">=5.3.0",
+            "symfony/framework-bundle": "~2.0",
+            "symfony/twig-bundle": "~2.0",
+            "zendframework/zend-mime": "2.1.*"
+        },
+        "suggest": {
+            "besimple/soap-client": "0.2.*",
+            "besimple/soap-server": "0.2.*"
+        },
+        "time": "2014-08-18 11:54:19",
+        "type": "symfony-bundle",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "0.2-dev"
+            }
+        },
+        "installation-source": "source",
+        "autoload": {
+            "psr-0": {
+                "BeSimple\\SoapBundle": ""
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Andreas Schamberger",
+                "email": "mail@andreass.net"
+            },
+            {
+                "name": "Christian Kerl",
+                "email": "christian-kerl@web.de"
+            },
+            {
+                "name": "Francis Besset",
+                "email": "francis.besset@gmail.com"
+            }
+        ],
+        "description": "Build and consume SOAP and WSDL based web services with Symfony2",
+        "homepage": "https://github.com/BeSimple/BeSimpleSoapBundle",
+        "keywords": [
+            "soap",
+            "soap-bundle"
+        ]
     }
 ]
