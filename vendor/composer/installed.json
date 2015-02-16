@@ -1651,56 +1651,6 @@
         ]
     },
     {
-        "name": "sensio/generator-bundle",
-        "version": "v2.5.1",
-        "version_normalized": "2.5.1.0",
-        "target-dir": "Sensio/Bundle/GeneratorBundle",
-        "source": {
-            "type": "git",
-            "url": "https://github.com/sensiolabs/SensioGeneratorBundle.git",
-            "reference": "9e23fc3de265ae013690d84aab98e7a84f46edcd"
-        },
-        "dist": {
-            "type": "zip",
-            "url": "https://api.github.com/repos/sensiolabs/SensioGeneratorBundle/zipball/9e23fc3de265ae013690d84aab98e7a84f46edcd",
-            "reference": "9e23fc3de265ae013690d84aab98e7a84f46edcd",
-            "shasum": ""
-        },
-        "require": {
-            "symfony/console": "~2.5",
-            "symfony/framework-bundle": "~2.2"
-        },
-        "require-dev": {
-            "doctrine/orm": "~2.2,>=2.2.3",
-            "symfony/doctrine-bridge": "~2.2",
-            "twig/twig": "~1.11"
-        },
-        "time": "2015-01-13 07:33:46",
-        "type": "symfony-bundle",
-        "extra": {
-            "branch-alias": {
-                "dev-master": "2.5.x-dev"
-            }
-        },
-        "installation-source": "dist",
-        "autoload": {
-            "psr-0": {
-                "Sensio\\Bundle\\GeneratorBundle": ""
-            }
-        },
-        "notification-url": "https://packagist.org/downloads/",
-        "license": [
-            "MIT"
-        ],
-        "authors": [
-            {
-                "name": "Fabien Potencier",
-                "email": "fabien@symfony.com"
-            }
-        ],
-        "description": "This bundle generates code for you"
-    },
-    {
         "name": "friendsofsymfony/user-bundle",
         "version": "v1.3.5",
         "version_normalized": "1.3.5.0",
@@ -1768,6 +1718,56 @@
         "keywords": [
             "User management"
         ]
+    },
+    {
+        "name": "sensio/generator-bundle",
+        "version": "v2.5.2",
+        "version_normalized": "2.5.2.0",
+        "target-dir": "Sensio/Bundle/GeneratorBundle",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/sensiolabs/SensioGeneratorBundle.git",
+            "reference": "4b09746520a826a7bf34a466ba31c7d8740fef7e"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/sensiolabs/SensioGeneratorBundle/zipball/4b09746520a826a7bf34a466ba31c7d8740fef7e",
+            "reference": "4b09746520a826a7bf34a466ba31c7d8740fef7e",
+            "shasum": ""
+        },
+        "require": {
+            "symfony/console": "~2.5",
+            "symfony/framework-bundle": "~2.2"
+        },
+        "require-dev": {
+            "doctrine/orm": "~2.2,>=2.2.3",
+            "symfony/doctrine-bridge": "~2.2",
+            "twig/twig": "~1.11"
+        },
+        "time": "2015-02-11 07:21:23",
+        "type": "symfony-bundle",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "2.5.x-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-0": {
+                "Sensio\\Bundle\\GeneratorBundle": ""
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Fabien Potencier",
+                "email": "fabien@symfony.com"
+            }
+        ],
+        "description": "This bundle generates code for you"
     },
     {
         "name": "zendframework/zend-stdlib",
@@ -1860,17 +1860,17 @@
     },
     {
         "name": "ass/xmlsecurity",
-        "version": "v1.1.0",
-        "version_normalized": "1.1.0.0",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
         "source": {
             "type": "git",
             "url": "https://github.com/aschamberger/XmlSecurity.git",
-            "reference": "d0bb2ec4cab4c203629cb4310f73bb1492525773"
+            "reference": "792221d1ca29442334c12af8f1680522286a13e7"
         },
         "dist": {
             "type": "zip",
-            "url": "https://api.github.com/repos/aschamberger/XmlSecurity/zipball/d0bb2ec4cab4c203629cb4310f73bb1492525773",
-            "reference": "d0bb2ec4cab4c203629cb4310f73bb1492525773",
+            "url": "https://api.github.com/repos/aschamberger/XmlSecurity/zipball/792221d1ca29442334c12af8f1680522286a13e7",
+            "reference": "792221d1ca29442334c12af8f1680522286a13e7",
             "shasum": ""
         },
         "require": {
@@ -1878,17 +1878,20 @@
             "lib-openssl": ">=0.9.0",
             "php": ">=5.3.0"
         },
+        "require-dev": {
+            "satooshi/php-coveralls": "dev-master"
+        },
         "suggest": {
             "ext-mcrypt": "*"
         },
-        "time": "2014-03-23 16:59:35",
+        "time": "2014-11-01 21:52:41",
         "type": "library",
         "extra": {
             "branch-alias": {
                 "dev-master": "1.0.x-dev"
             }
         },
-        "installation-source": "dist",
+        "installation-source": "source",
         "autoload": {
             "psr-0": {
                 "ass\\XmlSecurity": "src/"
@@ -1919,31 +1922,31 @@
     },
     {
         "name": "besimple/soap-wsdl",
-        "version": "v0.2.5",
-        "version_normalized": "0.2.5.0",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
         "target-dir": "BeSimple/SoapWsdl",
         "source": {
             "type": "git",
             "url": "https://github.com/BeSimple/BeSimpleSoapWsdl.git",
-            "reference": "8c1063fecc329066d90d0577347d9523afe65791"
+            "reference": "2e4544a017f84b05a54f285d9de62910ef060c4c"
         },
         "dist": {
             "type": "zip",
-            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapWsdl/zipball/8c1063fecc329066d90d0577347d9523afe65791",
-            "reference": "8c1063fecc329066d90d0577347d9523afe65791",
+            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapWsdl/zipball/2e4544a017f84b05a54f285d9de62910ef060c4c",
+            "reference": "2e4544a017f84b05a54f285d9de62910ef060c4c",
             "shasum": ""
         },
         "require": {
             "php": ">=5.3.0"
         },
-        "time": "2014-08-14 11:39:12",
+        "time": "2014-08-14 12:21:49",
         "type": "library",
         "extra": {
             "branch-alias": {
-                "dev-master": "0.2-dev"
+                "dev-master": "0.3-dev"
             }
         },
-        "installation-source": "dist",
+        "installation-source": "source",
         "autoload": {
             "psr-0": {
                 "BeSimple\\SoapWsdl": ""
@@ -1972,18 +1975,18 @@
     },
     {
         "name": "besimple/soap-common",
-        "version": "v0.2.5",
-        "version_normalized": "0.2.5.0",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
         "target-dir": "BeSimple/SoapCommon",
         "source": {
             "type": "git",
             "url": "https://github.com/BeSimple/BeSimpleSoapCommon.git",
-            "reference": "08aa78c7f1cae4b23cce5e8928dca7243ca4e4fa"
+            "reference": "cc88dca0e9b77907fda928b222b9a71ab7a790ce"
         },
         "dist": {
             "type": "zip",
-            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapCommon/zipball/08aa78c7f1cae4b23cce5e8928dca7243ca4e4fa",
-            "reference": "08aa78c7f1cae4b23cce5e8928dca7243ca4e4fa",
+            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapCommon/zipball/cc88dca0e9b77907fda928b222b9a71ab7a790ce",
+            "reference": "cc88dca0e9b77907fda928b222b9a71ab7a790ce",
             "shasum": ""
         },
         "require": {
@@ -1995,14 +1998,14 @@
             "ext-mcrypt": "*",
             "mikey179/vfsstream": "~1.0"
         },
-        "time": "2014-08-14 19:40:13",
+        "time": "2014-08-16 13:48:45",
         "type": "library",
         "extra": {
             "branch-alias": {
-                "dev-master": "0.2-dev"
+                "dev-master": "0.3-dev"
             }
         },
-        "installation-source": "dist",
+        "installation-source": "source",
         "autoload": {
             "psr-0": {
                 "BeSimple\\SoapCommon": ""
@@ -2035,39 +2038,39 @@
     },
     {
         "name": "besimple/soap-bundle",
-        "version": "0.2.x-dev",
-        "version_normalized": "0.2.9999999.9999999-dev",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
         "target-dir": "BeSimple/SoapBundle",
         "source": {
             "type": "git",
             "url": "https://github.com/BeSimple/BeSimpleSoapBundle.git",
-            "reference": "af19f56ce7a684639a2d308101d4ee8a78c00433"
+            "reference": "a5a8643628426c41ba3303241df6f9e69e8a006b"
         },
         "dist": {
             "type": "zip",
-            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapBundle/zipball/af19f56ce7a684639a2d308101d4ee8a78c00433",
-            "reference": "af19f56ce7a684639a2d308101d4ee8a78c00433",
+            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapBundle/zipball/a5a8643628426c41ba3303241df6f9e69e8a006b",
+            "reference": "a5a8643628426c41ba3303241df6f9e69e8a006b",
             "shasum": ""
         },
         "require": {
             "ass/xmlsecurity": "~1.0",
-            "besimple/soap-common": "0.2.*",
-            "besimple/soap-wsdl": "0.2.*",
+            "besimple/soap-common": "0.3.*",
+            "besimple/soap-wsdl": "0.3.*",
             "ext-soap": "*",
             "php": ">=5.3.0",
-            "symfony/framework-bundle": "~2.0",
-            "symfony/twig-bundle": "~2.0",
+            "symfony/framework-bundle": "~2.3",
+            "symfony/twig-bundle": "~2.3",
             "zendframework/zend-mime": "2.1.*"
         },
         "suggest": {
-            "besimple/soap-client": "0.2.*",
-            "besimple/soap-server": "0.2.*"
+            "besimple/soap-client": "0.3.*",
+            "besimple/soap-server": "0.3.*"
         },
-        "time": "2014-08-18 11:54:19",
+        "time": "2014-08-18 12:20:19",
         "type": "symfony-bundle",
         "extra": {
             "branch-alias": {
-                "dev-master": "0.2-dev"
+                "dev-master": "0.3-dev"
             }
         },
         "installation-source": "source",
@@ -2099,6 +2102,66 @@
         "keywords": [
             "soap",
             "soap-bundle"
+        ]
+    },
+    {
+        "name": "besimple/soap-server",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
+        "target-dir": "BeSimple/SoapServer",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/BeSimple/BeSimpleSoapServer.git",
+            "reference": "99119d748ef938380a394779fb4c441abb2f58a0"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/BeSimple/BeSimpleSoapServer/zipball/99119d748ef938380a394779fb4c441abb2f58a0",
+            "reference": "99119d748ef938380a394779fb4c441abb2f58a0",
+            "shasum": ""
+        },
+        "require": {
+            "ass/xmlsecurity": "~1.0",
+            "besimple/soap-common": "0.3.*",
+            "ext-soap": "*",
+            "php": ">=5.3.0"
+        },
+        "time": "2014-08-16 13:48:45",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "0.3-dev"
+            }
+        },
+        "installation-source": "source",
+        "autoload": {
+            "psr-0": {
+                "BeSimple\\SoapServer": ""
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Andreas Schamberger",
+                "email": "mail@andreass.net"
+            },
+            {
+                "name": "Christian Kerl",
+                "email": "christian-kerl@web.de"
+            },
+            {
+                "name": "Francis Besset",
+                "email": "francis.besset@gmail.com"
+            }
+        ],
+        "description": "Build and consume SOAP Server based web services",
+        "homepage": "https://github.com/BeSimple/BeSimpleSoapServer",
+        "keywords": [
+            "soap",
+            "soap-server"
         ]
     }
 ]

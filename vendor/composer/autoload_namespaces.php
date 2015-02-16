@@ -30,6 +30,7 @@ return array(
     'Doctrine\\Common\\' => array($vendorDir . '/doctrine/common/lib'),
     'Doctrine\\Bundle\\DoctrineCacheBundle' => array($vendorDir . '/doctrine/doctrine-cache-bundle'),
     'BeSimple\\SoapWsdl' => array($vendorDir . '/besimple/soap-wsdl'),
+    'BeSimple\\SoapServer' => array($vendorDir . '/besimple/soap-server'),
     'BeSimple\\SoapCommon' => array($vendorDir . '/besimple/soap-common'),
     'BeSimple\\SoapBundle' => array($vendorDir . '/besimple/soap-bundle'),
     'Assetic' => array($vendorDir . '/kriswallsmith/assetic/src'),

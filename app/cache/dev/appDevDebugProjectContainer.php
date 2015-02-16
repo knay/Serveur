@@ -47,6 +47,15 @@ class appDevDebugProjectContainer extends Container
             'assetic.filter.cssrewrite' => 'getAssetic_Filter_CssrewriteService',
             'assetic.filter_manager' => 'getAssetic_FilterManagerService',
             'assetic.request_listener' => 'getAssetic_RequestListenerService',
+            'besimple.soap.cache' => 'getBesimple_Soap_CacheService',
+            'besimple.soap.context.soap' => 'getBesimple_Soap_Context_SoapService',
+            'besimple.soap.converter.collection' => 'getBesimple_Soap_Converter_CollectionService',
+            'besimple.soap.definition.loader' => 'getBesimple_Soap_Definition_LoaderService',
+            'besimple.soap.exception_listener' => 'getBesimple_Soap_ExceptionListenerService',
+            'besimple.soap.request_format.listener' => 'getBesimple_Soap_RequestFormat_ListenerService',
+            'besimple.soap.response' => 'getBesimple_Soap_ResponseService',
+            'besimple.soap.response.listener' => 'getBesimple_Soap_Response_ListenerService',
+            'besimple.soap.type.repository' => 'getBesimple_Soap_Type_RepositoryService',
             'cache_clearer' => 'getCacheClearerService',
             'cache_warmer' => 'getCacheWarmerService',
             'controller_name_converter' => 'getControllerNameConverterService',
@@ -395,6 +404,148 @@ class appDevDebugProjectContainer extends Container
     }
 
     /**
+     * Gets the 'besimple.soap.cache' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapBundle\Cache A BeSimple\SoapBundle\Cache instance.
+     */
+    protected function getBesimple_Soap_CacheService()
+    {
+        return $this->services['besimple.soap.cache'] = new \BeSimple\SoapBundle\Cache(true, 1, (__DIR__.'/besimple/soap/cache'), NULL, NULL);
+    }
+
+    /**
+     * Gets the 'besimple.soap.context.soap' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapBundle\WebServiceContext A BeSimple\SoapBundle\WebServiceContext instance.
+     */
+    protected function getBesimple_Soap_Context_SoapService()
+    {
+        return $this->services['besimple.soap.context.soap'] = new \BeSimple\SoapBundle\WebServiceContext($this->get('besimple.soap.definition.loader'), $this->get('besimple.soap.converter.collection'), array('cache_dir' => (__DIR__.'/besimple/soap'), 'debug' => true, 'cache_type' => NULL, 'binder_request_header_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestHeaderMessageBinder', 'binder_request_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestMessageBinder', 'binder_response_class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralResponseMessageBinder', 'wsdl_stylesheet' => NULL, 'namespace' => 'http://localhost/serveur/web/app_dev.php/soap', 'resource' => '@ImerirNoyauBundle/Controller/SoapController.php', 'resource_type' => 'annotation', 'name' => 'Soap'), $this->get('besimple.soap.cache'));
+    }
+
+    /**
+     * Gets the 'besimple.soap.converter.collection' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapCommon\Converter\TypeConverterCollection A BeSimple\SoapCommon\Converter\TypeConverterCollection instance.
+     */
+    protected function getBesimple_Soap_Converter_CollectionService()
+    {
+        $this->services['besimple.soap.converter.collection'] = $instance = new \BeSimple\SoapCommon\Converter\TypeConverterCollection();
+
+        $instance->add(new \BeSimple\SoapCommon\Converter\DateTimeTypeConverter());
+        $instance->add(new \BeSimple\SoapCommon\Converter\DateTypeConverter());
+
+        return $instance;
+    }
+
+    /**
+     * Gets the 'besimple.soap.definition.loader' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \Symfony\Component\Config\Loader\DelegatingLoader A Symfony\Component\Config\Loader\DelegatingLoader instance.
+     */
+    protected function getBesimple_Soap_Definition_LoaderService()
+    {
+        $a = $this->get('annotation_reader');
+        $b = $this->get('besimple.soap.type.repository');
+
+        $c = new \BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationClassLoader($a, $b);
+
+        $d = new \Symfony\Component\Config\Loader\LoaderResolver();
+        $d->addLoader(new \BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationFileLoader($this->get('file_locator'), $c));
+        $d->addLoader($c);
+        $d->addLoader(new \BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationComplexTypeLoader($a, $b));
+
+        return $this->services['besimple.soap.definition.loader'] = new \Symfony\Component\Config\Loader\DelegatingLoader($d);
+    }
+
+    /**
+     * Gets the 'besimple.soap.exception_listener' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapBundle\EventListener\SoapExceptionListener A BeSimple\SoapBundle\EventListener\SoapExceptionListener instance.
+     */
+    protected function getBesimple_Soap_ExceptionListenerService()
+    {
+        return $this->services['besimple.soap.exception_listener'] = new \BeSimple\SoapBundle\EventListener\SoapExceptionListener($this, 'BeSimpleSoapBundle:SoapWebService:exception', $this->get('monolog.logger.request', ContainerInterface::NULL_ON_INVALID_REFERENCE));
+    }
+
+    /**
+     * Gets the 'besimple.soap.request_format.listener' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapBundle\EventListener\RequestFormatListener A BeSimple\SoapBundle\EventListener\RequestFormatListener instance.
+     */
+    protected function getBesimple_Soap_RequestFormat_ListenerService()
+    {
+        return $this->services['besimple.soap.request_format.listener'] = new \BeSimple\SoapBundle\EventListener\RequestFormatListener();
+    }
+
+    /**
+     * Gets the 'besimple.soap.response' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapBundle\Soap\SoapResponse A BeSimple\SoapBundle\Soap\SoapResponse instance.
+     */
+    protected function getBesimple_Soap_ResponseService()
+    {
+        return $this->services['besimple.soap.response'] = new \BeSimple\SoapBundle\Soap\SoapResponse();
+    }
+
+    /**
+     * Gets the 'besimple.soap.response.listener' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapBundle\EventListener\SoapResponseListener A BeSimple\SoapBundle\EventListener\SoapResponseListener instance.
+     */
+    protected function getBesimple_Soap_Response_ListenerService()
+    {
+        return $this->services['besimple.soap.response.listener'] = new \BeSimple\SoapBundle\EventListener\SoapResponseListener($this->get('besimple.soap.response'));
+    }
+
+    /**
+     * Gets the 'besimple.soap.type.repository' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \BeSimple\SoapCommon\Definition\Type\TypeRepository A BeSimple\SoapCommon\Definition\Type\TypeRepository instance.
+     */
+    protected function getBesimple_Soap_Type_RepositoryService()
+    {
+        $this->services['besimple.soap.type.repository'] = $instance = new \BeSimple\SoapCommon\Definition\Type\TypeRepository(new \BeSimple\SoapServer\Classmap());
+
+        $instance->addXmlNamespace('xsd', 'http://www.w3.org/2001/XMLSchema');
+        $instance->addType('string', 'xsd:string');
+        $instance->addType('boolean', 'xsd:boolean');
+        $instance->addType('int', 'xsd:int');
+        $instance->addType('float', 'xsd:float');
+        $instance->addType('date', 'xsd:date');
+        $instance->addType('dateTime', 'xsd:dateTime');
+
+        return $instance;
+    }
+
+    /**
      * Gets the 'cache_clearer' service.
      *
      * This service is shared.
@@ -544,6 +695,8 @@ class appDevDebugProjectContainer extends Container
         $instance->addListenerService('kernel.controller', array(0 => 'data_collector.router', 1 => 'onKernelController'), 0);
         $instance->addListenerService('kernel.request', array(0 => 'assetic.request_listener', 1 => 'onKernelRequest'), 0);
         $instance->addListenerService('security.interactive_login', array(0 => 'fos_user.security.interactive_login_listener', 1 => 'onSecurityInteractiveLogin'), 0);
+        $instance->addListenerService('kernel.request', array(0 => 'besimple.soap.request_format.listener', 1 => 'onKernelRequest'), 0);
+        $instance->addListenerService('kernel.view', array(0 => 'besimple.soap.response.listener', 1 => 'onKernelView'), 0);
         $instance->addSubscriberService('response_listener', 'Symfony\\Component\\HttpKernel\\EventListener\\ResponseListener');
         $instance->addSubscriberService('streamed_response_listener', 'Symfony\\Component\\HttpKernel\\EventListener\\StreamedResponseListener');
         $instance->addSubscriberService('locale_listener', 'Symfony\\Component\\HttpKernel\\EventListener\\LocaleListener');
@@ -566,6 +719,7 @@ class appDevDebugProjectContainer extends Container
         $instance->addSubscriberService('sensio_framework_extra.view.listener', 'Sensio\\Bundle\\FrameworkExtraBundle\\EventListener\\TemplateListener');
         $instance->addSubscriberService('sensio_framework_extra.cache.listener', 'Sensio\\Bundle\\FrameworkExtraBundle\\EventListener\\HttpCacheListener');
         $instance->addSubscriberService('sensio_framework_extra.security.listener', 'Sensio\\Bundle\\FrameworkExtraBundle\\EventListener\\SecurityListener');
+        $instance->addSubscriberService('besimple.soap.exception_listener', 'BeSimple\\SoapBundle\\EventListener\\SoapExceptionListener');
         $instance->addSubscriberService('debug.dump_listener', 'Symfony\\Component\\HttpKernel\\EventListener\\DumpListener');
         $instance->addSubscriberService('web_profiler.debug_toolbar', 'Symfony\\Bundle\\WebProfilerBundle\\EventListener\\WebDebugToolbarListener');
 
@@ -649,7 +803,7 @@ class appDevDebugProjectContainer extends Container
         $c = new \Symfony\Bridge\Doctrine\ContainerAwareEventManager($this);
         $c->addEventSubscriber(new \FOS\UserBundle\Entity\UserListener($this));
 
-        return $this->services['doctrine.dbal.default_connection'] = $this->get('doctrine.dbal.connection_factory')->createConnection(array('driver' => 'pdo_mysql', 'host' => '192.168.1.60', 'port' => NULL, 'dbname' => 'mydb', 'user' => 'alba', 'password' => 'alba', 'charset' => 'UTF8', 'driverOptions' => array()), $b, $c, array());
+        return $this->services['doctrine.dbal.default_connection'] = $this->get('doctrine.dbal.connection_factory')->createConnection(array('driver' => 'pdo_mysql', 'host' => 'localhost', 'port' => NULL, 'dbname' => 'alba', 'user' => 'alba', 'password' => 'alba', 'charset' => 'UTF8', 'driverOptions' => array()), $b, $c, array());
     }
 
     /**
@@ -754,7 +908,7 @@ class appDevDebugProjectContainer extends Container
     {
         $this->services['doctrine_cache.providers.doctrine.orm.default_metadata_cache'] = $instance = new \Doctrine\Common\Cache\ArrayCache();
 
-        $instance->setNamespace('sf2orm_default_e8588d76f9dc95dc7c224e50632835c6e1e63184de76dfaca50b65a5a7a33e54');
+        $instance->setNamespace('sf2orm_default_bf26e39e0218e3d6a572366bb7cbbd13ea533636aa08012b3c1b9a23b4ab9c65');
 
         return $instance;
     }
@@ -771,7 +925,7 @@ class appDevDebugProjectContainer extends Container
     {
         $this->services['doctrine_cache.providers.doctrine.orm.default_query_cache'] = $instance = new \Doctrine\Common\Cache\ArrayCache();
 
-        $instance->setNamespace('sf2orm_default_e8588d76f9dc95dc7c224e50632835c6e1e63184de76dfaca50b65a5a7a33e54');
+        $instance->setNamespace('sf2orm_default_bf26e39e0218e3d6a572366bb7cbbd13ea533636aa08012b3c1b9a23b4ab9c65');
 
         return $instance;
     }
@@ -788,7 +942,7 @@ class appDevDebugProjectContainer extends Container
     {
         $this->services['doctrine_cache.providers.doctrine.orm.default_result_cache'] = $instance = new \Doctrine\Common\Cache\ArrayCache();
 
-        $instance->setNamespace('sf2orm_default_e8588d76f9dc95dc7c224e50632835c6e1e63184de76dfaca50b65a5a7a33e54');
+        $instance->setNamespace('sf2orm_default_bf26e39e0218e3d6a572366bb7cbbd13ea533636aa08012b3c1b9a23b4ab9c65');
 
         return $instance;
     }
@@ -2350,7 +2504,7 @@ class appDevDebugProjectContainer extends Container
         $o = new \Symfony\Component\Security\Http\Authentication\DefaultAuthenticationFailureHandler($e, $l, array(), $a);
         $o->setOptions(array('login_path' => '/login', 'failure_path' => NULL, 'failure_forward' => false, 'failure_path_parameter' => '_failure_path'));
 
-        return $this->services['security.firewall.map.context.main'] = new \Symfony\Bundle\SecurityBundle\Security\FirewallContext(array(0 => new \Symfony\Component\Security\Http\Firewall\ChannelListener($k, new \Symfony\Component\Security\Http\EntryPoint\RetryAuthenticationEntryPoint(80, 443), $a), 1 => new \Symfony\Component\Security\Http\Firewall\ContextListener($b, array(0 => $this->get('fos_user.user_provider.username')), 'main', $a, $c), 2 => $m, 3 => new \Symfony\Component\Security\Http\Firewall\UsernamePasswordFormAuthenticationListener($b, $f, $this->get('security.authentication.session_strategy'), $l, 'main', $n, $o, array('check_path' => '/login_check', 'use_forward' => false, 'require_previous_session' => true, 'username_parameter' => '_username', 'password_parameter' => '_password', 'csrf_parameter' => '_csrf_token', 'intention' => 'authenticate', 'post_only' => true), $a, $c, $this->get('form.csrf_provider')), 4 => new \Symfony\Component\Security\Http\Firewall\AnonymousAuthenticationListener($b, '54de102a12742', $a, $f), 5 => new \Symfony\Component\Security\Http\Firewall\AccessListener($b, $this->get('security.access.decision_manager'), $k, $f)), new \Symfony\Component\Security\Http\Firewall\ExceptionListener($b, $this->get('security.authentication.trust_resolver'), $l, 'main', new \Symfony\Component\Security\Http\EntryPoint\FormAuthenticationEntryPoint($e, $l, '/login', false), NULL, NULL, $a));
+        return $this->services['security.firewall.map.context.main'] = new \Symfony\Bundle\SecurityBundle\Security\FirewallContext(array(0 => new \Symfony\Component\Security\Http\Firewall\ChannelListener($k, new \Symfony\Component\Security\Http\EntryPoint\RetryAuthenticationEntryPoint(80, 443), $a), 1 => new \Symfony\Component\Security\Http\Firewall\ContextListener($b, array(0 => $this->get('fos_user.user_provider.username')), 'main', $a, $c), 2 => $m, 3 => new \Symfony\Component\Security\Http\Firewall\UsernamePasswordFormAuthenticationListener($b, $f, $this->get('security.authentication.session_strategy'), $l, 'main', $n, $o, array('check_path' => '/login_check', 'use_forward' => false, 'require_previous_session' => true, 'username_parameter' => '_username', 'password_parameter' => '_password', 'csrf_parameter' => '_csrf_token', 'intention' => 'authenticate', 'post_only' => true), $a, $c, $this->get('form.csrf_provider')), 4 => new \Symfony\Component\Security\Http\Firewall\AnonymousAuthenticationListener($b, '54e1b9a1d1cdb', $a, $f), 5 => new \Symfony\Component\Security\Http\Firewall\AccessListener($b, $this->get('security.access.decision_manager'), $k, $f)), new \Symfony\Component\Security\Http\Firewall\ExceptionListener($b, $this->get('security.authentication.trust_resolver'), $l, 'main', new \Symfony\Component\Security\Http\EntryPoint\FormAuthenticationEntryPoint($e, $l, '/login', false), NULL, NULL, $a));
     }
 
     /**
@@ -3840,7 +3994,7 @@ class appDevDebugProjectContainer extends Container
      */
     protected function getSecurity_Authentication_ManagerService()
     {
-        $this->services['security.authentication.manager'] = $instance = new \Symfony\Component\Security\Core\Authentication\AuthenticationProviderManager(array(0 => new \Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider($this->get('fos_user.user_provider.username'), $this->get('security.user_checker'), 'main', $this->get('security.encoder_factory'), true), 1 => new \Symfony\Component\Security\Core\Authentication\Provider\AnonymousAuthenticationProvider('54de102a12742')), true);
+        $this->services['security.authentication.manager'] = $instance = new \Symfony\Component\Security\Core\Authentication\AuthenticationProviderManager(array(0 => new \Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider($this->get('fos_user.user_provider.username'), $this->get('security.user_checker'), 'main', $this->get('security.encoder_factory'), true), 1 => new \Symfony\Component\Security\Core\Authentication\Provider\AnonymousAuthenticationProvider('54e1b9a1d1cdb')), true);
 
         $instance->setEventDispatcher($this->get('debug.event_dispatcher'));
 
@@ -4052,6 +4206,7 @@ class appDevDebugProjectContainer extends Container
                 'SensioFrameworkExtraBundle' => 'Sensio\\Bundle\\FrameworkExtraBundle\\SensioFrameworkExtraBundle',
                 'ImerirNoyauBundle' => 'Imerir\\NoyauBundle\\ImerirNoyauBundle',
                 'FOSUserBundle' => 'FOS\\UserBundle\\FOSUserBundle',
+                'BeSimpleSoapBundle' => 'BeSimple\\SoapBundle\\BeSimpleSoapBundle',
                 'DebugBundle' => 'Symfony\\Bundle\\DebugBundle\\DebugBundle',
                 'WebProfilerBundle' => 'Symfony\\Bundle\\WebProfilerBundle\\WebProfilerBundle',
                 'SensioDistributionBundle' => 'Sensio\\Bundle\\DistributionBundle\\SensioDistributionBundle',
@@ -4060,9 +4215,9 @@ class appDevDebugProjectContainer extends Container
             'kernel.charset' => 'UTF-8',
             'kernel.container_class' => 'appDevDebugProjectContainer',
             'database_driver' => 'pdo_mysql',
-            'database_host' => '192.168.1.60',
+            'database_host' => 'localhost',
             'database_port' => NULL,
-            'database_name' => 'mydb',
+            'database_name' => 'alba',
             'database_user' => 'alba',
             'database_password' => 'alba',
             'mailer_transport' => 'smtp',
@@ -4672,6 +4827,35 @@ class appDevDebugProjectContainer extends Container
                 0 => 'ResetPassword',
                 1 => 'Default',
             ),
+            'besimple.soap.request_format.listener.class' => 'BeSimple\\SoapBundle\\EventListener\\RequestFormatListener',
+            'besimple.soap.definition.loader.resolver.class' => 'Symfony\\Component\\Config\\Loader\\LoaderResolver',
+            'besimple.soap.definition.loader.class' => 'Symfony\\Component\\Config\\Loader\\DelegatingLoader',
+            'besimple.soap.definition.loader.annot_dir.class' => 'BeSimple\\SoapBundle\\ServiceDefinition\\Loader\\AnnotationDirectoryLoader',
+            'besimple.soap.definition.loader.annot_file.class' => 'BeSimple\\SoapBundle\\ServiceDefinition\\Loader\\AnnotationFileLoader',
+            'besimple.soap.definition.loader.annot_class.class' => 'BeSimple\\SoapBundle\\ServiceDefinition\\Loader\\AnnotationClassLoader',
+            'besimple.soap.definition.loader.annot_complextype.class' => 'BeSimple\\SoapBundle\\ServiceDefinition\\Loader\\AnnotationComplexTypeLoader',
+            'besimple.soap.converter.collection.class' => 'BeSimple\\SoapCommon\\Converter\\TypeConverterCollection',
+            'besimple.soap.converter.date_time.class' => 'BeSimple\\SoapCommon\\Converter\\DateTimeTypeConverter',
+            'besimple.soap.converter.date.class' => 'BeSimple\\SoapCommon\\Converter\\DateTypeConverter',
+            'besimple.soap.response.class' => 'BeSimple\\SoapBundle\\Soap\\SoapResponse',
+            'besimple.soap.response.listener.class' => 'BeSimple\\SoapBundle\\EventListener\\SoapResponseListener',
+            'besimple.soap.exception_listener.class' => 'BeSimple\\SoapBundle\\EventListener\\SoapExceptionListener',
+            'besimple.soap.context.class' => 'BeSimple\\SoapBundle\\WebServiceContext',
+            'besimple.soap.binder.request_header.rpcliteral.class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestHeaderMessageBinder',
+            'besimple.soap.binder.request.rpcliteral.class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralRequestMessageBinder',
+            'besimple.soap.binder.response.rpcliteral.class' => 'BeSimple\\SoapBundle\\ServiceBinding\\RpcLiteralResponseMessageBinder',
+            'besimple.soap.binder.request.documentwrapped.class' => 'BeSimple\\SoapBundle\\ServiceBinding\\DocumentLiteralWrappedRequestMessageBinder',
+            'besimple.soap.binder.request_header.documentwrapped.class' => 'BeSimple\\SoapBundle\\ServiceBinding\\DocumentLiteralWrappedRequestHeaderMessageBinder',
+            'besimple.soap.binder.response.documentwrapped.class' => 'BeSimple\\SoapBundle\\ServiceBinding\\DocumentLiteralWrappedResponseMessageBinder',
+            'besimple.soap.type.repository.class' => 'BeSimple\\SoapCommon\\Definition\\Type\\TypeRepository',
+            'besimple.soap.server.classmap.class' => 'BeSimple\\SoapServer\\Classmap',
+            'besimple.soap.cache.class' => 'BeSimple\\SoapBundle\\Cache',
+            'besimple.soap.cache.dir' => (__DIR__.'/besimple/soap'),
+            'besimple.soap.cache.type' => 1,
+            'besimple.soap.cache.lifetime' => NULL,
+            'besimple.soap.cache.limit' => NULL,
+            'besimple.soap.definition.dumper.options.stylesheet' => NULL,
+            'besimple.soap.exception_listener.controller' => 'BeSimpleSoapBundle:SoapWebService:exception',
             'web_profiler.controller.profiler.class' => 'Symfony\\Bundle\\WebProfilerBundle\\Controller\\ProfilerController',
             'web_profiler.controller.router.class' => 'Symfony\\Bundle\\WebProfilerBundle\\Controller\\RouterController',
             'web_profiler.controller.exception.class' => 'Symfony\\Bundle\\WebProfilerBundle\\Controller\\ExceptionController',

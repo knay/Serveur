@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <container xmlns="http://symfony.com/schema/dic/services" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
   <parameters>
-    <parameter key="kernel.root_dir">/Users/etiennedijon/PhpstormProjects/alba/app</parameter>
+    <parameter key="kernel.root_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app</parameter>
     <parameter key="kernel.environment">dev</parameter>
     <parameter key="kernel.debug">true</parameter>
     <parameter key="kernel.name">app</parameter>
-    <parameter key="kernel.cache_dir">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev</parameter>
-    <parameter key="kernel.logs_dir">/Users/etiennedijon/PhpstormProjects/alba/app/logs</parameter>
+    <parameter key="kernel.cache_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev</parameter>
+    <parameter key="kernel.logs_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/logs</parameter>
     <parameter key="kernel.bundles" type="collection">
       <parameter key="FrameworkBundle">Symfony\Bundle\FrameworkBundle\FrameworkBundle</parameter>
       <parameter key="SecurityBundle">Symfony\Bundle\SecurityBundle\SecurityBundle</parameter>
@@ -18,6 +18,7 @@
       <parameter key="SensioFrameworkExtraBundle">Sensio\Bundle\FrameworkExtraBundle\SensioFrameworkExtraBundle</parameter>
       <parameter key="ImerirNoyauBundle">Imerir\NoyauBundle\ImerirNoyauBundle</parameter>
       <parameter key="FOSUserBundle">FOS\UserBundle\FOSUserBundle</parameter>
+      <parameter key="BeSimpleSoapBundle">BeSimple\SoapBundle\BeSimpleSoapBundle</parameter>
       <parameter key="DebugBundle">Symfony\Bundle\DebugBundle\DebugBundle</parameter>
       <parameter key="WebProfilerBundle">Symfony\Bundle\WebProfilerBundle\WebProfilerBundle</parameter>
       <parameter key="SensioDistributionBundle">Sensio\Bundle\DistributionBundle\SensioDistributionBundle</parameter>
@@ -26,9 +27,9 @@
     <parameter key="kernel.charset">UTF-8</parameter>
     <parameter key="kernel.container_class">appDevDebugProjectContainer</parameter>
     <parameter key="database_driver">pdo_mysql</parameter>
-    <parameter key="database_host">192.168.1.60</parameter>
+    <parameter key="database_host">localhost</parameter>
     <parameter key="database_port">null</parameter>
-    <parameter key="database_name">mydb</parameter>
+    <parameter key="database_name">alba</parameter>
     <parameter key="database_user">alba</parameter>
     <parameter key="database_password">alba</parameter>
     <parameter key="mailer_transport">smtp</parameter>
@@ -104,7 +105,7 @@
     <parameter key="session.storage.options" type="collection">
       <parameter key="gc_probability">1</parameter>
     </parameter>
-    <parameter key="session.save_path">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/sessions</parameter>
+    <parameter key="session.save_path">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/sessions</parameter>
     <parameter key="session.metadata.update_threshold">0</parameter>
     <parameter key="security.secure_random.class">Symfony\Component\Security\Core\Util\SecureRandom</parameter>
     <parameter key="form.resolved_type_factory.class">Symfony\Component\Form\ResolvedFormTypeFactory</parameter>
@@ -180,7 +181,7 @@
     <parameter key="data_collector.router.class">Symfony\Bundle\FrameworkBundle\DataCollector\RouterDataCollector</parameter>
     <parameter key="profiler_listener.only_exceptions">false</parameter>
     <parameter key="profiler_listener.only_master_requests">false</parameter>
-    <parameter key="profiler.storage.dsn">file:/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/profiler</parameter>
+    <parameter key="profiler.storage.dsn">file:/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/profiler</parameter>
     <parameter key="profiler.storage.username"></parameter>
     <parameter key="profiler.storage.password"></parameter>
     <parameter key="profiler.storage.lifetime">86400</parameter>
@@ -204,7 +205,7 @@
     <parameter key="router.request_context.host">localhost</parameter>
     <parameter key="router.request_context.scheme">http</parameter>
     <parameter key="router.request_context.base_url"></parameter>
-    <parameter key="router.resource">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/assetic/routing.yml</parameter>
+    <parameter key="router.resource">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/assetic/routing.yml</parameter>
     <parameter key="router.cache_class_prefix">appDev</parameter>
     <parameter key="request_listener.http_port">80</parameter>
     <parameter key="request_listener.https_port">443</parameter>
@@ -215,7 +216,7 @@
     <parameter key="debug.stopwatch.class">Symfony\Component\Stopwatch\Stopwatch</parameter>
     <parameter key="debug.error_handler.throw_at">-1</parameter>
     <parameter key="debug.event_dispatcher.class">Symfony\Component\HttpKernel\Debug\TraceableEventDispatcher</parameter>
-    <parameter key="debug.container.dump">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/appDevDebugProjectContainer.xml</parameter>
+    <parameter key="debug.container.dump">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/appDevDebugProjectContainer.xml</parameter>
     <parameter key="debug.controller_resolver.class">Symfony\Component\HttpKernel\Controller\TraceableControllerResolver</parameter>
     <parameter key="security.context.class">Symfony\Component\Security\Core\SecurityContext</parameter>
     <parameter key="security.user_checker.class">Symfony\Component\Security\Core\User\UserChecker</parameter>
@@ -335,7 +336,7 @@
         <parameter>Symfony\Bundle\TwigBundle\TwigDefaultEscapingStrategy</parameter>
         <parameter>guess</parameter>
       </parameter>
-      <parameter key="cache">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/twig</parameter>
+      <parameter key="cache">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/twig</parameter>
       <parameter key="charset">UTF-8</parameter>
       <parameter key="paths" type="collection"/>
     </parameter>
@@ -420,7 +421,7 @@
     <parameter key="swiftmailer.mailer.default.transport.smtp.auth_mode">null</parameter>
     <parameter key="swiftmailer.mailer.default.transport.smtp.timeout">30</parameter>
     <parameter key="swiftmailer.mailer.default.transport.smtp.source_ip">null</parameter>
-    <parameter key="swiftmailer.spool.default.memory.path">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/swiftmailer/spool/default</parameter>
+    <parameter key="swiftmailer.spool.default.memory.path">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/swiftmailer/spool/default</parameter>
     <parameter key="swiftmailer.mailer.default.spool.enabled">true</parameter>
     <parameter key="swiftmailer.mailer.default.plugin.impersonate">null</parameter>
     <parameter key="swiftmailer.mailer.default.single_address">null</parameter>
@@ -445,7 +446,7 @@
     <parameter key="assetic.worker.cache_busting.class">Assetic\Factory\Worker\CacheBustingWorker</parameter>
     <parameter key="assetic.value_supplier.class">Symfony\Bundle\AsseticBundle\DefaultValueSupplier</parameter>
     <parameter key="assetic.node.paths" type="collection"/>
-    <parameter key="assetic.cache_dir">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/assetic</parameter>
+    <parameter key="assetic.cache_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/assetic</parameter>
     <parameter key="assetic.bundles" type="collection"/>
     <parameter key="assetic.twig_extension.class">Symfony\Bundle\AsseticBundle\Twig\AsseticExtension</parameter>
     <parameter key="assetic.twig_formula_loader.class">Assetic\Extension\Twig\TwigFormulaLoader</parameter>
@@ -455,8 +456,8 @@
     <parameter key="assetic.debug">true</parameter>
     <parameter key="assetic.use_controller">true</parameter>
     <parameter key="assetic.enable_profiler">false</parameter>
-    <parameter key="assetic.read_from">/Users/etiennedijon/PhpstormProjects/alba/app/../web</parameter>
-    <parameter key="assetic.write_to">/Users/etiennedijon/PhpstormProjects/alba/app/../web</parameter>
+    <parameter key="assetic.read_from">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/../web</parameter>
+    <parameter key="assetic.write_to">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/../web</parameter>
     <parameter key="assetic.variables" type="collection"/>
     <parameter key="assetic.java.bin">/usr/bin/java</parameter>
     <parameter key="assetic.node.bin">/usr/bin/node</parameter>
@@ -565,7 +566,7 @@
     <parameter key="doctrine.orm.second_level_cache.cache_configuration.class">Doctrine\ORM\Cache\CacheConfiguration</parameter>
     <parameter key="doctrine.orm.second_level_cache.regions_configuration.class">Doctrine\ORM\Cache\RegionsConfiguration</parameter>
     <parameter key="doctrine.orm.auto_generate_proxy_classes">true</parameter>
-    <parameter key="doctrine.orm.proxy_dir">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/doctrine/orm/Proxies</parameter>
+    <parameter key="doctrine.orm.proxy_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/doctrine/orm/Proxies</parameter>
     <parameter key="doctrine.orm.proxy_namespace">Proxies</parameter>
     <parameter key="sensio_framework_extra.view.guesser.class">Sensio\Bundle\FrameworkExtraBundle\Templating\TemplateGuesser</parameter>
     <parameter key="sensio_framework_extra.controller.listener.class">Sensio\Bundle\FrameworkExtraBundle\EventListener\ControllerListener</parameter>
@@ -620,6 +621,35 @@
       <parameter>ResetPassword</parameter>
       <parameter>Default</parameter>
     </parameter>
+    <parameter key="besimple.soap.request_format.listener.class">BeSimple\SoapBundle\EventListener\RequestFormatListener</parameter>
+    <parameter key="besimple.soap.definition.loader.resolver.class">Symfony\Component\Config\Loader\LoaderResolver</parameter>
+    <parameter key="besimple.soap.definition.loader.class">Symfony\Component\Config\Loader\DelegatingLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_dir.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationDirectoryLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_file.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationFileLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_class.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationClassLoader</parameter>
+    <parameter key="besimple.soap.definition.loader.annot_complextype.class">BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationComplexTypeLoader</parameter>
+    <parameter key="besimple.soap.converter.collection.class">BeSimple\SoapCommon\Converter\TypeConverterCollection</parameter>
+    <parameter key="besimple.soap.converter.date_time.class">BeSimple\SoapCommon\Converter\DateTimeTypeConverter</parameter>
+    <parameter key="besimple.soap.converter.date.class">BeSimple\SoapCommon\Converter\DateTypeConverter</parameter>
+    <parameter key="besimple.soap.response.class">BeSimple\SoapBundle\Soap\SoapResponse</parameter>
+    <parameter key="besimple.soap.response.listener.class">BeSimple\SoapBundle\EventListener\SoapResponseListener</parameter>
+    <parameter key="besimple.soap.exception_listener.class">BeSimple\SoapBundle\EventListener\SoapExceptionListener</parameter>
+    <parameter key="besimple.soap.context.class">BeSimple\SoapBundle\WebServiceContext</parameter>
+    <parameter key="besimple.soap.binder.request_header.rpcliteral.class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestHeaderMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.request.rpcliteral.class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.response.rpcliteral.class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralResponseMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.request.documentwrapped.class">BeSimple\SoapBundle\ServiceBinding\DocumentLiteralWrappedRequestMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.request_header.documentwrapped.class">BeSimple\SoapBundle\ServiceBinding\DocumentLiteralWrappedRequestHeaderMessageBinder</parameter>
+    <parameter key="besimple.soap.binder.response.documentwrapped.class">BeSimple\SoapBundle\ServiceBinding\DocumentLiteralWrappedResponseMessageBinder</parameter>
+    <parameter key="besimple.soap.type.repository.class">BeSimple\SoapCommon\Definition\Type\TypeRepository</parameter>
+    <parameter key="besimple.soap.server.classmap.class">BeSimple\SoapServer\Classmap</parameter>
+    <parameter key="besimple.soap.cache.class">BeSimple\SoapBundle\Cache</parameter>
+    <parameter key="besimple.soap.cache.dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/besimple/soap</parameter>
+    <parameter key="besimple.soap.cache.type">1</parameter>
+    <parameter key="besimple.soap.cache.lifetime">null</parameter>
+    <parameter key="besimple.soap.cache.limit">null</parameter>
+    <parameter key="besimple.soap.definition.dumper.options.stylesheet">null</parameter>
+    <parameter key="besimple.soap.exception_listener.controller">BeSimpleSoapBundle:SoapWebService:exception</parameter>
     <parameter key="web_profiler.controller.profiler.class">Symfony\Bundle\WebProfilerBundle\Controller\ProfilerController</parameter>
     <parameter key="web_profiler.controller.router.class">Symfony\Bundle\WebProfilerBundle\Controller\RouterController</parameter>
     <parameter key="web_profiler.controller.exception.class">Symfony\Bundle\WebProfilerBundle\Controller\ExceptionController</parameter>
@@ -734,7 +764,7 @@
               <service class="Symfony\Bundle\FrameworkBundle\CacheWarmer\TemplateFinder" public="false">
                 <argument type="service" id="kernel"/>
                 <argument type="service" id="templating.filename_parser"/>
-                <argument>/Users/etiennedijon/PhpstormProjects/alba/app/Resources</argument>
+                <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/Resources</argument>
               </service>
             </argument>
             <argument type="service" id="templating.locator"/>
@@ -760,7 +790,7 @@
               <service class="Symfony\Bundle\FrameworkBundle\CacheWarmer\TemplateFinder" public="false">
                 <argument type="service" id="kernel"/>
                 <argument type="service" id="templating.filename_parser"/>
-                <argument>/Users/etiennedijon/PhpstormProjects/alba/app/Resources</argument>
+                <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/Resources</argument>
               </service>
             </argument>
           </service>
@@ -782,7 +812,7 @@
     <service id="filesystem" class="Symfony\Component\Filesystem\Filesystem"/>
     <service id="file_locator" class="Symfony\Component\HttpKernel\Config\FileLocator">
       <argument type="service" id="kernel"/>
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/Resources</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/Resources</argument>
     </service>
     <service id="uri_signer" class="Symfony\Component\HttpKernel\UriSigner">
       <argument>ThisTokenIsNotSoSecretChangeIt</argument>
@@ -879,7 +909,7 @@
         </argument>
       </argument>
       <argument type="collection">
-        <argument key="cache_dir">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/translations</argument>
+        <argument key="cache_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/translations</argument>
         <argument key="debug">true</argument>
       </argument>
     </service>
@@ -1092,7 +1122,7 @@
     </service>
     <service id="security.secure_random" class="Symfony\Component\Security\Core\Util\SecureRandom">
       <tag name="monolog.logger" channel="security"/>
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/secure_random.seed</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/secure_random.seed</argument>
       <argument type="service" id="monolog.logger.security" on-invalid="ignore"/>
     </service>
     <service id="form.resolved_type_factory" class="Symfony\Component\Form\Extension\DataCollector\Proxy\ResolvedTypeFactoryDataCollectorProxy">
@@ -1311,7 +1341,7 @@
     <service id="templating.filename_parser" class="Symfony\Bundle\FrameworkBundle\Templating\TemplateFilenameParser"/>
     <service id="templating.locator" class="Symfony\Bundle\FrameworkBundle\Templating\Loader\TemplateLocator" public="false">
       <argument type="service" id="file_locator"/>
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev</argument>
     </service>
     <service id="templating.helper.slots" class="Symfony\Component\Templating\Helper\SlotsHelper">
       <tag name="templating.helper" alias="slots"/>
@@ -1349,7 +1379,7 @@
     <service id="templating.helper.code" class="Symfony\Bundle\FrameworkBundle\Templating\Helper\CodeHelper">
       <tag name="templating.helper" alias="code"/>
       <argument>null</argument>
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app</argument>
       <argument>UTF-8</argument>
     </service>
     <service id="templating.helper.translator" class="Symfony\Bundle\FrameworkBundle\Templating\Helper\TranslatorHelper">
@@ -1404,8 +1434,8 @@
       </call>
       <call method="addXmlMappings">
         <argument type="collection">
-          <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/symfony/src/Symfony/Component/Form/Resources/config/validation.xml</argument>
-          <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/Resources/config/validation.xml</argument>
+          <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/symfony/src/Symfony/Component/Form/Resources/config/validation.xml</argument>
+          <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/Resources/config/validation.xml</argument>
         </argument>
       </call>
       <call method="enableAnnotationMapping">
@@ -1429,7 +1459,7 @@
         </argument>
       </call>
       <call method="addXmlMapping">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/DependencyInjection/Compiler/../../Resources/config/validation/orm.xml</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/DependencyInjection/Compiler/../../Resources/config/validation/orm.xml</argument>
       </call>
       <factory class="%validator.builder.factory.class%" method="createValidatorBuilder"/>
     </service>
@@ -1459,7 +1489,7 @@
       <tag name="monolog.logger" channel="profiler"/>
       <argument type="service">
         <service class="Symfony\Component\HttpKernel\Profiler\FileProfilerStorage" public="false">
-          <argument>file:/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/profiler</argument>
+          <argument>file:/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/profiler</argument>
           <argument></argument>
           <argument></argument>
           <argument>86400</argument>
@@ -1718,6 +1748,22 @@
         </argument>
         <argument>0</argument>
       </call>
+      <call method="addListenerService">
+        <argument>kernel.request</argument>
+        <argument type="collection">
+          <argument>besimple.soap.request_format.listener</argument>
+          <argument>onKernelRequest</argument>
+        </argument>
+        <argument>0</argument>
+      </call>
+      <call method="addListenerService">
+        <argument>kernel.view</argument>
+        <argument type="collection">
+          <argument>besimple.soap.response.listener</argument>
+          <argument>onKernelView</argument>
+        </argument>
+        <argument>0</argument>
+      </call>
       <call method="addSubscriberService">
         <argument>response_listener</argument>
         <argument>Symfony\Component\HttpKernel\EventListener\ResponseListener</argument>
@@ -1807,6 +1853,10 @@
         <argument>Sensio\Bundle\FrameworkExtraBundle\EventListener\SecurityListener</argument>
       </call>
       <call method="addSubscriberService">
+        <argument>besimple.soap.exception_listener</argument>
+        <argument>BeSimple\SoapBundle\EventListener\SoapExceptionListener</argument>
+      </call>
+      <call method="addSubscriberService">
         <argument>debug.dump_listener</argument>
         <argument>Symfony\Component\HttpKernel\EventListener\DumpListener</argument>
       </call>
@@ -1850,7 +1900,7 @@
         </argument>
         <argument type="service">
           <service class="Symfony\Component\Security\Core\Authentication\Provider\AnonymousAuthenticationProvider" public="false">
-            <argument>54de102a12742</argument>
+            <argument>54e1b9a1d1cdb</argument>
           </service>
         </argument>
       </argument>
@@ -2129,7 +2179,7 @@
         <argument type="service">
           <service class="Symfony\Component\Security\Http\Firewall\AnonymousAuthenticationListener" public="false">
             <argument type="service" id="security.context"/>
-            <argument>54de102a12742</argument>
+            <argument>54e1b9a1d1cdb</argument>
             <argument type="service" id="monolog.logger.security" on-invalid="null"/>
             <argument type="service" id="security.authentication.manager"/>
           </service>
@@ -2234,7 +2284,7 @@
           <argument>Symfony\Bundle\TwigBundle\TwigDefaultEscapingStrategy</argument>
           <argument>guess</argument>
         </argument>
-        <argument key="cache">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/twig</argument>
+        <argument key="cache">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/twig</argument>
         <argument key="charset">UTF-8</argument>
         <argument key="paths" type="collection"/>
       </argument>
@@ -2284,7 +2334,7 @@
           <service class="Symfony\Bridge\Twig\Extension\CodeExtension" public="false">
             <tag name="twig.extension"/>
             <argument>null</argument>
-            <argument>/Users/etiennedijon/PhpstormProjects/alba/app</argument>
+            <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app</argument>
             <argument>UTF-8</argument>
           </service>
         </argument>
@@ -2418,7 +2468,7 @@
       <argument>twig.controller.exception:showAction</argument>
     </service>
     <service id="monolog.handler.main" class="Monolog\Handler\StreamHandler">
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/logs/dev.log</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/logs/dev.log</argument>
       <argument>100</argument>
       <argument>true</argument>
       <argument>null</argument>
@@ -2480,7 +2530,7 @@
             </argument>
             <argument type="service">
               <service class="Assetic\Cache\ConfigCache" public="false">
-                <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/assetic/config</argument>
+                <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/assetic/config</argument>
               </service>
             </argument>
             <argument>true</argument>
@@ -2494,7 +2544,7 @@
             <tag name="assetic.formula_resource" loader="twig"/>
             <argument type="service" id="templating.loader"/>
             <argument></argument>
-            <argument>/Users/etiennedijon/PhpstormProjects/alba/app/Resources/views</argument>
+            <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/Resources/views</argument>
             <argument>/\.[^.]+\.twig$/</argument>
           </service>
         </argument>
@@ -2509,7 +2559,7 @@
           <factory service="service_container" method="getParameterBag"/>
         </service>
       </argument>
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/../web</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/../web</argument>
       <argument>true</argument>
       <call method="addWorker">
         <argument type="service">
@@ -2530,7 +2580,7 @@
       <argument type="service" id="profiler" on-invalid="null"/>
     </service>
     <service id="assetic.cache" class="Assetic\Cache\FilesystemCache" public="false">
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/assetic/assets</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/assetic/assets</argument>
     </service>
     <service id="assetic.request_listener" class="Symfony\Bundle\AsseticBundle\EventListener\RequestListener">
       <tag name="kernel.event_listener" event="kernel.request" method="onKernelRequest"/>
@@ -2553,9 +2603,9 @@
     <service id="doctrine.dbal.default_connection" class="Doctrine\DBAL\Connection" factory-method="createConnection" factory-service="doctrine.dbal.connection_factory">
       <argument type="collection">
         <argument key="driver">pdo_mysql</argument>
-        <argument key="host">192.168.1.60</argument>
+        <argument key="host">localhost</argument>
         <argument key="port">null</argument>
-        <argument key="dbname">mydb</argument>
+        <argument key="dbname">alba</argument>
         <argument key="user">alba</argument>
         <argument key="password">alba</argument>
         <argument key="charset">UTF8</argument>
@@ -2616,17 +2666,17 @@
     </service>
     <service id="doctrine_cache.providers.doctrine.orm.default_metadata_cache" class="Doctrine\Common\Cache\ArrayCache">
       <call method="setNamespace">
-        <argument>sf2orm_default_e8588d76f9dc95dc7c224e50632835c6e1e63184de76dfaca50b65a5a7a33e54</argument>
+        <argument>sf2orm_default_bf26e39e0218e3d6a572366bb7cbbd13ea533636aa08012b3c1b9a23b4ab9c65</argument>
       </call>
     </service>
     <service id="doctrine_cache.providers.doctrine.orm.default_result_cache" class="Doctrine\Common\Cache\ArrayCache">
       <call method="setNamespace">
-        <argument>sf2orm_default_e8588d76f9dc95dc7c224e50632835c6e1e63184de76dfaca50b65a5a7a33e54</argument>
+        <argument>sf2orm_default_bf26e39e0218e3d6a572366bb7cbbd13ea533636aa08012b3c1b9a23b4ab9c65</argument>
       </call>
     </service>
     <service id="doctrine_cache.providers.doctrine.orm.default_query_cache" class="Doctrine\Common\Cache\ArrayCache">
       <call method="setNamespace">
-        <argument>sf2orm_default_e8588d76f9dc95dc7c224e50632835c6e1e63184de76dfaca50b65a5a7a33e54</argument>
+        <argument>sf2orm_default_bf26e39e0218e3d6a572366bb7cbbd13ea533636aa08012b3c1b9a23b4ab9c65</argument>
       </call>
     </service>
     <service id="doctrine.orm.default_entity_listener_resolver" class="Doctrine\ORM\Mapping\DefaultEntityListenerResolver"/>
@@ -2661,7 +2711,7 @@
                     <service class="Doctrine\ORM\Mapping\Driver\AnnotationDriver" public="false">
                       <argument type="service" id="annotation_reader"/>
                       <argument type="collection">
-                        <argument>/Users/etiennedijon/PhpstormProjects/alba/src/Imerir/NoyauBundle/Entity</argument>
+                        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/src/Imerir/NoyauBundle/Entity</argument>
                       </argument>
                     </service>
                   </argument>
@@ -2671,7 +2721,7 @@
                   <argument type="service">
                     <service class="Doctrine\ORM\Mapping\Driver\SimplifiedXmlDriver" public="false">
                       <argument type="collection">
-                        <argument key="/Users/etiennedijon/PhpstormProjects/alba/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/Resources/config/doctrine">FOS\UserBundle\Entity</argument>
+                        <argument key="/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/Resources/config/doctrine">FOS\UserBundle\Entity</argument>
                       </argument>
                       <call method="setGlobalBasename">
                         <argument>mapping</argument>
@@ -2684,7 +2734,7 @@
             </argument>
           </call>
           <call method="setProxyDir">
-            <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/doctrine/orm/Proxies</argument>
+            <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/doctrine/orm/Proxies</argument>
           </call>
           <call method="setProxyNamespace">
             <argument>Proxies</argument>
@@ -2847,6 +2897,134 @@
     <service id="fos_user.resetting.form.type" class="FOS\UserBundle\Form\Type\ResettingFormType">
       <tag name="form.type" alias="fos_user_resetting"/>
     </service>
+    <service id="besimple.soap.request_format.listener" class="BeSimple\SoapBundle\EventListener\RequestFormatListener">
+      <tag name="kernel.event_listener" event="kernel.request" method="onKernelRequest"/>
+    </service>
+    <service id="besimple.soap.definition.loader" class="Symfony\Component\Config\Loader\DelegatingLoader">
+      <argument type="service">
+        <service class="Symfony\Component\Config\Loader\LoaderResolver" public="false">
+          <call method="addLoader">
+            <argument type="service">
+              <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationFileLoader" public="false">
+                <tag name="besimple.soap.definition.loader"/>
+                <argument type="service" id="file_locator"/>
+                <argument type="service">
+                  <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationClassLoader" public="false">
+                    <tag name="besimple.soap.definition.loader"/>
+                    <argument type="service" id="annotation_reader"/>
+                    <argument type="service" id="besimple.soap.type.repository"/>
+                  </service>
+                </argument>
+              </service>
+            </argument>
+          </call>
+          <call method="addLoader">
+            <argument type="service">
+              <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationClassLoader" public="false">
+                <tag name="besimple.soap.definition.loader"/>
+                <argument type="service" id="annotation_reader"/>
+                <argument type="service" id="besimple.soap.type.repository"/>
+              </service>
+            </argument>
+          </call>
+          <call method="addLoader">
+            <argument type="service">
+              <service class="BeSimple\SoapBundle\ServiceDefinition\Loader\AnnotationComplexTypeLoader" public="false">
+                <tag name="besimple.soap.definition.loader"/>
+                <argument type="service" id="annotation_reader"/>
+                <argument type="service" id="besimple.soap.type.repository"/>
+              </service>
+            </argument>
+          </call>
+        </service>
+      </argument>
+    </service>
+    <service id="besimple.soap.converter.collection" class="BeSimple\SoapCommon\Converter\TypeConverterCollection">
+      <call method="add">
+        <argument type="service">
+          <service class="BeSimple\SoapCommon\Converter\DateTimeTypeConverter" public="false">
+            <tag name="besimple.soap.converter"/>
+          </service>
+        </argument>
+      </call>
+      <call method="add">
+        <argument type="service">
+          <service class="BeSimple\SoapCommon\Converter\DateTypeConverter" public="false">
+            <tag name="besimple.soap.converter"/>
+          </service>
+        </argument>
+      </call>
+    </service>
+    <service id="besimple.soap.response" class="BeSimple\SoapBundle\Soap\SoapResponse"/>
+    <service id="besimple.soap.response.listener" class="BeSimple\SoapBundle\EventListener\SoapResponseListener">
+      <tag name="kernel.event_listener" event="kernel.view" method="onKernelView"/>
+      <argument type="service" id="besimple.soap.response"/>
+    </service>
+    <service id="besimple.soap.exception_listener" class="BeSimple\SoapBundle\EventListener\SoapExceptionListener">
+      <tag name="kernel.event_subscriber"/>
+      <tag name="monolog.logger" channel="request"/>
+      <argument type="service" id="service_container"/>
+      <argument>BeSimpleSoapBundle:SoapWebService:exception</argument>
+      <argument type="service" id="monolog.logger.request" on-invalid="null"/>
+    </service>
+    <service id="besimple.soap.type.repository" class="BeSimple\SoapCommon\Definition\Type\TypeRepository">
+      <argument type="service">
+        <service class="BeSimple\SoapServer\Classmap" public="false"/>
+      </argument>
+      <call method="addXmlNamespace">
+        <argument>xsd</argument>
+        <argument>http://www.w3.org/2001/XMLSchema</argument>
+      </call>
+      <call method="addType">
+        <argument>string</argument>
+        <argument>xsd:string</argument>
+      </call>
+      <call method="addType">
+        <argument>boolean</argument>
+        <argument>xsd:boolean</argument>
+      </call>
+      <call method="addType">
+        <argument>int</argument>
+        <argument>xsd:int</argument>
+      </call>
+      <call method="addType">
+        <argument>float</argument>
+        <argument>xsd:float</argument>
+      </call>
+      <call method="addType">
+        <argument>date</argument>
+        <argument>xsd:date</argument>
+      </call>
+      <call method="addType">
+        <argument>dateTime</argument>
+        <argument>xsd:dateTime</argument>
+      </call>
+    </service>
+    <service id="besimple.soap.cache" class="BeSimple\SoapBundle\Cache">
+      <argument>true</argument>
+      <argument>1</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/besimple/soap/cache</argument>
+      <argument>null</argument>
+      <argument>null</argument>
+    </service>
+    <service id="besimple.soap.context.soap" class="BeSimple\SoapBundle\WebServiceContext">
+      <argument type="service" id="besimple.soap.definition.loader"/>
+      <argument type="service" id="besimple.soap.converter.collection"/>
+      <argument type="collection">
+        <argument key="cache_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/besimple/soap</argument>
+        <argument key="debug">true</argument>
+        <argument key="cache_type">null</argument>
+        <argument key="binder_request_header_class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestHeaderMessageBinder</argument>
+        <argument key="binder_request_class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralRequestMessageBinder</argument>
+        <argument key="binder_response_class">BeSimple\SoapBundle\ServiceBinding\RpcLiteralResponseMessageBinder</argument>
+        <argument key="wsdl_stylesheet">null</argument>
+        <argument key="namespace">http://localhost/serveur/web/app_dev.php/soap</argument>
+        <argument key="resource">@ImerirNoyauBundle/Controller/SoapController.php</argument>
+        <argument key="resource_type">annotation</argument>
+        <argument key="name">Soap</argument>
+      </argument>
+      <argument type="service" id="besimple.soap.cache"/>
+    </service>
     <service id="data_collector.dump" class="Symfony\Component\HttpKernel\DataCollector\DumpDataCollector">
       <tag name="data_collector" id="dump" template="@Debug/Profiler/dump.html.twig"/>
       <argument type="service" id="debug.stopwatch" on-invalid="ignore"/>
@@ -2950,7 +3128,7 @@
       <argument>^/bundles|^/_wdt</argument>
     </service>
     <service id="sensio_distribution.webconfigurator" class="Sensio\Bundle\DistributionBundle\Configurator\Configurator">
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app</argument>
       <call method="addStep">
         <argument type="service">
           <service class="Sensio\Bundle\DistributionBundle\Configurator\Step\DoctrineStep" public="false">
@@ -3098,7 +3276,7 @@
       <argument>true</argument>
     </service>
     <service id="session.storage.filesystem" class="Symfony\Component\HttpFoundation\Session\Storage\MockFileSessionStorage">
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/sessions</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/sessions</argument>
       <argument>MOCKSESSID</argument>
       <argument type="service" id="session.storage.metadata_bag"/>
     </service>
@@ -3141,9 +3319,9 @@
     <service id="router" class="Symfony\Bundle\FrameworkBundle\Routing\Router">
       <tag name="monolog.logger" channel="router"/>
       <argument type="service" id="service_container"/>
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/assetic/routing.yml</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/assetic/routing.yml</argument>
       <argument type="collection">
-        <argument key="cache_dir">/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev</argument>
+        <argument key="cache_dir">/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev</argument>
         <argument key="debug">true</argument>
         <argument key="generator_class">Symfony\Component\Routing\Generator\UrlGenerator</argument>
         <argument key="generator_base_class">Symfony\Component\Routing\Generator\UrlGenerator</argument>
@@ -3163,7 +3341,7 @@
       <argument type="service">
         <service class="Doctrine\Common\Annotations\AnnotationReader" public="false"/>
       </argument>
-      <argument>/Users/etiennedijon/PhpstormProjects/alba/app/cache/dev/annotations</argument>
+      <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/cache/dev/annotations</argument>
       <argument>true</argument>
     </service>
     <service id="security.encoder_factory" class="Symfony\Component\Security\Core\Encoder\EncoderFactory">
@@ -3186,50 +3364,50 @@
       <argument type="service" id="templating.locator"/>
       <argument type="service" id="templating.name_parser"/>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/symfony/src/Symfony/Bundle/FrameworkBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/symfony/src/Symfony/Bundle/FrameworkBundle/Resources/views</argument>
         <argument>Framework</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/symfony/src/Symfony/Bundle/SecurityBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/symfony/src/Symfony/Bundle/SecurityBundle/Resources/views</argument>
         <argument>Security</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/symfony/src/Symfony/Bundle/TwigBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/symfony/src/Symfony/Bundle/TwigBundle/Resources/views</argument>
         <argument>Twig</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/swiftmailer-bundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/swiftmailer-bundle/Resources/views</argument>
         <argument>Swiftmailer</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/doctrine/doctrine-bundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/doctrine/doctrine-bundle/Resources/views</argument>
         <argument>Doctrine</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/src/Imerir/NoyauBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/src/Imerir/NoyauBundle/Resources/views</argument>
         <argument>ImerirNoyau</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/friendsofsymfony/user-bundle/FOS/UserBundle/Resources/views</argument>
         <argument>FOSUser</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/symfony/src/Symfony/Bundle/DebugBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/symfony/src/Symfony/Bundle/DebugBundle/Resources/views</argument>
         <argument>Debug</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/symfony/src/Symfony/Bundle/WebProfilerBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/symfony/src/Symfony/Bundle/WebProfilerBundle/Resources/views</argument>
         <argument>WebProfiler</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/views</argument>
         <argument>SensioDistribution</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/app/Resources/views</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/app/Resources/views</argument>
       </call>
       <call method="addPath">
-        <argument>/Users/etiennedijon/PhpstormProjects/alba/vendor/symfony/symfony/src/Symfony/Bridge/Twig/Resources/views/Form</argument>
+        <argument>/Users/Knay/Documents/Cours/Imerir/ERP/serveur/vendor/symfony/symfony/src/Symfony/Bridge/Twig/Resources/views/Form</argument>
       </call>
     </service>
     <service id="logger" class="Symfony\Bridge\Monolog\Logger">
