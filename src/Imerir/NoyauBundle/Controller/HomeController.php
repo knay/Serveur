@@ -32,6 +32,12 @@ class HomeController extends Controller
 		$context = $this->container->get('security.context');
 		$context->setToken($token);
     	
+		// TODO inserer ce code pour trouver l'utilisateur
+		/*$userManager = $this->container->get('fos_user.user_manager');
+		$user = $userManager->findUserByUsername($this->container->get('security.context')
+				->getToken()
+				->getUser());*/
+		
         return $this->render('ImerirNoyauBundle:default:index.html.twig');
     }
 }
