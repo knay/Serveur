@@ -14,22 +14,10 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
 class SoapController extends ContainerAware
 {
-	/*
-    public function indexAction()
-    {
-    	$server = new \SoapServer('bundles/imerirnoyau/soap/alba.wsdl');
-    	$server->setObject($this->get('soap_service'));
-    	
-    	$response = new Response();
-    	$response->headers->set('Content-Type', 'text/xml; charset=ISO-8859-1');
-    	
-    	ob_start();
-    	$server->handle();
-    	$response->setContent(ob_get_clean());
-    	
-    	return $response;
-    }
-	*/
+	private $dbDsn = null;    // Le dsn du serveur de base de données
+	private $dbUsr = null;    // L'utilisateur du serveur de base de données
+	private $dbPasswd = null; // Le mot de passe de l'utilisateur sur le serveur de base de données
+	
 	/**
 	 * @Soap\Method("hello")
 	 * @Soap\Param("name", phpType = "string")
@@ -86,6 +74,7 @@ class SoapController extends ContainerAware
 			return new SoapFault("Server","Vos identifiants de connexion sont invalides");
 		}
 	}
+	
 	/**
 	 * @Soap\Method("ajoutLigneProduit")
 	 * @Soap\Param("nom",phpType="string")
@@ -112,11 +101,51 @@ class SoapController extends ContainerAware
 
 		}
 		catch(Exception $e){
+			// TODO ETIENNE : Ne pas écrire sur la sortir standard. Tu casserais le XML produit par SOAP
 			echo 'Erreur : '.$e->getMessage().'<br />';
 			echo 'N° : '.$e->getCode();
 			return new SoapFault("Server","la ligne produit existe déjà");
 		}
-
 	}
+	
+	/**
+	 * Permet de récupérer une ligne de produit.
+	 * @param $count Le nombre d'enregistrement voulu, 0 pour tout avoir
+	 * @param $offset Le décalage par rapport au début des enregistrements
+	 * @param $nom Si vous voulez une ligne de produit spécifique (interet ?).
+	 * 
+	 * TODO ajouter ASC ou DESC
+	 * 
+	 * @Soap\Method("getLigneProduit")
+	 * @Soap\Param("count",phpType="int")
+	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getLigneProduitAction($count, $offset, $nom) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+		
+		if(!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service 
+		$result = array();
 
+		// Formation de la requete SQL
+		$sql = 'SELECT nom FROM ligne_produit ';
+		if (!empty($nom))
+			$sql.='WHERE nom=\''.$pdo->quote($nom).'\' ';
+		if($offset != 0) {
+			$sql.='LIMIT '.(int)$offset;
+			if ($count != 0)
+				$sql.=','.(int)$count;
+		}
+		
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			array_push($result, $row['nom']);
+		}
+		
+		return json_encode($result);
+	}
 }

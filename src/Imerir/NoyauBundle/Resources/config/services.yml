@@ -1,5 +1,8 @@
 services:
-    soap_service:
-        class: Imerir\NoyauBundle\Services\SoapService
+    bdd_service:
+        class: Imerir\NoyauBundle\Services\BDDService
         arguments: ['@service_container']
-
+    user_service:
+        class: Imerir\NoyauBundle\Services\UserService
+        arguments: ['@service_container']
+      
