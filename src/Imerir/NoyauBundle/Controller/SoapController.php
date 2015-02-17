@@ -3,6 +3,7 @@
 namespace Imerir\NoyauBundle\Controller;
 
 use BeSimple\SoapServer\Exception\SenderSoapFault;
+use BeSimple\SoapServer\SoapServer;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
@@ -46,6 +47,7 @@ class SoapController extends ContainerAware
 	 */
 	public function loginAction($username, $passwd) {
 		//TODO securité SQL
+
 		//recupere la classe Utilisateur mappé à la table User dans la base de données
 		$dm = $this->container->get('doctrine')->getEntityManager();
 
@@ -57,23 +59,26 @@ class SoapController extends ContainerAware
 		$hash = $encoder->encodePassword($passwd, $user->getSalt());
 
 		//DEBUG
-		echo $hash;
+		//echo $hash;
 
 		//DQL langage doctrine les paramètres sont mis dans un tableau
 		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username AND u.password = :passwd";
 		$queryUser = $dm->createQuery($sql)->setParameters(array('username'=>$username,'passwd'=>$hash));
+
 		//on récupère toutes les lignes de la requête
 		$users = $queryUser->getResult();
 		//on teste si il y a bien un utilisateur username avec le mot de passe passwd
 		if(!empty($users)){
-			//on lit la première ligne
+			//on lit la première lignes
 			$u = $users[0];
 
 			$token = new UsernamePasswordToken($u->getUsername(), $u->getPassword(), 'main', $u->getRoles());
 			$context = $this->container->get('security.context');
 			$context->setToken($token);
 			//TODO controler le phpsessid
-			$retourJson = array('token'=>$this->container->get('request')->cookies->get('PHPSESSID'),'username'=>$username,'role'=>$u->getRoles()[0]);
+			$retourJson = array('token'=>$this->container->get('request')->cookies->get('PHPSESSID'),
+				'username'=>$username,
+				'role'=>$u->getRoles()[0]);
 			return json_encode($retourJson);
 		}
 		else{
