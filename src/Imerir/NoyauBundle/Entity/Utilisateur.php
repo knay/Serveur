@@ -26,7 +26,7 @@ class Utilisateur extends BaseUser
     {
        parent::__construct();
        if (empty($this->roles)) {
-         $this->roles[] = 'ROLE_USER';
+         $this->roles[] = 'ROLE_GERANT';
        }
     }
     
