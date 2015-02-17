@@ -4,6 +4,7 @@ namespace Imerir\NoyauBundle\Controller;
 
 use BeSimple\SoapServer\Exception\SenderSoapFault;
 use BeSimple\SoapServer\SoapServer;
+use Symfony\Component\Config\Definition\Exception\Exception;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
@@ -85,4 +86,37 @@ class SoapController extends ContainerAware
 			return new SoapFault("Server","Vos identifiants de connexion sont invalides");
 		}
 	}
+	/**
+	 * @Soap\Method("ajoutLigneProduit")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutLigneProduitAction($nom){
+		try{
+			$pdo = new \PDO('mysql:host=localhost;dbname=alba', 'alba', 'alba');
+			//on verifie si il y a deja la ligne produit
+			$sql = "SELECT * FROM ligne_produit WHERE nom='".$nom."'";
+
+			$resultat = $pdo->query($sql);
+			//si la ligne produit n'existe pas
+			if($resultat->rowCount()==0){
+				$sql = "INSERT INTO ligne_produit(nom)VALUES('".$nom."');";
+				$pdo->query($sql);
+
+				return "OK";
+			}
+			//sinon soapfault
+			else{
+				return new SoapFault("Server","Echec de l'enregistrement");
+			}
+
+		}
+		catch(Exception $e){
+			echo 'Erreur : '.$e->getMessage().'<br />';
+			echo 'N° : '.$e->getCode();
+			return new SoapFault("Server","la ligne produit existe déjà");
+		}
+
+	}
+
 }
