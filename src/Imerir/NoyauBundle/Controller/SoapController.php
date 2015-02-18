@@ -87,9 +87,6 @@ class SoapController extends ContainerAware
 
 		}
 		catch(Exception $e){
-			// TODO ETIENNE : Ne pas écrire sur la sortir standard. Tu casserais le XML produit par SOAP
-			echo 'Erreur : '.$e->getMessage().'<br />';
-			echo 'N° : '.$e->getCode();
 			return new SoapFault("Server","la ligne produit existe déjà");
 		}
 	}
@@ -121,7 +118,7 @@ class SoapController extends ContainerAware
 		// Formation de la requete SQL
 		$sql = 'SELECT nom FROM ligne_produit ';
 		if (!empty($nom))
-			$sql.='WHERE nom=\''.$pdo->quote($nom).'\' ';
+			$sql.='WHERE nom='.$pdo->quote($nom).' ';
 		if($offset != 0) {
 			$sql.='LIMIT '.(int)$offset;
 			if ($count != 0)
@@ -133,5 +130,78 @@ class SoapController extends ContainerAware
 		}
 		
 		return json_encode($result);
+	}
+	
+	/**
+	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
+	 * @param $nom Le nom de l'attribut
+	 * @param $ligneProduits Les lignes produits concernée par l'attribut
+	 * @param $attributs Les valeurs d'attribut possible
+	 * @param $id L'id de l'attribut en cas de modification (mettre 0 en cas d'ajout)
+	 *
+	 * @Soap\Method("setAttribut")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("lignesProduits",phpType="string")
+	 * @Soap\Param("attributs",phpType="string")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function setAttributAction($nom, $lignesProduits, $attributs, $id) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[SA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($nom) || !is_string($lignesProduits) || !is_string($attributs) || !is_int($id)) // Vérif des arguments
+			return new SoapFault('Server','[SA002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		
+		$tabLgProduit = json_decode($lignesProduits);
+		$tabAttributs = json_decode($attributs);
+		if ($tabLgProduit === NULL || $tabAttributs === NULL) // On vérif qu'on arrive à decoder le json 
+			return new SoapFault('Server','[SA003] Paramètres invalides, JSON attendu.');
+	
+		// Si on veut modifier un attribut existant
+		if ($id !== 0) {
+			// Formation de la requete SQL
+			$sql = 'SELECT nom FROM attribut WHERE id=\''.(int)$id.'\'';
+			$resultat = $pdo->query($sql);
+			// Si l'attribut n'existe pas
+			if($resultat->rowCount() === 0) {
+				// TODO GERER LE CAS DE LA MODIF
+			}
+		}
+		else { // On ajoute un attribut
+			$sql = 'INSERT INTO attribut (nom) VALUES ('.$pdo->quote($nom).')';
+			$count = $pdo->exec($sql);
+			if ($count !== 1) { // Si problème insertion
+				return new SoapFault('Server','[SA004] Erreur lors de l\'enregistrement des données');
+			}
+			$idAttribut = $pdo->lastInsertId(); // On recup l'id de l'attribut créé
+			
+			// Insertion des valeurs d'attribut possible
+			foreach ($tabAttributs as $libelle) {
+				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle) VALUES ('.$idAttribut.', '.$pdo->quote($libelle).')';
+				$count = $pdo->exec($sql);
+			}
+			
+			// Insertion des lignes produits dans la table ligne_produit_a_pour_attribut
+			foreach ($tabLgProduit as $produit) {
+				$sql = 'SELECT id FROM ligne_produit WHERE nom='.$pdo->quote($produit);
+				$resultat = $pdo->query($sql);
+				if($resultat->rowCount() === 0) // Si pas de résultat, la ligne produit n'existe pas et on continue 
+					continue;
+				
+				// On récup l'id de la ligne produit
+				foreach  ($resultat as $row) {
+					$idLigneProduit = $row['id'];
+				}
+				
+				$sql = 'INSERT INTO ligne_produit_a_pour_attribut (ref_ligne_produit, ref_attribut)' .
+						'VALUES ('.$idLigneProduit.', '.$idAttribut.')'; 
+				$count = $pdo->exec($sql);
+			}
+		}
+	
+		return $count;
 	}
 }
