@@ -101,9 +101,6 @@ class SoapController extends ContainerAware
 
 		}
 		catch(Exception $e){
-			// TODO ETIENNE : Ne pas écrire sur la sortir standard. Tu casserais le XML produit par SOAP
-			echo 'Erreur : '.$e->getMessage().'<br />';
-			echo 'N° : '.$e->getCode();
 			return new SoapFault("Server","la ligne produit existe déjà");
 		}
 	}
