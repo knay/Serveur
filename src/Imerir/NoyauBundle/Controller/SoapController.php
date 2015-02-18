@@ -62,32 +62,44 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * Permet d'ajouter ou modifier une ligne produit
+	 * @param $nom Le nom de la ligne produit a créer ou modifier
+	 *
 	 * @Soap\Method("ajoutLigneProduit")
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function ajoutLigneProduitAction($nom){
-		try{
-			$pdo = new \PDO('mysql:host=localhost;dbname=alba', 'alba', 'alba');
+		//on teste si l'utilisateur a les droits pour accéder à cette fonction
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+		if(!is_string($nom)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		try {
+			$pdo = $this->container->get('bdd_service')->getPdo();
 			//on verifie si il y a deja la ligne produit
-			$sql = "SELECT * FROM ligne_produit WHERE nom='".$nom."'";
+			$sql = "SELECT * FROM ligne_produit WHERE nom='" . $nom . "'";
 
 			$resultat = $pdo->query($sql);
 			//si la ligne produit n'existe pas
-			if($resultat->rowCount()==0){
-				$sql = "INSERT INTO ligne_produit(nom)VALUES('".$nom."');";
+			if ($resultat->rowCount() == 0) {
+				$sql = "INSERT INTO ligne_produit(nom)VALUES('" . $nom . "');";
 				$pdo->query($sql);
 
 				return "OK";
-			}
-			//sinon soapfault
-			else{
-				return new SoapFault("Server","Echec de l'enregistrement");
+			} //sinon soapfault
+			else {
+				return new SoapFault("Server", "Echec de l'enregistrement");
 			}
 
+<<<<<<< HEAD
 		}
 		catch(Exception $e){
 			return new SoapFault("Server","la ligne produit existe déjà");
+=======
+		} catch (Exception $e) {
+			return new SoapFault("Server", "la ligne produit existe déjà");
+>>>>>>> 2ed81691947a46775d69d4bed12ce28916a9b14a
 		}
 	}
 	
@@ -131,6 +143,7 @@ class SoapController extends ContainerAware
 		
 		return json_encode($result);
 	}
+<<<<<<< HEAD
 	
 	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
@@ -203,5 +216,109 @@ class SoapController extends ContainerAware
 		}
 	
 		return $count;
+=======
+
+	/**
+	 * Permet d'ajouter ou modifier un produit
+	 * @param $nom Le nom du produit a créer ou modifier
+	 * @param $ligneProduit Le nom de la ligne produit pour lequelle le produit est créé
+	 *
+	 * @Soap\Method("ajoutProduit")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("ligneProduit",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutProduitAction($nom,$ligneProduit){
+		//on teste si l'utilisateur a les droits pour accéder à cette fonction
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+		if(!is_string($nom) || !is_string($ligneProduit)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		try {
+
+			$pdo = $this->container->get('bdd_service')->getPdo();
+
+			//on verifie si il y a deja la ligne produit
+			$sql = "SELECT * FROM produit JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
+			WHERE produit.nom='" . $nom . "' AND ligne_produit.nom='".$ligneProduit."'";
+
+			//requête qui permet de voir si la ligne de produit existe
+			$sql_lp = "SELECT id FROM ligne_produit WHERE nom='" . $nom . "'";
+
+			//on exécute les requêtes
+			$resultat = $pdo->query($sql);
+			$resultat_lp = $pdo->query($sql_lp);
+
+			//si la ligne produit n'existe pas
+			if ($resultat->rowCount() == 0 && $resultat_lp->rowCount() > 0) {
+
+				while($ligne = $resultat_lp->fetch(PDO::FETCH_ASSOC))
+				{
+					$id = $ligne["id"];
+				}
+				//on insert le produit pour la ligne de produit $ligneProduit
+				$sql = "INSERT INTO produit(nom,ref_ligne_produit)VALUES('" . $nom . "','".$id."');";
+				$pdo->query($sql);
+
+				return "OK";
+
+			} //sinon soapfault
+			else {
+				return new SoapFault("Server", "Echec de l'enregistrement");
+			}
+
+		} catch (Exception $e) {
+			return new SoapFault("Server", "la ligne produit existe déjà");
+		}
+	}
+
+	/**
+	 * Permet d'ajouter ou modifier un produit
+	 * @param $nom Le nom du produit a créer ou modifier
+	 * @param $ligneProduit Le nom de la ligne produit pour lequelle le produit est créé
+	 *
+	 * @Soap\Method("getProduit")
+	 * @Soap\Param("count",phpType="int")
+	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("ligneproduit",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getProduitAction($count, $offset, $nom, $ligneproduit){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+
+		if(!is_string($nom) || !is_int($offset) || !is_int($count) || !is_string($ligneproduit)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+
+		//on récupere l'objet pdo connecté à la base du logiciel
+		$pdo = $this->container->get('bdd_service')->getPdo();
+
+		// Formation de la requete SQL selon les paramètres donnés
+		$sql = 'SELECT ligne_produit.nom, produit.nom FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+		if (!empty($nom) && !empty($ligneproduit))
+			$sql.='WHERE produit.nom='.$pdo->quote($nom).' AND ligne_produit.nom='.$pdo->quote($ligneproduit).'';
+		elseif (empty($nom) && !empty($ligneproduit))
+			$sql.='WHERE ligne_produit.nom='.$pdo->quote($ligneproduit).'';
+		elseif (!empty($nom) && empty($ligneproduit))
+			$sql.='WHERE produit.nom='.$pdo->quote($nom).'';
+		if($offset != 0) {
+			$sql.='LIMIT '.(int)$offset;
+			if ($count != 0)
+				$sql.=','.(int)$count;
+		}
+
+		//exécution de la requête
+		$resultat = array();
+
+		//on créé le tableau de retour à partir de la requête
+		foreach ($pdo->query($sql) as $ligne) {
+			array_push($resultat, $ligne['ligne_produit.nom']);
+			array_push($resultat,$ligne['produit.nom']);
+		}
+
+		//encodage json du tableau de résultat avec ligneproduit et produit
+		return json_encode($resultat);
+>>>>>>> 2ed81691947a46775d69d4bed12ce28916a9b14a
 	}
 }
