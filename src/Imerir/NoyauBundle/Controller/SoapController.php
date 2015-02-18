@@ -12,17 +12,42 @@ use BeSimple\SoapBundle\ServiceDefinition\Annotation as Soap;
 use Symfony\Component\DependencyInjection\ContainerAware;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
+/**
+ * Classe utilisant BeSimple SoapBundle afin de proposer un serveur SOAP.
+ * Le wsdl est produit automatiquement en suivant les indications des annotations PHP
+ * en en-tête PHP.
+ * 
+ * Liste des fonction du serveur SOAP : 
+ *   login, ajoutLigneProduit, getLigneProduit, setAttribut, getAttribut, ajoutProduit, 
+ *   getProduit. 
+ */
 class SoapController extends ContainerAware
 {
 	/**
+	 * @Soap\Method("fault")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function faultAction($nom) {
+		throw new \SoapFault("Cli","Vos identifiants de connexion sont invalides", 200);
+	}
+	
+	/**
+	 * Permet de connecter l'utilisateur côté serveur.
+	 * La fonction va chercher en base de données si l'authentification est bonne, si elle
+	 * l'est, sera créera une session Symfony, sinon une erreur est levée.
+	 * Une fois la connection effectuée, le client doit renvoyer le token fournit sous la 
+	 * forme de cookie SOAP sous le nom de PHPSESSID.
+	 * 
+	 * @param $username Le nom de l'utilisateur à connecter.
+	 * @param $passwd Le mot de passe de l'utilisateur.
+	 * 
 	 * @Soap\Method("login")
 	 * @Soap\Param("username",phpType="string")
 	 * @Soap\Param("passwd",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function loginAction($username, $passwd) {
-		//TODO securité SQL
-
 		//recupere la classe Utilisateur mappé à la table User dans la base de données
 		$dm = $this->container->get('doctrine')->getEntityManager();
 
@@ -50,7 +75,7 @@ class SoapController extends ContainerAware
 			$token = new UsernamePasswordToken($u->getUsername(), $u->getPassword(), 'main', $u->getRoles());
 			$context = $this->container->get('security.context');
 			$context->setToken($token);
-			//TODO controler le phpsessid
+
 			$retourJson = array('token'=>$this->container->get('request')->cookies->get('PHPSESSID'),
 				'username'=>$username,
 				'role'=>$u->getRoles()[0]);
@@ -176,11 +201,16 @@ class SoapController extends ContainerAware
 			}
 		}
 		else { // On ajoute un attribut
+			$sql = 'SELECT nom FROM attribut WHERE nom=\''.$pdo->quote($nom).'\'';
+			$resultat = $pdo->query($sql);
+			if($resultat->rowCount() !== 0) 
+				return new \SoapFault('Server','SA004 Le nom que vous avez choisi existe déjà.');
+				
 			//TODO VERIFIER SI L'ATTRIBUT EXISTE DEJA, si oui erreur
 			$sql = 'INSERT INTO attribut (nom) VALUES ('.$pdo->quote($nom).')';
 			$count = $pdo->exec($sql);
 			if ($count !== 1) { // Si problème insertion
-				return new SoapFault('Server','[SA004] Erreur lors de l\'enregistrement des données');
+				return new SoapFault('Server','[SA005] Erreur lors de l\'enregistrement des données');
 			}
 			$idAttribut = $pdo->lastInsertId(); // On recup l'id de l'attribut créé
 			
@@ -213,10 +243,18 @@ class SoapController extends ContainerAware
 	
 	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
-	 * @param $nom Le nom de l'attribut
-	 * @param $ligneProduits Les lignes produits concernée par l'attribut
-	 * @param $attributs Les valeurs d'attribut possible
-	 * @param $id L'id de l'attribut en cas de modification (mettre 0 en cas d'ajout)
+	 * Le résultat produit sera un tableau JSON de la forme : 
+	 *    -> nom
+	 *    -> id
+	 *    -> attributs (tableau)
+	 *    ----> valeurAttr
+	 *    -> lignes produit (tableau)
+	 *    ----> nomLigneProduit
+	 *    
+	 * @param $idLigneProduit L'id de la ligne produit dont on veut les attributs (0 pour tous les avoir)
+	 * @param $idAttribut Les lignes produits concernée par l'attribut
+	 * @param $avecValeurAttribut True si vous voulez récupèrer les valeur d'attributs possible
+	 * @param $avecLigneProduit True si vous voulez récupérer les lignes produit liées à l'attribut
 	 *
 	 * @Soap\Method("getAttribut")
 	 * @Soap\Param("idLigneProduit",phpType="int")
@@ -233,26 +271,45 @@ class SoapController extends ContainerAware
 			return new SoapFault('Server','[GA002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
-		$result = array();
+		$result = array(); // Tableau contenant le résultat
 		
 		// Si on a pas de critère c'est qu'on veut tout les attributs et on ne va pas récupérer les valeurs ni les lignes produits
 		if ($idLigneProduit === 0 && $idAttribut === 0) {
-			$sql = 'SELECT nom FROM attribut';
+			$sql = 'SELECT id, nom FROM attribut';
 			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-				array_push($result, $row['nom']);
+				$ligne = array('id'=>$row['id'], 'nom'=>$row['nom']);
+				array_push($result, $ligne);
 			}
 		}
-		else if ($idLigneProduit !== 0) {
-			$sql = 'SELECT a.nom FROM attribut a ';
-			if ($avecValeurAttribut)
+		// Si on cherche un attribut avec un id spécifique
+		else if ($idAttribut !== 0) {
+			if (true === $avecValeurAttribut) { // Si on veut les valeurs d'attributs, on les récupère
+				$sql = 'SELECT a.id, a.nom, v.libelle FROM attribut a ';
 				$sql .= 'JOIN valeur_attribut v ON v.ref_attribut=a.id ';
-			
-			$sql.='WHERE a.id='.(int)$idLigneProduit;
-			//if ($avecLigneProduit)
+				$sql.='WHERE a.id='.(int)$idAttribut;
 				
-			$result = $pdo->query($sql);
+				$result['attribut'] = array();
+				foreach ($pdo->query($sql) as $row) { // On ajoute tous les attributs à la réponse
+					$result['nom'] = $row['nom'];
+					$result['id'] = $row['id'];
+					$ligne = array('valeurAttr'=>$row['libelle']);
+					array_push($result['attribut'], $ligne);
+				}
+			}
+			if (true === $avecLigneProduit) { // Si on veut les lignes produits, on les récupère
+				$sql = 'SELECT l.nom AS nomLigneProduit FROM attribut a ';
+				$sql.= 'JOIN ligne_produit_a_pour_attribut lp ON a.id=lp.ref_attribut ';
+				$sql.= 'JOIN ligne_produit l ON ref_ligne_produit=l.id ';
+				$sql.= 'WHERE a.id='.(int)$idAttribut;
+				
+				$result['ligneProduit'] = array();
+				foreach ($pdo->query($sql) as $row) { // On ajoute toutes les lignes produit à la réponse
+					$ligne = array('nomLigneProduit'=>$row['nomLigneProduit']);
+					array_push($result['ligneProduit'], $ligne);
+				}
+			}
 		}
-		
+		// TODO faire la recherche par ligne produit
 		return json_encode($result);
 	}
 	

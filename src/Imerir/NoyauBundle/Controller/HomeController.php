@@ -15,6 +15,8 @@ class HomeController extends Controller
 		$user = $userManager->findUserByUsername($this->container->get('security.context')
 				->getToken()
 				->getUser());*/
+    	
+    	$s = new \SoapFault("Server", "la ligne produit existe déjà");
 		
         return $this->render('ImerirNoyauBundle:default:index.html.twig');
     }
