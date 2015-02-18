@@ -91,15 +91,8 @@ class SoapController extends ContainerAware
 			else {
 				return new SoapFault("Server", "Echec de l'enregistrement");
 			}
-
-<<<<<<< HEAD
-		}
-		catch(Exception $e){
-			return new SoapFault("Server","la ligne produit existe déjà");
-=======
 		} catch (Exception $e) {
 			return new SoapFault("Server", "la ligne produit existe déjà");
->>>>>>> 2ed81691947a46775d69d4bed12ce28916a9b14a
 		}
 	}
 	
@@ -143,7 +136,6 @@ class SoapController extends ContainerAware
 		
 		return json_encode($result);
 	}
-<<<<<<< HEAD
 	
 	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
@@ -216,8 +208,8 @@ class SoapController extends ContainerAware
 		}
 	
 		return $count;
-=======
-
+	}
+	
 	/**
 	 * Permet d'ajouter ou modifier un produit
 	 * @param $nom Le nom du produit a créer ou modifier
@@ -319,6 +311,5 @@ class SoapController extends ContainerAware
 
 		//encodage json du tableau de résultat avec ligneproduit et produit
 		return json_encode($resultat);
->>>>>>> 2ed81691947a46775d69d4bed12ce28916a9b14a
 	}
 }
