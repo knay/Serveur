@@ -14,20 +14,6 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
 class SoapController extends ContainerAware
 {
-	private $dbDsn = null;    // Le dsn du serveur de base de données
-	private $dbUsr = null;    // L'utilisateur du serveur de base de données
-	private $dbPasswd = null; // Le mot de passe de l'utilisateur sur le serveur de base de données
-	
-	/**
-	 * @Soap\Method("hello")
-	 * @Soap\Param("name", phpType = "string")
-	 * @Soap\Result(phpType = "string")
-	 */
-	public function helloAction($name)
-	{
-		return sprintf('Hello %s!', $name);
-	}
-
 	/**
 	 * @Soap\Method("login")
 	 * @Soap\Param("username",phpType="string")
@@ -101,6 +87,9 @@ class SoapController extends ContainerAware
 
 		}
 		catch(Exception $e){
+			// TODO ETIENNE : Ne pas écrire sur la sortir standard. Tu casserais le XML produit par SOAP
+			echo 'Erreur : '.$e->getMessage().'<br />';
+			echo 'N° : '.$e->getCode();
 			return new SoapFault("Server","la ligne produit existe déjà");
 		}
 	}
