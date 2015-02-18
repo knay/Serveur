@@ -272,37 +272,32 @@ class SoapController extends ContainerAware
 			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
 		if(!is_string($nom) || !is_string($ligneProduit)) // Vérif des arguments
 			return new SoapFault('Server','[LP002] Paramètres invalides.');
+
 		try {
 
 			$pdo = $this->container->get('bdd_service')->getPdo();
 
-			//on verifie si il y a deja la ligne produit
+			//on verifie si il y a deja le produit
 			$sql = "SELECT * FROM produit JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
-			WHERE produit.nom='" . $nom . "' AND ligne_produit.nom='".$ligneProduit."'";
+			WHERE produit.nom=" .$pdo->quote($nom). " AND ligne_produit.nom=".$pdo->quote($ligneProduit)."";
 
-			//requête qui permet de voir si la ligne de produit existe
-			$sql_lp = "SELECT id FROM ligne_produit WHERE nom='" . $nom . "'";
+			//requête qui permet de récupérer l'identifiant de la ligne produit
+			$sql_lp = "SELECT * FROM ligne_produit WHERE nom=".$pdo->quote($ligneProduit)."";
 
 			//on exécute les requêtes
 			$resultat = $pdo->query($sql);
-			$resultat_lp = $pdo->query($sql_lp);
 
-			//si la ligne produit n'existe pas
-			if ($resultat->rowCount() == 0 && $resultat_lp->rowCount() > 0) {
+			if($resultat->rowCount() == 0) {
 
-				while($ligne = $resultat_lp->fetch(PDO::FETCH_ASSOC))
-				{
-					$id = $ligne["id"];
+				//on recupère l'identifiant de la ligne produit
+				foreach ($pdo->query($sql_lp) as $row) {
+					$id = $row["id"];
 				}
 				//on insert le produit pour la ligne de produit $ligneProduit
 				$sql = "INSERT INTO produit(nom,ref_ligne_produit)VALUES('" . $nom . "','".$id."');";
 				$pdo->query($sql);
 
 				return "OK";
-
-			} //sinon soapfault
-			else {
-				return new SoapFault("Server", "Echec de l'enregistrement");
 			}
 
 		} catch (Exception $e) {
