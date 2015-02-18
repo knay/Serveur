@@ -191,4 +191,53 @@ class SoapController extends ContainerAware
 			return new SoapFault("Server", "la ligne produit existe déjà");
 		}
 	}
+
+	/**
+	 * Permet d'ajouter ou modifier un produit
+	 * @param $nom Le nom du produit a créer ou modifier
+	 * @param $ligneProduit Le nom de la ligne produit pour lequelle le produit est créé
+	 *
+	 * @Soap\Method("getProduit")
+	 * @Soap\Param("count",phpType="int")
+	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("ligneproduit",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getProduitAction($count, $offset, $nom, $ligneproduit){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+
+		if(!is_string($nom) || !is_int($offset) || !is_int($count) || !is_string($ligneproduit)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+
+		//on récupere l'objet pdo connecté à la base du logiciel
+		$pdo = $this->container->get('bdd_service')->getPdo();
+
+		// Formation de la requete SQL selon les paramètres donnés
+		$sql = 'SELECT ligne_produit.nom, produit.nom FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+		if (!empty($nom) && !empty($ligneproduit))
+			$sql.='WHERE produit.nom='.$pdo->quote($nom).' AND ligne_produit.nom='.$pdo->quote($ligneproduit).'';
+		elseif (empty($nom) && !empty($ligneproduit))
+			$sql.='WHERE ligne_produit.nom='.$pdo->quote($ligneproduit).'';
+		elseif (!empty($nom) && empty($ligneproduit))
+			$sql.='WHERE produit.nom='.$pdo->quote($nom).'';
+		if($offset != 0) {
+			$sql.='LIMIT '.(int)$offset;
+			if ($count != 0)
+				$sql.=','.(int)$count;
+		}
+
+		//exécution de la requête
+		$resultat = array();
+
+		//on créé le tableau de retour à partir de la requête
+		foreach ($pdo->query($sql) as $ligne) {
+			array_push($resultat, $ligne['ligne_produit.nom']);
+			array_push($resultat,$ligne['produit.nom']);
+		}
+
+		//encodage json du tableau de résultat avec ligneproduit et produit
+		return json_encode($resultat);
+	}
 }
