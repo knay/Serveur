@@ -176,6 +176,7 @@ class SoapController extends ContainerAware
 			}
 		}
 		else { // On ajoute un attribut
+			//TODO VERIFIER SI L'ATTRIBUT EXISTE DEJA, si oui erreur
 			$sql = 'INSERT INTO attribut (nom) VALUES ('.$pdo->quote($nom).')';
 			$count = $pdo->exec($sql);
 			if ($count !== 1) { // Si problème insertion
