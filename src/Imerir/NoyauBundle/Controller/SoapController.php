@@ -211,6 +211,51 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
+	 * @param $nom Le nom de l'attribut
+	 * @param $ligneProduits Les lignes produits concernée par l'attribut
+	 * @param $attributs Les valeurs d'attribut possible
+	 * @param $id L'id de l'attribut en cas de modification (mettre 0 en cas d'ajout)
+	 *
+	 * @Soap\Method("getAttribut")
+	 * @Soap\Param("idLigneProduit",phpType="int")
+	 * @Soap\Param("idAttribut",phpType="int")
+	 * @Soap\Param("avecValeurAttribut",phpType="boolean")
+	 * @Soap\Param("avecLigneProduit",phpType="boolean")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAttributAction($idLigneProduit, $idAttribut, $avecValeurAttribut, $avecLigneProduit) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_int($idLigneProduit) || !is_int($idAttribut) || !is_bool($avecValeurAttribut) || !is_bool($avecLigneProduit)) // Vérif des arguments
+			return new SoapFault('Server','[GA002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		$result = array();
+		
+		// Si on a pas de critère c'est qu'on veut tout les attributs et on ne va pas récupérer les valeurs ni les lignes produits
+		if ($idLigneProduit === 0 && $idAttribut === 0) {
+			$sql = 'SELECT nom FROM attribut';
+			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+				array_push($result, $row['nom']);
+			}
+		}
+		else if ($idLigneProduit !== 0) {
+			$sql = 'SELECT a.nom FROM attribut a ';
+			if ($avecValeurAttribut)
+				$sql .= 'JOIN valeur_attribut v ON v.ref_attribut=a.id ';
+			
+			$sql.='WHERE a.id='.(int)$idLigneProduit;
+			//if ($avecLigneProduit)
+				
+			$result = $pdo->query($sql);
+		}
+		
+		return json_encode($result);
+	}
+	
+	/**
 	 * Permet d'ajouter ou modifier un produit
 	 * @param $nom Le nom du produit a créer ou modifier
 	 * @param $ligneProduit Le nom de la ligne produit pour lequelle le produit est créé
