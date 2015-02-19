@@ -397,7 +397,8 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo();
 
 		// Formation de la requete SQL selon les paramètres donnés
-		$sql = 'SELECT ligne_produit.nom, produit.nom FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+		$sql = 'SELECT ligne_produit.nom as "lp_nom", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+
 		if (!empty($nom) && !empty($ligneproduit))
 			$sql.='WHERE produit.nom='.$pdo->quote($nom).' AND ligne_produit.nom='.$pdo->quote($ligneproduit).'';
 		elseif (empty($nom) && !empty($ligneproduit))
@@ -415,11 +416,12 @@ class SoapController extends ContainerAware
 
 		//on créé le tableau de retour à partir de la requête
 		foreach ($pdo->query($sql) as $ligne) {
-			array_push($resultat, $ligne['ligne_produit.nom']);
-			array_push($resultat,$ligne['produit.nom']);
+			$row = array('lp'=>$ligne['lp_nom'], 'p' => $ligne['p_nom']);
+			array_push($resultat,$row);
 		}
 
 		//encodage json du tableau de résultat avec ligneproduit et produit
 		return json_encode($resultat);
+
 	}
 }
