@@ -194,24 +194,44 @@ class SoapController extends ContainerAware
 		// Si on veut modifier un attribut existant
 		if ($id !== 0) {
 			// Formation de la requete SQL
-			//$sql = 'SELECT nom FROM attribut WHERE id='.(int)$id.'';
-			//$resultat = $pdo->query($sql);
+			$sql = 'SELECT nom FROM attribut WHERE id=\''.(int)$id.'\'';
+			$count = $pdo->query($sql);
+			
 			// Si l'attribut n'existe pas
-			/*if($resultat->rowCount() === 0) {
+			if($count->rowCount() === 0) {
 				return new \SoapFault('Server','[SA004] L\'attribut choisi n\'existe pas. Peut-être vouliez-vous ajouter un attribut ?');			
 			}
 			
 			$sql = 'UPDATE attribut SET nom='.$pdo->quote($nom).' WHERE id=\''.(int)$id.'\''; // On modifie le nom de l'attribut
-			$resultat = $pdo->query($sql);*/
+			$count = $pdo->query($sql);
 			
-			/*$sql = 'DELETE FROM valeur_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
-			$resultat = $pdo->query($sql);
+			$sql = 'DELETE FROM valeur_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
+			$count = $pdo->query($sql);
 			
 			// Insertion des valeurs d'attribut possible
 			foreach ($tabAttributs as $libelle) {
-				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle) VALUES ('.$idAttribut.', '.$pdo->quote($libelle).')';
+				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle) VALUES (\''.(int)$id.'\', '.$pdo->quote($libelle).')';
 				$count = $pdo->exec($sql);
-			}*/
+			}
+			
+			$sql = 'DELETE FROM ligne_produit_a_pour_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
+			$count = $pdo->query($sql);
+			
+			foreach ($tabLgProduit as $produit) {
+				$sql = 'SELECT id FROM ligne_produit WHERE nom='.$pdo->quote($produit);
+				$resultat = $pdo->query($sql);
+				if($resultat->rowCount() === 0) // Si pas de résultat, la ligne produit n'existe pas et on continue 
+					continue;
+				
+				// On récup l'id de la ligne produit
+				foreach  ($resultat as $row) {
+					$idLigneProduit = $row['id'];
+				}
+				
+				$sql = 'INSERT INTO ligne_produit_a_pour_attribut (ref_ligne_produit, ref_attribut)' .
+						'VALUES ('.$idLigneProduit.', '.$id.')'; 
+				$count = $pdo->exec($sql);
+			}
 		}
 		else { // On ajoute un attribut
 			$sql = 'SELECT nom FROM attribut WHERE nom='.$pdo->quote($nom);
@@ -269,17 +289,19 @@ class SoapController extends ContainerAware
 	 * @param $avecLigneProduit True si vous voulez récupérer les lignes produit liées à l'attribut
 	 *
 	 * @Soap\Method("getAttribut")
+	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("idLigneProduit",phpType="int")
 	 * @Soap\Param("idAttribut",phpType="int")
 	 * @Soap\Param("avecValeurAttribut",phpType="boolean")
 	 * @Soap\Param("avecLigneProduit",phpType="boolean")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getAttributAction($idLigneProduit, $idAttribut, $avecValeurAttribut, $avecLigneProduit) {
+	public function getAttributAction($nom, $idLigneProduit, $idAttribut, $avecValeurAttribut, $avecLigneProduit) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
 	
-		if(!is_int($idLigneProduit) || !is_int($idAttribut) || !is_bool($avecValeurAttribut) || !is_bool($avecLigneProduit)) // Vérif des arguments
+		if(!is_int($idLigneProduit) || !is_int($idAttribut) || !is_bool($avecValeurAttribut) 
+		|| !is_bool($avecLigneProduit) || !is_string($nom)) // Vérif des arguments
 			return new SoapFault('Server','[GA002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
@@ -287,7 +309,11 @@ class SoapController extends ContainerAware
 		
 		// Si on a pas de critère c'est qu'on veut tout les attributs et on ne va pas récupérer les valeurs ni les lignes produits
 		if ($idLigneProduit === 0 && $idAttribut === 0) {
-			$sql = 'SELECT id, nom FROM attribut';
+			$sql = 'SELECT id, nom FROM attribut ';
+			if (!empty($nom)) {
+				$nom = '%'.$nom.'%';
+				$sql.='WHERE nom LIKE '.$pdo->quote($nom);
+			}
 			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 				$ligne = array('id'=>$row['id'], 'nom'=>$row['nom']);
 				array_push($result, $ligne);
