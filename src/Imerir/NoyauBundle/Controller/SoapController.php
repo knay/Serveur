@@ -146,7 +146,7 @@ class SoapController extends ContainerAware
 		$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT nom FROM ligne_produit ';
+		$sql = 'SELECT id, nom FROM ligne_produit ';
 		if (!empty($nom))
 			$sql.='WHERE nom='.$pdo->quote($nom).' ';
 		if($offset != 0) {
@@ -156,7 +156,8 @@ class SoapController extends ContainerAware
 		}
 		
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			array_push($result, $row['nom']);
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom']);
+			array_push($result, $ligne);
 		}
 		
 		return json_encode($result);
@@ -178,10 +179,10 @@ class SoapController extends ContainerAware
 	 */
 	public function setAttributAction($nom, $lignesProduits, $attributs, $id) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[SA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[SA001] Vous n\'avez pas les droits nécessaires.');
 	
 		if(!is_string($nom) || !is_string($lignesProduits) || !is_string($attributs) || !is_int($id)) // Vérif des arguments
-			return new SoapFault('Server','[SA002] Paramètres invalides.');
+			return new \SoapFault('Server','[SA002] Paramètres invalides.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		
@@ -193,24 +194,35 @@ class SoapController extends ContainerAware
 		// Si on veut modifier un attribut existant
 		if ($id !== 0) {
 			// Formation de la requete SQL
-			$sql = 'SELECT nom FROM attribut WHERE id=\''.(int)$id.'\'';
-			$resultat = $pdo->query($sql);
+			//$sql = 'SELECT nom FROM attribut WHERE id='.(int)$id.'';
+			//$resultat = $pdo->query($sql);
 			// Si l'attribut n'existe pas
-			if($resultat->rowCount() === 0) {
-				// TODO GERER LE CAS DE LA MODIF
+			/*if($resultat->rowCount() === 0) {
+				return new \SoapFault('Server','[SA004] L\'attribut choisi n\'existe pas. Peut-être vouliez-vous ajouter un attribut ?');			
 			}
+			
+			$sql = 'UPDATE attribut SET nom='.$pdo->quote($nom).' WHERE id=\''.(int)$id.'\''; // On modifie le nom de l'attribut
+			$resultat = $pdo->query($sql);*/
+			
+			/*$sql = 'DELETE FROM valeur_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
+			$resultat = $pdo->query($sql);
+			
+			// Insertion des valeurs d'attribut possible
+			foreach ($tabAttributs as $libelle) {
+				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle) VALUES ('.$idAttribut.', '.$pdo->quote($libelle).')';
+				$count = $pdo->exec($sql);
+			}*/
 		}
 		else { // On ajoute un attribut
-			$sql = 'SELECT nom FROM attribut WHERE nom=\''.$pdo->quote($nom).'\'';
+			$sql = 'SELECT nom FROM attribut WHERE nom='.$pdo->quote($nom);
 			$resultat = $pdo->query($sql);
-			if($resultat->rowCount() !== 0) 
-				return new \SoapFault('Server','SA004 Le nom que vous avez choisi existe déjà.');
+			if($resultat->rowCount() !== 0)
+				return new \SoapFault('Server','[SA005] Le nom que vous avez choisi existe déjà. Peut-être vouliez-vous modifier un attribut existant ?');
 				
-			//TODO VERIFIER SI L'ATTRIBUT EXISTE DEJA, si oui erreur
 			$sql = 'INSERT INTO attribut (nom) VALUES ('.$pdo->quote($nom).')';
 			$count = $pdo->exec($sql);
 			if ($count !== 1) { // Si problème insertion
-				return new SoapFault('Server','[SA005] Erreur lors de l\'enregistrement des données');
+				return new \SoapFault('Server','[SA006] Erreur lors de l\'enregistrement des données');
 			}
 			$idAttribut = $pdo->lastInsertId(); // On recup l'id de l'attribut créé
 			
