@@ -425,6 +425,7 @@ class SoapController extends ContainerAware
 		//on récupere l'objet pdo connecté à la base du logiciel
 		$pdo = $this->container->get('bdd_service')->getPdo();
 
+
 		// Formation de la requete SQL selon les paramètres donnés
 		$sql = 'SELECT ligne_produit.nom as "lp_nom", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
 
