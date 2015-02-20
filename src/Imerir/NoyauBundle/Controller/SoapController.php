@@ -165,7 +165,36 @@ class SoapController extends ContainerAware
 		
 		return json_encode($result);
 	}
-	
+
+	/**
+	 * Permet de modifier une ligne produit.
+	 * @param $nom Si vous voulez une ligne de produit spécifique (interet ?).
+	 *
+	 * @Soap\Method("modifLigneProduit")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifLigneProduitAction($id,$nom) {
+
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if(!is_int($id)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètre invalide.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		//$result = array();
+
+		// Formation de la requete SQL
+		$sql = 'UPDATE ligne_produit SET nom='.$pdo->quote($nom).' WHERE id='.$pdo->quote($id).' ';
+
+        $pdo->query($sql);
+		return "OK";
+	}
+
+
 	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
 	 * @param $nom Le nom de l'attribut
