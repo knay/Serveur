@@ -146,7 +146,7 @@ class SoapController extends ContainerAware
 		$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT nom FROM ligne_produit ';
+		$sql = 'SELECT id, nom FROM ligne_produit ';
 		if (!empty($nom))
 			$sql.='WHERE nom='.$pdo->quote($nom).' ';
 		if($offset != 0) {
@@ -156,7 +156,8 @@ class SoapController extends ContainerAware
 		}
 		
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			array_push($result,$row['nom']);
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom']);
+			array_push($result, $ligne);
 		}
 		
 		return json_encode($result);
@@ -178,10 +179,10 @@ class SoapController extends ContainerAware
 	 */
 	public function setAttributAction($nom, $lignesProduits, $attributs, $id) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[SA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[SA001] Vous n\'avez pas les droits nécessaires.');
 	
 		if(!is_string($nom) || !is_string($lignesProduits) || !is_string($attributs) || !is_int($id)) // Vérif des arguments
-			return new SoapFault('Server','[SA002] Paramètres invalides.');
+			return new \SoapFault('Server','[SA002] Paramètres invalides.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		
@@ -194,23 +195,54 @@ class SoapController extends ContainerAware
 		if ($id !== 0) {
 			// Formation de la requete SQL
 			$sql = 'SELECT nom FROM attribut WHERE id=\''.(int)$id.'\'';
-			$resultat = $pdo->query($sql);
+			$count = $pdo->query($sql);
+			
 			// Si l'attribut n'existe pas
-			if($resultat->rowCount() === 0) {
-				// TODO GERER LE CAS DE LA MODIF
+			if($count->rowCount() === 0) {
+				return new \SoapFault('Server','[SA004] L\'attribut choisi n\'existe pas. Peut-être vouliez-vous ajouter un attribut ?');			
+			}
+			
+			$sql = 'UPDATE attribut SET nom='.$pdo->quote($nom).' WHERE id=\''.(int)$id.'\''; // On modifie le nom de l'attribut
+			$count = $pdo->query($sql);
+			
+			$sql = 'DELETE FROM valeur_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
+			$count = $pdo->query($sql);
+			
+			// Insertion des valeurs d'attribut possible
+			foreach ($tabAttributs as $libelle) {
+				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle) VALUES (\''.(int)$id.'\', '.$pdo->quote($libelle).')';
+				$count = $pdo->exec($sql);
+			}
+			
+			$sql = 'DELETE FROM ligne_produit_a_pour_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
+			$count = $pdo->query($sql);
+			
+			foreach ($tabLgProduit as $produit) {
+				$sql = 'SELECT id FROM ligne_produit WHERE nom='.$pdo->quote($produit);
+				$resultat = $pdo->query($sql);
+				if($resultat->rowCount() === 0) // Si pas de résultat, la ligne produit n'existe pas et on continue 
+					continue;
+				
+				// On récup l'id de la ligne produit
+				foreach  ($resultat as $row) {
+					$idLigneProduit = $row['id'];
+				}
+				
+				$sql = 'INSERT INTO ligne_produit_a_pour_attribut (ref_ligne_produit, ref_attribut)' .
+						'VALUES ('.$idLigneProduit.', '.$id.')'; 
+				$count = $pdo->exec($sql);
 			}
 		}
 		else { // On ajoute un attribut
-			$sql = 'SELECT nom FROM attribut WHERE nom=\''.$pdo->quote($nom).'\'';
+			$sql = 'SELECT nom FROM attribut WHERE nom='.$pdo->quote($nom);
 			$resultat = $pdo->query($sql);
-			if($resultat->rowCount() !== 0) 
-				return new \SoapFault('Server','SA004 Le nom que vous avez choisi existe déjà.');
+			if($resultat->rowCount() !== 0)
+				return new \SoapFault('Server','[SA005] Le nom que vous avez choisi existe déjà. Peut-être vouliez-vous modifier un attribut existant ?');
 				
-			//TODO VERIFIER SI L'ATTRIBUT EXISTE DEJA, si oui erreur
 			$sql = 'INSERT INTO attribut (nom) VALUES ('.$pdo->quote($nom).')';
 			$count = $pdo->exec($sql);
 			if ($count !== 1) { // Si problème insertion
-				return new SoapFault('Server','[SA005] Erreur lors de l\'enregistrement des données');
+				return new \SoapFault('Server','[SA006] Erreur lors de l\'enregistrement des données');
 			}
 			$idAttribut = $pdo->lastInsertId(); // On recup l'id de l'attribut créé
 			
@@ -257,17 +289,19 @@ class SoapController extends ContainerAware
 	 * @param $avecLigneProduit True si vous voulez récupérer les lignes produit liées à l'attribut
 	 *
 	 * @Soap\Method("getAttribut")
+	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("idLigneProduit",phpType="int")
 	 * @Soap\Param("idAttribut",phpType="int")
 	 * @Soap\Param("avecValeurAttribut",phpType="boolean")
 	 * @Soap\Param("avecLigneProduit",phpType="boolean")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getAttributAction($idLigneProduit, $idAttribut, $avecValeurAttribut, $avecLigneProduit) {
+	public function getAttributAction($nom, $idLigneProduit, $idAttribut, $avecValeurAttribut, $avecLigneProduit) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
 	
-		if(!is_int($idLigneProduit) || !is_int($idAttribut) || !is_bool($avecValeurAttribut) || !is_bool($avecLigneProduit)) // Vérif des arguments
+		if(!is_int($idLigneProduit) || !is_int($idAttribut) || !is_bool($avecValeurAttribut) 
+		|| !is_bool($avecLigneProduit) || !is_string($nom)) // Vérif des arguments
 			return new SoapFault('Server','[GA002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
@@ -275,7 +309,11 @@ class SoapController extends ContainerAware
 		
 		// Si on a pas de critère c'est qu'on veut tout les attributs et on ne va pas récupérer les valeurs ni les lignes produits
 		if ($idLigneProduit === 0 && $idAttribut === 0) {
-			$sql = 'SELECT id, nom FROM attribut';
+			$sql = 'SELECT id, nom FROM attribut ';
+			if (!empty($nom)) {
+				$nom = '%'.$nom.'%';
+				$sql.='WHERE nom LIKE '.$pdo->quote($nom);
+			}
 			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 				$ligne = array('id'=>$row['id'], 'nom'=>$row['nom']);
 				array_push($result, $ligne);
