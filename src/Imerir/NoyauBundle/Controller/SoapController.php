@@ -456,7 +456,7 @@ class SoapController extends ContainerAware
 
 
 		// Formation de la requete SQL selon les paramètres donnés
-		$sql = 'SELECT ligne_produit.nom as "lp_nom", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+		$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
 
 		if (!empty($nom) && !empty($ligneproduit))
 			$sql.='WHERE produit.nom='.$pdo->quote($nom).' AND ligne_produit.nom='.$pdo->quote($ligneproduit).'';
@@ -478,12 +478,44 @@ class SoapController extends ContainerAware
 
 		//on créé le tableau de retour à partir de la requête
 		foreach ($pdo->query($sql) as $ligne) {
-			$row = array('lp'=>$ligne['lp_nom'], 'p' => $ligne['p_nom']);
+			$row = array('lp'=>$ligne['lp_nom'],'p_id'=>$ligne['p_id'], 'p' => $ligne['p_nom']);
 			array_push($resultat,$row);
 		}
 
 		//encodage json du tableau de résultat avec ligneproduit et produit
 		return json_encode($resultat);
+
+	}
+	/**
+	 * Permet de modifier un produit
+	 *
+	 * @Soap\Method("modifProduit")
+	 * @Soap\Param("nom_lp",phpType="string")
+	 * @Soap\Param("nom_p",phpType="string")
+	 * @Soap\Param("id_p",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifProduitAction($nom_lp,$nom_p, $id_p){
+
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+
+		if(!is_string($nom_lp) || !is_int($id_p) || !is_string($nom_p)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+
+		//on récupere l'objet pdo connecté à la base du logiciel
+		$pdo = $this->container->get('bdd_service')->getPdo();
+
+		$sql_recup_lp_id = 'SELECT ligne_produit.id "lp_id" FROM ligne_produit WHERE ligne_produit.nom='.$pdo->quote($nom_lp).'';
+
+		foreach ($pdo->query($sql_recup_lp_id) as $ligne_lp) {
+			$id_lp = $ligne_lp['lp_id'];
+		}
+		// Formation de la requete SQL selon les paramètres donnés
+		$sql = 'UPDATE produit SET nom='.$pdo->quote($nom_p).', ref_ligne_produit='.$pdo->quote($id_lp).' WHERE id='.$pdo->quote($id_p).'';
+
+		$pdo->query($sql);
+		return "OK";
 
 	}
 }
