@@ -150,9 +150,12 @@ class SoapController extends ContainerAware
 		if (!empty($nom))
 			$sql.='WHERE nom='.$pdo->quote($nom).' ';
 		if($offset != 0) {
-			$sql.='LIMIT '.(int)$offset;
+			$sql.=' ORDER BY nom ASC LIMIT '.(int)$offset;
 			if ($count != 0)
 				$sql.=','.(int)$count;
+		}
+		else{
+			$sql .=' ORDER BY nom ASC';
 		}
 		
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
@@ -432,9 +435,12 @@ class SoapController extends ContainerAware
 		elseif (!empty($nom) && empty($ligneproduit))
 			$sql.='WHERE produit.nom='.$pdo->quote($nom).'';
 		if($offset != 0) {
-			$sql.='LIMIT '.(int)$offset;
+			$sql.='ORDER BY ligne_produit.nom ASC LIMIT '.(int)$offset;
 			if ($count != 0)
 				$sql.=','.(int)$count;
+		}
+		else{
+			$sql .= 'ORDER BY ligne_produit.nom ASC';
 		}
 
 		//exécution de la requête
