@@ -156,7 +156,7 @@ class SoapController extends ContainerAware
 		}
 		
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			array_push($result, $row['nom']);
+			array_push($result,$row['nom']);
 		}
 		
 		return json_encode($result);
