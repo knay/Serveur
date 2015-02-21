@@ -164,6 +164,56 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * Permet de récupèrer les attributs d'un produit suivant son nom.
+	 * @param $nom Le nom du produit dont on chercher les attributs.
+	 * 
+	 * @Soap\Method("getAttributFromNomProduit")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAttributFromNomProduitAction($nom) {
+		if (!($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) && 
+			!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[AFNP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($nom)) // Vérif des arguments
+			return new \SoapFault('Server','[AFNP002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		$tabValAttribut = array();
+	
+		// Formation de la requete SQL
+		$sql = 'SELECT att_nom AS nom, libelle FROM (
+				SELECT produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle
+				FROM produit 
+				JOIN ligne_produit ON ligne_produit.id = produit.ref_ligne_produit
+				JOIN ligne_produit_a_pour_attribut ON ligne_produit_a_pour_attribut.ref_ligne_produit = ligne_produit.id
+				JOIN attribut ON attribut.id=ligne_produit_a_pour_attribut.ref_attribut
+				JOIN valeur_attribut ON attribut.id = valeur_attribut.ref_attribut
+				)t
+				WHERE nom='.$pdo->quote($nom).
+			   'GROUP BY att_nom, libelle';
+	
+		$dernierNomAttribut = '';
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			if ($dernierNomAttribut === '') { // Premier tour de boucle, on a pas encore de nom d'attribut
+				$dernierNomAttribut = $row['nom'];
+			}
+			
+			if ($row['nom'] !== $dernierNomAttribut) { // Si on change de nom d'attribut, on a fini de travailler avec ses valeurs donc on push
+				array_push($result, array('nom'=>$dernierNomAttribut, 'valeurs'=>$tabValAttribut));
+				$tabValAttribut = array();
+				$dernierNomAttribut = $row['nom'];
+			}
+			array_push($tabValAttribut, $row['libelle']);
+		}
+		array_push($result, array('nom'=>$dernierNomAttribut, 'valeurs'=>$tabValAttribut));
+						
+		return json_encode($result);
+	}
+	
+	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
 	 * @param $nom Le nom de l'attribut
 	 * @param $ligneProduits Les lignes produits concernée par l'attribut
