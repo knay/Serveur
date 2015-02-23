@@ -193,7 +193,140 @@ class SoapController extends ContainerAware
         $pdo->query($sql);
 		return "OK";
 	}
-
+	
+	/**
+	 * Permet de faire un inventaire d'articles.
+	 * Prend en paramètre un tableau json d'articles au format : 
+	 *   -> codeBarre = $codeBarre
+	 *   -> produit = $nomProduit
+	 *   -> quantite = $quantite
+	 *   -> attributs = 
+	 *   ----> $nomAttribut1 = $valAttribut1
+	 *   ----> $nomAttribut2 = $valAttribut2
+	 *   ----> ...
+	 * 
+	 * @param articles Un chaine de caractère JSON correspondant à un tableau ayant le format décrit ci-dessus.
+	 * 
+	 * @Soap\Method("faireInventaire")
+	 * @Soap\Param("articles",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function faireInventaireAction($articles) {
+		if (!($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) && 
+			!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[INV001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($articles)) // Vérif des arguments
+			return new \SoapFault('Server','[INV002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$tabArticles = json_decode($articles);
+		
+		foreach($tabArticles as $article) {
+			$code_barre = $article->codeBarre;
+			$nom_produit = $article->produit;
+			$quantite = $article->quantite;
+			$attributs = $article->attributs;
+			
+			if(empty($code_barre)) // Si pas de code barre on enregistre pas c'est pas normal
+				break;
+			
+			$sql = 'SELECT id FROM article WHERE code_barre='.$pdo->quote($code_barre); // On cherche si l'article existe ou non
+			$resultat = $pdo->query($sql);
+			
+			if ($resultat->rowCount() == 0) { // Si l'article n'existe pas on l'ajoute
+				$sql = 'SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit); // On récup l'id du produit
+				$resultat = $pdo->query($sql);
+				
+				foreach ($pdo->query($sql) as $row) {
+					$idProduit = $row['id'];
+				}
+				
+				$sql = 'INSERT INTO article(ref_produit, code_barre, est_visible) 
+					    VALUE (\''.$idProduit.'\', '.$pdo->quote($code_barre).', TRUE)';
+				$resultat = $pdo->query($sql);
+				$idArticle = $pdo->lastInsertId(); // On récup l'id de l'article créé
+			}
+			else { // Si l'article existe on recup juste son ID (TODO il faut permettre de modifier la ref produit)
+				foreach ($resultat as $row) {
+					$idArticle = $row['id'];
+				}
+				$sql = 'UPDATE article SET ref_produit=
+						(SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit).') 
+					    WHERE article.id = \''.$idArticle.'\'';
+				$resultat = $pdo->query($sql);
+			}
+			
+			$sql = 'INSERT INTO mouvement_stock (ref_article, quantite_mouvement, date_mouvement, est_inventaire)
+					VALUES (\''.$idArticle.'\', '.$quantite.', NOW(), TRUE)'; // Insertion du mouvement de stock
+			$resultat = $pdo->query($sql);
+			
+			$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\''.$idArticle.'\'';
+			$resultat = $pdo->query($sql); // On vide la table de correspondance pour cet article
+			
+			// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
+			foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
+				$sql = 'SELECT valeur_attribut.id AS vaid, attribut.id AS aid FROM valeur_attribut
+				        JOIN attribut ON ref_attribut = attribut.id
+				        WHERE attribut.nom='.$pdo->quote($nomAttribut).' AND valeur_attribut.libelle='.$pdo->quote($libelleValeurAttribut);
+				
+				foreach ($pdo->query($sql) as $row) {
+					$idValAttribut = $row['vaid'];
+				}
+				
+				$sql = 'INSERT INTO article_a_pour_val_attribut (ref_article, ref_val_attribut)
+						VALUE (\''.$idArticle.'\', \''.$idValAttribut.'\')'; // Insertion de la valeur attribut
+				$resultat = $pdo->query($sql);
+			}
+		}
+		
+		return '';
+	}
+	
+	
+	/**
+	 * Permet de récupérer un article ainsi que ces attributs et son produit référent
+	 * à partir de son code barre.
+	 * Renvoie une reponse json sous la forme :
+	 *    -> nomProduit = $nom
+	 *    -> attributs =
+	 *    ----> attribut1 = $valAttribut1
+	 *    ----> attribut2 = $valAttribut2
+	 *    
+	 * @param $codeBarre Le code barre de l'article recherché.
+	 * 
+	 * @Soap\Method("getArticleFromCodeBarre")
+	 * @Soap\Param("codeBarre",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getArticleFromCodeBarreAction($codeBarre) {
+		if (!($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) &&
+				!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GAFCB001] Vous n\'avez pas les droits nécessaires.');
+		
+		if(!is_string($codeBarre)) // Vérif des arguments
+			return new \SoapFault('Server','[GAFCB002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$reponse = array();
+		
+		$sql = 'SELECT produit.nom AS nomProduit, attribut.nom AS nomAttribut, valeur_attribut.libelle AS nomValAttribut
+				FROM article
+				JOIN produit ON article.ref_produit = produit.id
+				JOIN article_a_pour_val_attribut ON article_a_pour_val_attribut.ref_article = article.id
+				JOIN valeur_attribut ON article_a_pour_val_attribut.ref_val_attribut = valeur_attribut.id
+				JOIN attribut ON valeur_attribut.ref_attribut = attribut.id
+				WHERE article.code_barre = '.$pdo->quote($codeBarre);
+		$resultat = $pdo->query($sql);
+		
+		$reponse['attributs'] = array();
+		foreach ($resultat as $row) {
+			$reponse['nomProduit'] = $row['nomProduit'];
+			$reponse['attributs'][$row['nomAttribut']] = $row['nomValAttribut'];
+		}
+		
+		return json_encode($reponse);
+	}
 
 	/**
 	 * Permet de récupèrer les attributs d'un produit suivant son nom.
