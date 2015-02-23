@@ -165,6 +165,85 @@ class SoapController extends ContainerAware
 		
 		return json_encode($result);
 	}
+
+	/**
+	 * Permet de modifier une ligne produit.
+	 * @param $nom Si vous voulez une ligne de produit spécifique (interet ?).
+	 *
+	 * @Soap\Method("modifLigneProduit")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifLigneProduitAction($id,$nom) {
+
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if(!is_int($id)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètre invalide.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		//$result = array();
+
+		// Formation de la requete SQL
+		$sql = 'UPDATE ligne_produit SET nom='.$pdo->quote($nom).' WHERE id='.$pdo->quote($id).' ';
+
+        $pdo->query($sql);
+		return "OK";
+	}
+
+
+	/**
+	 * Permet de récupèrer les attributs d'un produit suivant son nom.
+	 * @param $nom Le nom du produit dont on chercher les attributs.
+	 * 
+	 * @Soap\Method("getAttributFromNomProduit")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAttributFromNomProduitAction($nom) {
+		if (!($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) && 
+			!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[AFNP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($nom)) // Vérif des arguments
+			return new \SoapFault('Server','[AFNP002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		$tabValAttribut = array();
+	
+		// Formation de la requete SQL
+		$sql = 'SELECT att_nom AS nom, libelle FROM (
+				SELECT produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle
+				FROM produit 
+				JOIN ligne_produit ON ligne_produit.id = produit.ref_ligne_produit
+				JOIN ligne_produit_a_pour_attribut ON ligne_produit_a_pour_attribut.ref_ligne_produit = ligne_produit.id
+				JOIN attribut ON attribut.id=ligne_produit_a_pour_attribut.ref_attribut
+				JOIN valeur_attribut ON attribut.id = valeur_attribut.ref_attribut
+				)t
+				WHERE nom='.$pdo->quote($nom).
+			   'GROUP BY att_nom, libelle';
+	
+		$dernierNomAttribut = '';
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			if ($dernierNomAttribut === '') { // Premier tour de boucle, on a pas encore de nom d'attribut
+				$dernierNomAttribut = $row['nom'];
+			}
+			
+			if ($row['nom'] !== $dernierNomAttribut) { // Si on change de nom d'attribut, on a fini de travailler avec ses valeurs donc on push
+				array_push($result, array('nom'=>$dernierNomAttribut, 'valeurs'=>$tabValAttribut));
+				$tabValAttribut = array();
+				$dernierNomAttribut = $row['nom'];
+			}
+			array_push($tabValAttribut, $row['libelle']);
+		}
+		array_push($result, array('nom'=>$dernierNomAttribut, 'valeurs'=>$tabValAttribut));
+						
+		return json_encode($result);
+	}
 	
 	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
@@ -425,8 +504,9 @@ class SoapController extends ContainerAware
 		//on récupere l'objet pdo connecté à la base du logiciel
 		$pdo = $this->container->get('bdd_service')->getPdo();
 
+
 		// Formation de la requete SQL selon les paramètres donnés
-		$sql = 'SELECT ligne_produit.nom as "lp_nom", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+		$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
 
 		if (!empty($nom) && !empty($ligneproduit))
 			$sql.='WHERE produit.nom='.$pdo->quote($nom).' AND ligne_produit.nom='.$pdo->quote($ligneproduit).'';
@@ -448,13 +528,46 @@ class SoapController extends ContainerAware
 
 		//on créé le tableau de retour à partir de la requête
 		foreach ($pdo->query($sql) as $ligne) {
-			$row = array('lp'=>$ligne['lp_nom'], 'p' => $ligne['p_nom']);
+			$row = array('lp'=>$ligne['lp_nom'],'p_id'=>$ligne['p_id'], 'p' => $ligne['p_nom']);
 			array_push($resultat,$row);
 		}
 
 		//encodage json du tableau de résultat avec ligneproduit et produit
 		return json_encode($resultat);
 
+	}
+	
+	/**
+	 * Permet de modifier un produit
+	 *
+	 * @Soap\Method("modifProduit")
+	 * @Soap\Param("nom_lp",phpType="string")
+	 * @Soap\Param("nom_p",phpType="string")
+	 * @Soap\Param("id_p",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifProduitAction($nom_lp,$nom_p, $id_p){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($nom_lp) || !is_int($id_p) || !is_string($nom_p)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+	
+		//on récupere l'objet pdo connecté à la base du logiciel
+		$pdo = $this->container->get('bdd_service')->getPdo();
+	
+		$sql_recup_lp_id = 'SELECT ligne_produit.id "lp_id" FROM ligne_produit WHERE ligne_produit.nom='.$pdo->quote($nom_lp).'';
+	
+		foreach ($pdo->query($sql_recup_lp_id) as $ligne_lp) {
+			$id_lp = $ligne_lp['lp_id'];
+		}
+		// Formation de la requete SQL selon les paramètres donnés
+		$sql = 'UPDATE produit SET nom='.$pdo->quote($nom_p).', ref_ligne_produit='.$pdo->quote($id_lp).' WHERE id='.$pdo->quote($id_p).'';
+	
+		$pdo->query($sql);
+		return "OK";
+	
 	}
 	
 	/**
