@@ -669,6 +669,7 @@ class SoapController extends ContainerAware
 		return json_encode($resultat);
 
 	}
+	
 	/**
 	 * Permet de modifier un produit
 	 *
@@ -679,26 +680,57 @@ class SoapController extends ContainerAware
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function modifProduitAction($nom_lp,$nom_p, $id_p){
-
+	
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
-
+	
 		if(!is_string($nom_lp) || !is_int($id_p) || !is_string($nom_p)) // Vérif des arguments
 			return new SoapFault('Server','[LP002] Paramètres invalides.');
-
+	
 		//on récupere l'objet pdo connecté à la base du logiciel
 		$pdo = $this->container->get('bdd_service')->getPdo();
-
+	
 		$sql_recup_lp_id = 'SELECT ligne_produit.id "lp_id" FROM ligne_produit WHERE ligne_produit.nom='.$pdo->quote($nom_lp).'';
-
+	
 		foreach ($pdo->query($sql_recup_lp_id) as $ligne_lp) {
 			$id_lp = $ligne_lp['lp_id'];
 		}
 		// Formation de la requete SQL selon les paramètres donnés
 		$sql = 'UPDATE produit SET nom='.$pdo->quote($nom_p).', ref_ligne_produit='.$pdo->quote($id_lp).' WHERE id='.$pdo->quote($id_p).'';
-
+	
 		$pdo->query($sql);
 		return "OK";
-
+	
 	}
+	
+	/**
+	 * Permet de retourner le menu et sous menu en fonction du role
+	 * au formart json.
+	 *
+	 * @Soap\Method("getMenu")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getMenuAction(){
+		// Verifie le role de l'utilisateur connecte
+		// Si il est gerant
+		//if ($this->container->get('user_service')->isOk('ROLE_GERANT')){
+		$tableau_menu = array(
+				array("menu" => "caisse","sous_menu" => array()),
+				array("menu" => "client","sous_menu" => array("info client","Stats")),
+				array("menu" =>"evenement","sous_menu" => array()),
+				array("menu" =>"fournisseur","sous_menu" => array("fournisseur","historique")),
+				array("menu" =>"produit","sous_menu" => array("produit","Reception","stock","inventaire")),
+				array("menu" =>"vente","sous_menu" => array("moyen de transport","stats","factures","retour"))
+		);
+		return json_encode($tableau_menu);
+		//}
+		// Si il est employe
+// 		else {
+			
+// 		}
+		
+		
+	}
+	
+	
 }
