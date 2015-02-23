@@ -581,7 +581,7 @@ class SoapController extends ContainerAware
 		// Verifie le role de l'utilisateur connecte
 		// Si il est gerant
 		//if ($this->container->get('user_service')->isOk('ROLE_GERANT')){
-		$array = array(
+		$tableau_menu = array(
 				array("menu" => "caisse","sous_menu" => array()),
 				array("menu" => "client","sous_menu" => array("info client","Stats")),
 				array("menu" =>"evenement","sous_menu" => array()),
@@ -589,7 +589,7 @@ class SoapController extends ContainerAware
 				array("menu" =>"produit","sous_menu" => array("produit","Reception","stock","inventaire")),
 				array("menu" =>"vente","sous_menu" => array("moyen de transport","stats","factures","retour"))
 		);
-		return json_encode($array);
+		return json_encode($tableau_menu);
 		//}
 		// Si il est employe
 // 		else {
