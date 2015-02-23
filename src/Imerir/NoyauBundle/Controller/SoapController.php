@@ -349,15 +349,15 @@ class SoapController extends ContainerAware
 		$tabValAttribut = array();
 	
 		// Formation de la requete SQL
-		$sql = 'SELECT att_nom AS nom, libelle FROM (
-				SELECT produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle
+		$sql = 'SELECT att_nom AS nom, libelle, est_visible FROM (
+				SELECT produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle, valeur_attribut.est_visible
 				FROM produit 
 				JOIN ligne_produit ON ligne_produit.id = produit.ref_ligne_produit
 				JOIN ligne_produit_a_pour_attribut ON ligne_produit_a_pour_attribut.ref_ligne_produit = ligne_produit.id
 				JOIN attribut ON attribut.id=ligne_produit_a_pour_attribut.ref_attribut
 				JOIN valeur_attribut ON attribut.id = valeur_attribut.ref_attribut
 				)t
-				WHERE nom='.$pdo->quote($nom).
+				WHERE est_visible = TRUE AND nom='.$pdo->quote($nom).
 			   'GROUP BY att_nom, libelle';
 	
 		$dernierNomAttribut = '';
@@ -420,12 +420,12 @@ class SoapController extends ContainerAware
 			$sql = 'UPDATE attribut SET nom='.$pdo->quote($nom).' WHERE id=\''.(int)$id.'\''; // On modifie le nom de l'attribut
 			$count = $pdo->query($sql);
 			
-			$sql = 'DELETE FROM valeur_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
+			$sql = 'UPDATE valeur_attribut SET est_visible=FALSE WHERE ref_attribut=\''.(int)$id.'\' AND est_visible=TRUE'; // On supprime toutes les valeurs de cet attribut
 			$count = $pdo->query($sql);
 			
 			// Insertion des valeurs d'attribut possible
 			foreach ($tabAttributs as $libelle) {
-				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle) VALUES (\''.(int)$id.'\', '.$pdo->quote($libelle).')';
+				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle, est_visible) VALUES (\''.(int)$id.'\', '.$pdo->quote($libelle).', TRUE)';
 				$count = $pdo->exec($sql);
 			}
 			
@@ -454,7 +454,7 @@ class SoapController extends ContainerAware
 			if($resultat->rowCount() !== 0)
 				return new \SoapFault('Server','[SA005] Le nom que vous avez choisi existe déjà. Peut-être vouliez-vous modifier un attribut existant ?');
 				
-			$sql = 'INSERT INTO attribut (nom) VALUES ('.$pdo->quote($nom).')';
+			$sql = 'INSERT INTO attribut (nom, est_visible) VALUES ('.$pdo->quote($nom).', TRUE)';
 			$count = $pdo->exec($sql);
 			if ($count !== 1) { // Si problème insertion
 				return new \SoapFault('Server','[SA006] Erreur lors de l\'enregistrement des données');
@@ -463,7 +463,7 @@ class SoapController extends ContainerAware
 			
 			// Insertion des valeurs d'attribut possible
 			foreach ($tabAttributs as $libelle) {
-				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle) VALUES ('.$idAttribut.', '.$pdo->quote($libelle).')';
+				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle, est_visible) VALUES ('.$idAttribut.', '.$pdo->quote($libelle).', TRUE)';
 				$count = $pdo->exec($sql);
 			}
 			
@@ -527,7 +527,7 @@ class SoapController extends ContainerAware
 			$sql = 'SELECT id, nom FROM attribut ';
 			if (!empty($nom)) {
 				$nom = '%'.$nom.'%';
-				$sql.='WHERE nom LIKE '.$pdo->quote($nom);
+				$sql.='WHERE attribut.est_visible = TRUE AND nom LIKE '.$pdo->quote($nom);
 			}
 			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 				$ligne = array('id'=>$row['id'], 'nom'=>$row['nom']);
@@ -538,8 +538,8 @@ class SoapController extends ContainerAware
 		else if ($idAttribut !== 0) {
 			if (true === $avecValeurAttribut) { // Si on veut les valeurs d'attributs, on les récupère
 				$sql = 'SELECT a.id, a.nom, v.libelle FROM attribut a ';
-				$sql .= 'JOIN valeur_attribut v ON v.ref_attribut=a.id ';
-				$sql.='WHERE a.id='.(int)$idAttribut;
+				$sql.= 'JOIN valeur_attribut v ON v.ref_attribut=a.id ';
+				$sql.= 'WHERE v.est_visible = TRUE AND a.id='.(int)$idAttribut;
 				
 				$result['attribut'] = array();
 				foreach ($pdo->query($sql) as $row) { // On ajoute tous les attributs à la réponse
@@ -716,11 +716,11 @@ class SoapController extends ContainerAware
 		//if ($this->container->get('user_service')->isOk('ROLE_GERANT')){
 		$tableau_menu = array(
 				array("menu" => "caisse","sous_menu" => array()),
-				array("menu" => "client","sous_menu" => array("info client","Stats")),
-				array("menu" =>"evenement","sous_menu" => array()),
-				array("menu" =>"fournisseur","sous_menu" => array("fournisseur","historique")),
-				array("menu" =>"produit","sous_menu" => array("produit","Reception","stock","inventaire")),
-				array("menu" =>"vente","sous_menu" => array("moyen de transport","stats","factures","retour"))
+				array("menu" => "client","sous_menu" => array("Info client","Stats")),
+				array("menu" => "evenement","sous_menu" => array()),
+				array("menu" => "fournisseur","sous_menu" => array("Fournisseur","Historique")),
+				array("menu" => "produit","sous_menu" => array("Attribut","Ligne produit","Produit","Reception","Stock","Inventaire")),
+				array("menu" => "vente","sous_menu" => array("Moyen de payement","Stats","Factures","Retour"))
 		);
 		return json_encode($tableau_menu);
 		//}
