@@ -716,11 +716,11 @@ class SoapController extends ContainerAware
 		//if ($this->container->get('user_service')->isOk('ROLE_GERANT')){
 		$tableau_menu = array(
 				array("menu" => "caisse","sous_menu" => array()),
-				array("menu" => "client","sous_menu" => array("info client","Stats")),
-				array("menu" =>"evenement","sous_menu" => array()),
-				array("menu" =>"fournisseur","sous_menu" => array("fournisseur","historique")),
-				array("menu" =>"produit","sous_menu" => array("produit","Reception","stock","inventaire")),
-				array("menu" =>"vente","sous_menu" => array("moyen de transport","stats","factures","retour"))
+				array("menu" => "client","sous_menu" => array("Info client","Stats")),
+				array("menu" => "evenement","sous_menu" => array()),
+				array("menu" => "fournisseur","sous_menu" => array("Fournisseur","Historique")),
+				array("menu" => "produit","sous_menu" => array("Attribut","Ligne produit","Produit","Reception","Stock","Inventaire")),
+				array("menu" => "vente","sous_menu" => array("Moyen de payement","Stats","Factures","Retour"))
 		);
 		return json_encode($tableau_menu);
 		//}
