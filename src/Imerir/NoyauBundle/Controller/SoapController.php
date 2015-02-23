@@ -456,4 +456,35 @@ class SoapController extends ContainerAware
 		return json_encode($resultat);
 
 	}
+	
+	/**
+	 * Permet de retourner le menu et sous menu en fonction du role
+	 * au formart json.
+	 *
+	 * @Soap\Method("getMenu")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getMenuAction(){
+		// Verifie le role de l'utilisateur connecte
+		// Si il est gerant
+		//if ($this->container->get('user_service')->isOk('ROLE_GERANT')){
+		$array = array(
+				array("menu" => "caisse","sous_menu" => array()),
+				array("menu" => "client","sous_menu" => array("info client","Stats")),
+				array("menu" =>"evenement","sous_menu" => array()),
+				array("menu" =>"fournisseur","sous_menu" => array("fournisseur","historique")),
+				array("menu" =>"produit","sous_menu" => array("produit","Reception","stock","inventaire")),
+				array("menu" =>"vente","sous_menu" => array("moyen de transport","stats","factures","retour"))
+		);
+		return json_encode($array);
+		//}
+		// Si il est employe
+// 		else {
+			
+// 		}
+		
+		
+	}
+	
+	
 }
