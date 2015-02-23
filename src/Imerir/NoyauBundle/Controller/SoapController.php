@@ -731,6 +731,57 @@ class SoapController extends ContainerAware
 		
 		
 	}
+	/* @Soap\Method("getFournisseurs")
+	* @Soap\Param("count",phpType="int")
+	* @Soap\Param("offset",phpType="int")
+	* @Soap\Param("nom",phpType="string")
+	* @Soap\Result(phpType = "string")
+	*/
+	public function getFournisseursAction($count, $offset, $nom,$email,$telephone_portable) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+
+		if(!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+		// Formation de la requete SQL
+		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur ';
+		if (!empty($nom) && !empty($email) && !empty($telephone_portable))
+			$sql.='WHERE nom='.$pdo->quote($nom).' AND email='.$pdo->quote($email).'
+			AND telephone_portable='.$pdo->quote($telephone_portable).'';
+		if (empty($nom) && !empty($email) && !empty($telephone_portable))
+			$sql.='WHERE email='.$pdo->quote($email).'
+			AND telephone_portable='.$pdo->quote($telephone_portable).'';
+		if (empty($nom) && empty($email) && !empty($telephone_portable))
+			$sql.='WHERE telephone_portable='.$pdo->quote($telephone_portable).'';
+
+		if (!empty($nom) && empty($email) && empty($telephone_portable))
+			$sql.='WHERE nom='.$pdo->quote($nom).'';
+		if (empty($nom) && !empty($email) && empty($telephone_portable))
+			$sql.='WHERE nom='.$pdo->quote($nom).' AND email='.$pdo->quote($email).'';
+		if (!empty($nom) && empty($email) && !empty($telephone_portable))
+			$sql.='WHERE nom='.$pdo->quote($nom).' AND telephone_portable='.$pdo->quote($telephone_portable).'';
+		if($offset != 0) {
+			$sql.=' ORDER BY nom ASC LIMIT '.(int)$offset;
+			if ($count != 0)
+				$sql.=','.(int)$count;
+		}
+		else{
+			$sql .=' ORDER BY nom ASC';
+		}
+
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom'],'email'=>$row['email'],'telephone_portable'=>$row['telephone_portable']);
+			array_push($result, $ligne);
+		}
+
+		return json_encode($result);
+	}
+
+
 	
 	
 }
