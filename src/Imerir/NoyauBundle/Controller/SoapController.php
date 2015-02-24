@@ -789,20 +789,27 @@ class SoapController extends ContainerAware
 		$result = array();
 
 		// Formation de la requete SQL
+		//$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE email='.$pdo->quote($email).'';
+
 		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur ';
 		if (!empty($nom) && !empty($email) && !empty($telephone_portable))
 			$sql.='WHERE nom='.$pdo->quote($nom).' AND email='.$pdo->quote($email).'
 			AND telephone_portable='.$pdo->quote($telephone_portable).'';
+
 		if (empty($nom) && !empty($email) && !empty($telephone_portable))
 			$sql.='WHERE email='.$pdo->quote($email).'
 			AND telephone_portable='.$pdo->quote($telephone_portable).'';
+
 		if (empty($nom) && empty($email) && !empty($telephone_portable))
 			$sql.='WHERE telephone_portable='.$pdo->quote($telephone_portable).'';
 
+
 		if (!empty($nom) && empty($email) && empty($telephone_portable))
 			$sql.='WHERE nom='.$pdo->quote($nom).'';
-		if (empty($nom) && !empty($email) && empty($telephone_portable))
+
+		if (!empty($nom) && !empty($email) && empty($telephone_portable))
 			$sql.='WHERE nom='.$pdo->quote($nom).' AND email='.$pdo->quote($email).'';
+
 		if (!empty($nom) && empty($email) && !empty($telephone_portable))
 			$sql.='WHERE nom='.$pdo->quote($nom).' AND telephone_portable='.$pdo->quote($telephone_portable).'';
 
@@ -832,31 +839,33 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("telephone_portable",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function ajoutFournisseurAction($nom,$email,$telephone_portable) {
+	public function ajoutFournisseurAction($nom,$email,$telephone_portable)
+	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
 
-		if(!is_string($nom) || !is_string($email) || !is_string($telephone_portable)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		if (!is_string($nom)) // Vérif des arguments
+			return new SoapFault('Server', '[LP002] Paramètres invalides.');
 
-		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 
-		// Formation de la requete SQL
-		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom='.$pdo->quote($nom).'';
+                $pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+                $result = array();
 
-		$resultat = $pdo->query();
+                // Formation de la requete SQL
+                $sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom='.$pdo->quote($nom).'';
 
-		if($resultat->rowCount($sql) == 0) {
+                $resultat = $pdo->query($sql);
+                if($resultat->rowCount($sql) == 0) {
 
-			//on insert le fournisseur
-			$sql = "INSERT INTO fournisseur(nom,email,telephone_portable)VALUES('" . $nom . "','".$email."','".$telephone_portable."');";
-			$pdo->query($sql);
+                    //on insert le fournisseur
+                    $sql = "INSERT INTO fournisseur(nom,email,telephone_portable)VALUES('" . $nom . "','".$email."','".$telephone_portable."');";
+                    $pdo->query($sql);
 
-			return "OK";
-		}
+                    return "OK";
+                }
 
-		return new SoapFault('Server','[LP002] Paramètres invalides.');
+                return new SoapFault('Server','[LP002] Paramètres invalides.');
+
 	}
 
 	
