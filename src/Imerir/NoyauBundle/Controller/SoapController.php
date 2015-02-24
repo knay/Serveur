@@ -209,14 +209,15 @@ class SoapController extends ContainerAware
 	 * 
 	 * @Soap\Method("faireInventaire")
 	 * @Soap\Param("articles",phpType="string")
+	 * @Soap\Param("avecPrix",phpType="boolean")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function faireInventaireAction($articles) {
+	public function faireInventaireAction($articles, $avecPrix) {
 		if (!($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) && 
 			!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[INV001] Vous n\'avez pas les droits nécessaires.');
 	
-		if(!is_string($articles)) // Vérif des arguments
+		if(!is_string($articles) || !is_bool($avecPrix)) // Vérif des arguments
 			return new \SoapFault('Server','[INV002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -227,6 +228,9 @@ class SoapController extends ContainerAware
 			$nom_produit = $article->produit;
 			$quantite = $article->quantite;
 			$attributs = $article->attributs;
+			
+			if ($avecPrix)
+				$prixClient = $article->prix;
 			
 			if(empty($code_barre)) // Si pas de code barre on enregistre pas c'est pas normal
 				break;
@@ -247,13 +251,19 @@ class SoapController extends ContainerAware
 				$resultat = $pdo->query($sql);
 				$idArticle = $pdo->lastInsertId(); // On récup l'id de l'article créé
 			}
-			else { // Si l'article existe on recup juste son ID (TODO il faut permettre de modifier la ref produit)
+			else { // Si l'article existe on recup juste son ID
 				foreach ($resultat as $row) {
 					$idArticle = $row['id'];
 				}
 				$sql = 'UPDATE article SET ref_produit=
 						(SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit).') 
 					    WHERE article.id = \''.$idArticle.'\'';
+				$resultat = $pdo->query($sql);
+			}
+			
+			if ($avecPrix) {
+				$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
+							VALUE (\''.$idArticle.'\', 0, \''.(int)$prixClient.'\', NOW())';
 				$resultat = $pdo->query($sql);
 			}
 			
