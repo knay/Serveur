@@ -825,6 +825,39 @@ class SoapController extends ContainerAware
 		return json_encode($result);
 	}
 
+	/**
+	 * @Soap\Method("ajoutFournisseur")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("email",phpType="string")
+	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutFournisseurAction($nom,$email,$telephone_portable) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+
+		if(!is_string($nom) || !is_string($email) || !is_string($telephone_portable)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+		// Formation de la requete SQL
+		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom='.$pdo->quote($nom).'';
+
+		$resultat = $pdo->query();
+
+		if($resultat->rowCount($sql) == 0) {
+
+			//on insert le fournisseur
+			$sql = "INSERT INTO fournisseur(nom,email,telephone_portable)VALUES('" . $nom . "','".$email."','".$telephone_portable."');";
+			$pdo->query($sql);
+
+			return "OK";
+		}
+
+		return new SoapFault('Server','[LP002] Paramètres invalides.');
+	}
 
 	
 	
