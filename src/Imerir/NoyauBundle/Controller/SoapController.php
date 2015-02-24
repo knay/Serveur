@@ -741,10 +741,13 @@ class SoapController extends ContainerAware
 		
 		
 	}
-	/* @Soap\Method("getFournisseurs")
+	/**
+	 * @Soap\Method("getFournisseurs")
 	* @Soap\Param("count",phpType="int")
 	* @Soap\Param("offset",phpType="int")
 	* @Soap\Param("nom",phpType="string")
+	* @Soap\Param("email",phpType="string")
+	* @Soap\Param("telephone_portable",phpType="string")
 	* @Soap\Result(phpType = "string")
 	*/
 	public function getFournisseursAction($count, $offset, $nom,$email,$telephone_portable) {
@@ -774,6 +777,9 @@ class SoapController extends ContainerAware
 			$sql.='WHERE nom='.$pdo->quote($nom).' AND email='.$pdo->quote($email).'';
 		if (!empty($nom) && empty($email) && !empty($telephone_portable))
 			$sql.='WHERE nom='.$pdo->quote($nom).' AND telephone_portable='.$pdo->quote($telephone_portable).'';
+
+		if (empty($nom) && !empty($email) && empty($telephone_portable))
+			$sql.='WHERE email='.$pdo->quote($email).'';
 		if($offset != 0) {
 			$sql.=' ORDER BY nom ASC LIMIT '.(int)$offset;
 			if ($count != 0)
