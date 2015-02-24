@@ -577,6 +577,34 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * Permet de récupérer le prix depuis le code barre.
+	 * 
+	 * @param $codeBarre Le code barre du produit recherché.
+	 * 
+	 * @Soap\Method("getPrixFromCodeBarre")
+	 * @Soap\Param("codeBarre",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getPrixFromCodeBarreAction($codeBarre) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+		
+		if(!is_string($codeBarre)) // Vérif des arguments
+			return new \SoapFault('Server','[GA002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($codeBarre);
+		$resultat = $pdo->query($sql);
+		
+		$prix = 0;
+		foreach ($resultat as $row) {
+			$prix = $row["montant_client"];
+		}
+		
+		return ''.$prix;
+	}
+	
+	/**
 	 * Permet d'ajouter ou modifier un produit
 	 * @param $nom Le nom du produit a créer ou modifier
 	 * @param $ligneProduit Le nom de la ligne produit pour lequelle le produit est créé
