@@ -118,7 +118,7 @@ class SoapController extends ContainerAware
 			
 			$sql = 'INSERT INTO mouvement_stock (ref_article, date_mouvement, quantite_mouvement, est_inventaire, est_visible)
 					VALUE ((SELECT id FROM article WHERE code_barre='.$pdo->quote($code_barre).'), 
-							NOW(), \''.(int)-$quantite.'\', false, false)';
+							NOW(), \''.(int)-$quantite.'\', false, true)';
 			
 			$resultat = $pdo->query($sql);
 		}
