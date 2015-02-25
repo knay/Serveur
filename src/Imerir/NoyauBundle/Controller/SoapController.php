@@ -86,6 +86,46 @@ class SoapController extends ContainerAware
 		}
 	}
 	
+	
+	/**
+	 * Permet d'ajouter ou modifier une ligne produit
+	 * @param $nom Le nom de la ligne produit a créer ou modifier
+	 *
+	 * @Soap\Method("enregistrerAchat")
+	 * @Soap\Param("articles",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function enregistrerAchatAction($articles) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[EA001] Vous n\'avez pas les droits nécessaires.');
+		if(!is_string($articles)) // Vérif des arguments
+			return new \SoapFault('Server','[EA002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		$tabArticles = json_decode($articles);
+		
+		foreach($tabArticles as $article) {
+			$code_barre = $article->codeBarre;
+			$quantite = $article->quantite;
+			$promo = $article->quantite;
+			$prix = 0;
+			
+			$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($code_barre);
+			$resultat = $pdo->query($sql);
+			foreach ($resultat as $row) {
+				$prix = floatval($row['montant_client']);
+			}
+			
+			$sql = 'INSERT INTO mouvement_stock (ref_article, date_mouvement, quantite_mouvement, est_inventaire, est_visible)
+					VALUE ((SELECT id FROM article WHERE code_barre='.$pdo->quote($code_barre).'), 
+							NOW(), \''.(int)-$quantite.'\', false, true)';
+			
+			$resultat = $pdo->query($sql);
+		}
+		
+		return '';
+	}
+	
 	/**
 	 * Permet d'ajouter ou modifier une ligne produit
 	 * @param $nom Le nom de la ligne produit a créer ou modifier
