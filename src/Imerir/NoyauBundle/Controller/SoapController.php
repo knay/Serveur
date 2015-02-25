@@ -806,11 +806,79 @@ class SoapController extends ContainerAware
 // 		else {
 			
 // 		}
+	}
+	
+	/**
+	 * Permet de retourner le stock actuel.
+	 *
+	 * @Soap\Method("getStock")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getStock(){
 		
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+		
+// 		if(!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
+// 			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		//Recuperer l'id de toutes les lignes produits
+		$sql_recupere_ligne_produit = 'SELECT id,nom FROM alba.ligne_produit WHERE est_visible = 1';
+		
+		//On parcourt les lignes produits
+		foreach ($pdo->query($sql_recupere_ligne_produit) as $row_ligne_produit) { 
+			//Recuperer l'id de tous les produits
+			$sql_recupere_produit = 'SELECT id,nom FROM alba.produit WHERE ref_ligne_produit = '.$row_ligne_produit['id'].' AND est_visible = 1';
+		
+			//On parcourt les produits de la ligne produit
+			foreach ($pdo->query($sql_recupere_produit) as $row_produit) {
+				//Recuperer l'id de tous les articles
+				$sql_recupere_article = 'SELECT id,code_barre FROM alba.article WHERE ref_produit = '.$row_produit['id'].' AND est_visible = 1';
+				
+				//On parcourt les articles du produit
+				foreach ($pdo->query($sql_recupere_article) as $row_article) {
+					
+					//Recupere l'id du stock
+					$sql_recupere_id_quantite_inventaire = 'SELECT id,quantite_mouvement FROM alba.mouvement_stock WHERE ref_article = '.$row_article['id'].' AND est_inventaire = 1 order by date_mouvement desc limit 1';
+					
+					//On parcourt les mouvements de stock de l'article
+					foreach ($pdo->query($sql_recupere_id_quantite_inventaire) as $row_inventaire) {
+						if(!empty($row_inventaire['id'])){
+							$sql_mouvement_stock = 'SELECT SUM(quantite_mouvement) as total_mouvement FROM alba.mouvement_stock WHERE ref_article = '.$row_article['id'].' AND id >'.$row_inventaire['id'];
+							
+							//On parcourt l
+							foreach ($pdo->query($sql_mouvement_stock) as $row_resultat) {
+								$resultat_stock = 0;
+								if(empty($row_resultat['total_mouvement'])){
+									$resultat_stock = $row_inventaire['quantite_mouvement'];
+								}
+								else{
+									if($row_resultat['total_mouvement'] > $row_inventaire['quantite_mouvement']){
+										$resultat_stock =  $row_resultat['total_mouvement'] + $row_inventaire['quantite_mouvement'];
+									}
+									else{
+										$resultat_stock =  $row_inventaire['quantite_mouvement']+$row_resultat['total_mouvement'];
+									}
+								}
+								
+								$ligne = array('ligne_produit' => $row_ligne_produit['nom'],'produit' => $row_produit['nom'],'article'=>$row_article['code_barre'],'quantite'=>$resultat_stock);
+								array_push($result, $ligne);
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		return json_encode($result);
 		
 	}
+	
 	/**
-	 * @Soap\Method("getFournisseurs")
+	* @Soap\Method("getFournisseurs")
 	* @Soap\Param("count",phpType="int")
 	* @Soap\Param("offset",phpType="int")
 	* @Soap\Param("nom",phpType="string")
