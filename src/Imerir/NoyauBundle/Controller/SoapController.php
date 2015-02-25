@@ -246,6 +246,7 @@ class SoapController extends ContainerAware
 	 *   ----> ...
 	 * 
 	 * @param articles Un chaine de caractère JSON correspondant à un tableau ayant le format décrit ci-dessus.
+	 * @param avecPrix Dit qu'on fournit le prix de l'article ou non pendant l'inventaire
 	 * 
 	 * @Soap\Method("faireInventaire")
 	 * @Soap\Param("articles",phpType="string")
@@ -301,9 +302,9 @@ class SoapController extends ContainerAware
 				$resultat = $pdo->query($sql);
 			}
 			
-			if ($avecPrix) {
+			if ($avecPrix) { // Si on enregistre le prix avec
 				$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
-							VALUE (\''.$idArticle.'\', 0, \''.(int)$prixClient.'\', NOW())';
+							VALUE (\''.$idArticle.'\', 0, \''.(float)$prixClient.'\', NOW())';
 				$resultat = $pdo->query($sql);
 			}
 			
@@ -976,6 +977,34 @@ class SoapController extends ContainerAware
 
 	}
 
-	
-	
+	/**
+	 * @Soap\Method("modifFournisseur")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("email",phpType="string")
+	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifFournisseurAction($id,$nom,$email,$telephone_portable)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+
+		if (!is_string($nom) || !is_int($id)) // Vérif des arguments
+			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+		// Formation de la requete SQL
+		$sql = 'UPDATE fournisseur SET nom='.$pdo->quote($nom).',email='.$pdo->quote($email).',telephone_portable='.$pdo->quote($telephone_portable).'
+		WHERE id='.$pdo->quote($id).'';
+
+		$resultat = $pdo->query($sql);
+		$pdo->query($sql);
+
+		return "OK";
+
+	}
 }
