@@ -107,7 +107,7 @@ class SoapController extends ContainerAware
 		foreach($tabArticles as $article) {
 			$code_barre = $article->codeBarre;
 			$quantite = $article->quantite;
-			$promo = $article->quantite;
+			$promo = $article->promo;
 			$prix = 0;
 			
 			$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($code_barre);
@@ -454,8 +454,8 @@ class SoapController extends ContainerAware
 		
 		$tabLgProduit = json_decode($lignesProduits);
 		$tabAttributs = json_decode($attributs);
-		if ($tabLgProduit === NULL || $tabAttributs === NULL) // On vérif qu'on arrive à decoder le json 
-			return new SoapFault('Server','[SA003] Paramètres invalides, JSON attendu.');
+		if ($tabLgProduit === NULL || $tabAttributs === NULL || empty($nom)) // On vérif qu'on arrive à decoder le json 
+			return new \SoapFault('Server','[SA003] Paramètres invalides, JSON attendu.');
 	
 		// Si on veut modifier un attribut existant
 		if ($id !== 0) {
@@ -476,8 +476,10 @@ class SoapController extends ContainerAware
 			
 			// Insertion des valeurs d'attribut possible
 			foreach ($tabAttributs as $libelle) {
-				$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle, est_visible) VALUES (\''.(int)$id.'\', '.$pdo->quote($libelle).', TRUE)';
-				$count = $pdo->exec($sql);
+				if (!empty($libelle)) {
+					$sql = 'INSERT INTO valeur_attribut (ref_attribut, libelle, est_visible) VALUES (\''.(int)$id.'\', '.$pdo->quote($libelle).', TRUE)';
+					$count = $pdo->exec($sql);
+				}
 			}
 			
 			$sql = 'DELETE FROM ligne_produit_a_pour_attribut WHERE ref_attribut=\''.(int)$id.'\''; // On supprime toutes les valeurs de cet attribut
@@ -575,14 +577,44 @@ class SoapController extends ContainerAware
 		
 		// Si on a pas de critère c'est qu'on veut tout les attributs et on ne va pas récupérer les valeurs ni les lignes produits
 		if ($idLigneProduit === 0 && $idAttribut === 0) {
-			$sql = 'SELECT id, nom FROM attribut ';
-			if (!empty($nom)) {
-				$nom = '%'.$nom.'%';
-				$sql.='WHERE attribut.est_visible = TRUE AND nom LIKE '.$pdo->quote($nom);
+			if (true === $avecValeurAttribut) {
+				$sql = 'SELECT a.id AS aid, nom, v.libelle, a.est_visible FROM attribut a
+				        JOIN valeur_attribut v ON v.ref_attribut=a.id 
+						WHERE a.est_visible = TRUE AND v.est_visible = TRUE ';
+				
+				if (!empty($nom)) {
+					$nom = '%'.$nom.'%';
+					$sql.=' AND a.nom LIKE '.$pdo->quote($nom);
+				}
+				
+				$sql.= ' GROUP BY libelle ORDER BY nom ASC';
+				
+				$tabAttributs = array();
+				$dernierNom = '';
+				$dernierId = 0;
+				foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+					if ($dernierNom !== $row['nom']) {
+						$ligne = array('id'=>$dernierId, 'nom'=>$dernierNom, 'attributs'=>$tabAttributs);
+						array_push($result, $ligne);
+						$tabAttributs = array();
+					}
+					$dernierLibelle = $row['libelle'];
+					$dernierNom = $row['nom'];
+					$dernierId = $row['aid'];
+					array_push($tabAttributs, $row['libelle']);
+				}
 			}
-			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-				$ligne = array('id'=>$row['id'], 'nom'=>$row['nom']);
-				array_push($result, $ligne);
+			else {
+				$sql = 'SELECT id, nom FROM attribut a ';
+
+				if (!empty($nom)) {
+					$nom = '%'.$nom.'%';
+					$sql.='WHERE attribut.est_visible = TRUE AND a.nom LIKE '.$pdo->quote($nom);
+				}
+				foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+					$ligne = array('id'=>$row['id'], 'nom'=>$row['nom']);
+					array_push($result, $ligne);
+				}
 			}
 		}
 		// Si on cherche un attribut avec un id spécifique
