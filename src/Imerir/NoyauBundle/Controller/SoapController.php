@@ -1129,4 +1129,102 @@ class SoapController extends ContainerAware
 		return json_encode($result);
 	}
 
+	/**
+	 * @Soap\Method("ajoutAdresse")
+	 * @Soap\Param("pays",phpType="string")
+	 * @Soap\Param("est_fournisseur",phpType="boolean")
+	 * @Soap\Param("ref_id",phpType="int")
+	 * @Soap\Param("ville",phpType="string")
+	 * @Soap\Param("voie",phpType="string")
+	 * @Soap\Param("num_voie",phpType="string")
+	 * @Soap\Param("code_postal",phpType="string")
+	 * @Soap\Param("num_appartement",phpType="string")
+	 * @Soap\Param("telephone_fixe",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutAdresseAction($est_fournisseur,$ref_id,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
+			|| !is_string($num_appartement) || !is_string($telephone_fixe)
+		|| !is_bool($est_fournisseur) || !is_int($ref_id)) // Vérif des arguments
+			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+		// Formation de la requete SQL
+
+		$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse
+WHERE pays='.$pdo->quote($pays).' AND ville='.$pdo->quote($ville).' AND voie='.$pdo->quote($voie).'
+AND num_voie='.$pdo->quote($num_voie).' ';
+
+		if($est_fournisseur)
+			$sql .= 'AND ref_fournisseur='.$pdo->quote($ref_id).'';
+		else
+			$sql .= 'AND ref_contact='.$pdo->quote($ref_id).'';
+
+		//on teste si l'adresse existe déjà
+		$resultat = $pdo->query($sql);
+
+		if($resultat->rowCount() == 0){
+			//insertion des données
+			if($est_fournisseur){
+				$sql='INSERT INTO adresse(ref_fournisseur,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
+'.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
+'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).'';
+			}
+			else{
+				$sql='INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
+'.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
+'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).'';
+			}
+			$pdo->query($sql);
+
+			return "OK";
+
+		}
+		else{
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		}
+	}
+
+	/**
+	 * @Soap\Method("modifAdresse")
+	 * @Soap\Param("id_ad",phpType="int")
+	 * @Soap\Param("pays",phpType="string")
+	 * @Soap\Param("ville",phpType="string")
+	 * @Soap\Param("voie",phpType="string")
+	 * @Soap\Param("num_voie",phpType="string")
+	 * @Soap\Param("code_postal",phpType="string")
+	 * @Soap\Param("num_appartement",phpType="string")
+	 * @Soap\Param("telephone_fixe",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifAdresseAction($id_ad,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe){
+
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
+			|| !is_string($num_appartement) || !is_string($telephone_fixe)|| !is_int($id_ad)) // Vérif des arguments
+			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+		//Formation de la requête SQL
+		$sql = 'UPDATE adresse SET pays='.$pdo->quote($pays).', ville='.$pdo->quote($ville).', voie='.$pdo->quote($voie).',
+		num_voie='.$pdo->quote($num_voie).',code_postal='.$pdo->quote($code_postal).',num_appartement='.$num_appartement.',
+		telephone_fixe='.$pdo->quote($telephone_fixe).' WHERE id='.$pdo->quote($id_ad).'';
+
+		$pdo->query($sql);
+		return "OK";
+
+	}
+
 }
