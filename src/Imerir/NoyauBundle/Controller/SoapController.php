@@ -824,21 +824,24 @@ class SoapController extends ContainerAware
 	public function getMenuAction(){
 		// Verifie le role de l'utilisateur connecte
 		// Si il est gerant
-		//if ($this->container->get('user_service')->isOk('ROLE_GERANT')){
-		$tableau_menu = array(
-				array("menu" => "caisse","sous_menu" => array()),
-				array("menu" => "client","sous_menu" => array("Info client","Stats")),
-				array("menu" => "evenement","sous_menu" => array()),
-				array("menu" => "fournisseur","sous_menu" => array("Fournisseur","Historique")),
-				array("menu" => "produit","sous_menu" => array("Attribut","Ligne produit","Produit","Reception","Stock","Inventaire")),
-				array("menu" => "vente","sous_menu" => array("Moyen de payement","Stats","Factures","Retour"))
-		);
-		return json_encode($tableau_menu);
-		//}
+		if ($this->container->get('user_service')->isOk('ROLE_GERANT')) {
+			$tableau_menu = array(
+				array('menu' => 'caisse','sous_menu' => array()),
+				array('menu' => 'client','sous_menu' => array('Info client','Stats')),
+				array('menu' => 'evenement','sous_menu' => array()),
+				array('menu' => 'fournisseur','sous_menu' => array('Fournisseur','Historique')),
+				array('menu' => 'produit','sous_menu' => array('Article', 'Attribut','Ligne produit','Produit','Reception','Stock','Inventaire')),
+				array('menu' => 'vente','sous_menu' => array('Moyen de payement','Stats','Factures','Retour')));
+			return json_encode($tableau_menu);
+		}
+		
 		// Si il est employe
-// 		else {
-			
-// 		}
+ 		else if ($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) { 
+			//TODO
+ 		}
+ 		else { // Si l'utilisateur n'est pas connecté
+ 			return new \SoapFault('Server','[GM001] Vous n\'avez pas les droits nécessaires.');
+ 		}
 	}
 	
 	/**
