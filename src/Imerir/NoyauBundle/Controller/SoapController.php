@@ -12,6 +12,8 @@ use BeSimple\SoapBundle\ServiceDefinition\Annotation as Soap;
 use Symfony\Component\DependencyInjection\ContainerAware;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
+use Imerir\NoyauBundle\Entity\Utilisateur;
+
 /**
  * Classe utilisant BeSimple SoapBundle afin de proposer un serveur SOAP.
  * Le wsdl est produit automatiquement en suivant les indications des annotations PHP
@@ -23,15 +25,6 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
  */
 class SoapController extends ContainerAware
 {
-	/**
-	 * @Soap\Method("fault")
-	 * @Soap\Param("nom",phpType="string")
-	 * @Soap\Result(phpType = "string")
-	 */
-	public function faultAction($nom) {
-		throw new \SoapFault("Cli","Vos identifiants de connexion sont invalides", 200);
-	}
-	
 	/**
 	 * Permet de connecter l'utilisateur côté serveur.
 	 * La fonction va chercher en base de données si l'authentification est bonne, si elle
@@ -51,6 +44,14 @@ class SoapController extends ContainerAware
 		//recupere la classe Utilisateur mappé à la table User dans la base de données
 		$dm = $this->container->get('doctrine')->getEntityManager();
 
+		// Avant toute chose on regarde si l'utilisateur existe... Sinon on continue pas
+		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username";
+		$queryUser = $dm->createQuery($sql)->setParameters(array('username' => $username));
+		$users = $queryUser->getResult();
+		if(count($users) === 0) {
+			return new \SoapFault('Server', 'Vos identifiants de connexion sont invalides.');
+		}
+		
 		//on récupère l'encoder du password dans la base de données pour ensuite hasher le mot de passe et tester
 		//si le mot de passe est le même
 		$userManager = $this->container->get('fos_user.user_manager');
@@ -63,12 +64,12 @@ class SoapController extends ContainerAware
 
 		//DQL langage doctrine les paramètres sont mis dans un tableau
 		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username AND u.password = :passwd";
-		$queryUser = $dm->createQuery($sql)->setParameters(array('username'=>$username,'passwd'=>$hash));
+		$queryUser = $dm->createQuery($sql)->setParameters(array('username'=>$username, 'passwd'=>$hash));
 
 		//on récupère toutes les lignes de la requête
 		$users = $queryUser->getResult();
 		//on teste si il y a bien un utilisateur username avec le mot de passe passwd
-		if(!empty($users)){
+		if(count($users) !== 0) {
 			//on lit la première lignes
 			$u = $users[0];
 
@@ -82,7 +83,7 @@ class SoapController extends ContainerAware
 			return json_encode($retourJson);
 		}
 		else{
-			return new SoapFault("Server","Vos identifiants de connexion sont invalides");
+			return new \SoapFault('Server', 'Vos identifiants de connexion sont invalides.');
 		}
 	}
 	
