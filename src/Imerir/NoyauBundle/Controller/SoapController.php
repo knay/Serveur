@@ -154,6 +154,79 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * TODO 
+	 * @Soap\Method("modifArticle")
+	 * @Soap\Param("article",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifArticleAction($article) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[MA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($article)) // Vérif des arguments
+			return new \SoapFault('Server','[MA002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$tabArticle = json_decode($article);
+		$result = array();
+		
+		$code_barre = $tabArticle->codeBarre;
+		$nom_produit = $tabArticle->produit;
+		$attributs = $tabArticle->attributs;
+		$prix = $tabArticle->prix;
+		
+		$sql = 'SELECT * FROM article WHERE code_barre='.$pdo->quote($code_barre);
+		$resultat = $pdo->query($sql);
+		
+		if ($resultat->rowCount() == 0) { // Si l'article n'existe pas on l'ajoute
+			$sql = 'SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit); // On récup l'id du produit
+			$resultat = $pdo->query($sql);
+			
+			foreach ($pdo->query($sql) as $row) {
+				$idProduit = $row['id'];
+			}
+			
+			$sql = 'INSERT INTO article(ref_produit, code_barre, est_visible) 
+				    VALUE (\''.$idProduit.'\', '.$pdo->quote($code_barre).', TRUE)';
+			$resultat = $pdo->query($sql);
+			$idArticle = $pdo->lastInsertId(); // On récup l'id de l'article créé
+		}
+		else { // Si l'article existe on recup juste son ID
+			foreach ($resultat as $row) {
+				$idArticle = $row['id'];
+			}
+			$sql = 'UPDATE article SET ref_produit=
+					(SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit).') 
+				    WHERE article.id = \''.$idArticle.'\'';
+			$resultat = $pdo->query($sql);
+		}
+		
+		$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
+					VALUE (\''.$idArticle.'\', 0, \''.(float)$prix.'\', NOW())';
+		$resultat = $pdo->query($sql);
+		
+		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\''.$idArticle.'\'';
+		$resultat = $pdo->query($sql); // On vide la table de correspondance pour cet article
+		
+		// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
+		foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
+			$sql = 'SELECT valeur_attribut.id AS vaid, attribut.id AS aid FROM valeur_attribut
+			        JOIN attribut ON ref_attribut = attribut.id
+			        WHERE attribut.nom='.$pdo->quote($nomAttribut).' AND valeur_attribut.libelle='.$pdo->quote($libelleValeurAttribut);
+			
+			foreach ($pdo->query($sql) as $row) {
+				$idValAttribut = $row['vaid'];
+			}
+			
+			$sql = 'INSERT INTO article_a_pour_val_attribut (ref_article, ref_val_attribut)
+					VALUE (\''.$idArticle.'\', \''.$idValAttribut.'\')'; // Insertion de la valeur attribut
+			$resultat = $pdo->query($sql);
+		}
+		
+		return '';
+	}
+	
+	/**
 	 * Permet d'ajouter ou modifier une ligne produit
 	 * @param $nom Le nom de la ligne produit a créer ou modifier
 	 *
@@ -945,8 +1018,8 @@ class SoapController extends ContainerAware
  			
 		}
 		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
-		// selection une ligne produit puis finalement s�lectionner biper un artcile.
-		// et on donnne la priorit� a l'article!
+		// selection une ligne produit puis finalement s�lectionner biper un artcile.
+		// et on donnne la priorit� a l'article!
 		if (!empty($Article)){
 			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
 		}
