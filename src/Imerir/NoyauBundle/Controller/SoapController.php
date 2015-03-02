@@ -43,6 +43,12 @@ class SoapController extends ContainerAware
 	public function loginAction($username, $passwd) {
 		//recupere la classe Utilisateur mappé à la table User dans la base de données
 		$dm = $this->container->get('doctrine')->getEntityManager();
+		
+		try { // Test de la connexion au serveur SQL
+			$dm->getConnection()->connect();
+		} catch (\Exception $e) {
+			return new \SoapFault('Server', '[LOG001] Problème de connexion au serveur de base de données.');
+		}
 
 		// Avant toute chose on regarde si l'utilisateur existe... Sinon on continue pas
 		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username";
@@ -138,9 +144,9 @@ class SoapController extends ContainerAware
 	public function ajoutLigneProduitAction($nom){
 		//on teste si l'utilisateur a les droits pour accéder à cette fonction
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[ALP001] Vous n\'avez pas les droits nécessaires.');
 		if(!is_string($nom)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+			return new \SoapFault('Server','[ALP002] Paramètres invalides.');
 		try {
 			$pdo = $this->container->get('bdd_service')->getPdo();
 			//on verifie si il y a deja la ligne produit
@@ -155,10 +161,10 @@ class SoapController extends ContainerAware
 				return "OK";
 			} //sinon soapfault
 			else {
-				return new SoapFault("Server", "Echec de l'enregistrement");
+				return new \SoapFault("Server", "[ALP003] Echec de l'enregistrement");
 			}
 		} catch (Exception $e) {
-			return new SoapFault("Server", "la ligne produit existe déjà");
+			return new \SoapFault("Server", "[ALP004] La ligne produit existe déjà");
 		}
 	}
 	
@@ -178,10 +184,10 @@ class SoapController extends ContainerAware
 	 */
 	public function getLigneProduitAction($count, $offset, $nom) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GLP001] Vous n\'avez pas les droits nécessaires.');
 		
 		if(!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+			return new \SoapFault('Server','[GLP002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service 
 		$result = array();
@@ -219,11 +225,11 @@ class SoapController extends ContainerAware
 	public function modifLigneProduitAction($id,$nom) {
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[MLP001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if(!is_int($id)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètre invalide.');
+			return new \SoapFault('Server','[MLP002] Paramètre invalide.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		//$result = array();
@@ -391,10 +397,10 @@ class SoapController extends ContainerAware
 	public function getAttributFromNomProduitAction($nom) {
 		if (!($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) && 
 			!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[AFNP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GAFNP001] Vous n\'avez pas les droits nécessaires.');
 	
 		if(!is_string($nom)) // Vérif des arguments
-			return new \SoapFault('Server','[AFNP002] Paramètres invalides.');
+			return new \SoapFault('Server','[GAFNP002] Paramètres invalides.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -567,11 +573,11 @@ class SoapController extends ContainerAware
 	 */
 	public function getAttributAction($nom, $idLigneProduit, $idAttribut, $avecValeurAttribut, $avecLigneProduit) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
 	
 		if(!is_int($idLigneProduit) || !is_int($idAttribut) || !is_bool($avecValeurAttribut) 
 		|| !is_bool($avecLigneProduit) || !is_string($nom)) // Vérif des arguments
-			return new SoapFault('Server','[GA002] Paramètres invalides.');
+			return new \SoapFault('Server','[GA002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$result = array(); // Tableau contenant le résultat
@@ -661,10 +667,10 @@ class SoapController extends ContainerAware
 	 */
 	public function getPrixFromCodeBarreAction($codeBarre) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GPFCB001] Vous n\'avez pas les droits nécessaires.');
 		
 		if(!is_string($codeBarre)) // Vérif des arguments
-			return new \SoapFault('Server','[GA002] Paramètres invalides.');
+			return new \SoapFault('Server','[GPFCBA002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($codeBarre);
@@ -691,9 +697,9 @@ class SoapController extends ContainerAware
 	public function ajoutProduitAction($nom,$ligneProduit){
 		//on teste si l'utilisateur a les droits pour accéder à cette fonction
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[ALP001] Vous n\'avez pas les droits nécessaires.');
 		if(!is_string($nom) || !is_string($ligneProduit)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+			return new \SoapFault('Server','[ALP002] Paramètres invalides.');
 
 		try {
 
@@ -723,7 +729,7 @@ class SoapController extends ContainerAware
 			}
 
 		} catch (Exception $e) {
-			return new SoapFault("Server", "la ligne produit existe déjà");
+			return new \SoapFault("Server", "[ALP003] La ligne produit existe déjà");
 		}
 	}
 
@@ -741,10 +747,10 @@ class SoapController extends ContainerAware
 	 */
 	public function getProduitAction($count, $offset, $nom, $ligneproduit){
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GP001] Vous n\'avez pas les droits nécessaires.');
 
 		if(!is_string($nom) || !is_int($offset) || !is_int($count) || !is_string($ligneproduit)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+			return new \SoapFault('Server','[GP002] Paramètres invalides.');
 
 		//on récupere l'objet pdo connecté à la base du logiciel
 		$pdo = $this->container->get('bdd_service')->getPdo();
@@ -794,10 +800,10 @@ class SoapController extends ContainerAware
 	public function modifProduitAction($nom_lp,$nom_p, $id_p){
 	
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
 	
 		if(!is_string($nom_lp) || !is_int($id_p) || !is_string($nom_p)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+			return new \SoapFault('Server','[LP002] Paramètres invalides.');
 	
 		//on récupere l'objet pdo connecté à la base du logiciel
 		$pdo = $this->container->get('bdd_service')->getPdo();
@@ -925,10 +931,10 @@ class SoapController extends ContainerAware
 	*/
 	public function getFournisseursAction($count, $offset, $nom,$email,$telephone_portable) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GF001] Vous n\'avez pas les droits nécessaires.');
 
 		if(!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+			return new \SoapFault('Server','[GF002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -987,10 +993,10 @@ class SoapController extends ContainerAware
 	public function ajoutFournisseurAction($nom,$email,$telephone_portable)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[AF001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($nom)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[AF002] Paramètres invalides.');
 
 
                 $pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -1009,7 +1015,7 @@ class SoapController extends ContainerAware
                     return "OK";
                 }
 
-                return new SoapFault('Server','[LP002] Paramètres invalides.');
+                return new \SoapFault('Server','[AF002] Paramètres invalides.');
 
 	}
 
@@ -1024,10 +1030,10 @@ class SoapController extends ContainerAware
 	public function modifFournisseurAction($id,$nom,$email,$telephone_portable)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($nom) || !is_int($id)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[MF002] Paramètres invalides.');
 
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -1062,13 +1068,13 @@ class SoapController extends ContainerAware
 	public function getAdressesAction($count, $offset, $pays, $ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)
 			|| !is_int($offset) || !is_int($count)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1146,13 +1152,13 @@ class SoapController extends ContainerAware
 	public function ajoutAdresseAction($est_fournisseur,$ref_id,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[AA001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)
 		|| !is_bool($est_fournisseur) || !is_int($ref_id)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[AA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1189,7 +1195,7 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 
 		}
 		else{
-			return new SoapFault('Server','[LP002] Paramètres invalides.');
+			return new \SoapFault('Server','[AA002] Paramètres invalides.');
 		}
 	}
 
@@ -1208,12 +1214,12 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 	public function modifAdresseAction($id_ad,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe){
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[MA001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)|| !is_int($id_ad)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[MA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();

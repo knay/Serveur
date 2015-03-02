@@ -12,7 +12,13 @@ class HomeController extends Controller
     {
     //recupere la classe Utilisateur mappé à la table User dans la base de données
 		$dm = $this->container->get('doctrine')->getEntityManager();
-		$username = 'lba';
+		try {
+			$dm->getConnection()->connect();
+		} catch (\Exception $e) {
+			echo 'march po';
+		}
+		//print_r($dm);
+		/*$username = 'lba';
 		$passwd = 'alb';
 		
 		$sql = "SELECT u FROM ImerirNoyauBundle:Utilisateur u WHERE u.username = :username";
@@ -63,7 +69,7 @@ class HomeController extends Controller
 		else{
 			echo 'FAILLL';
 		}
-		
+		*/
         return $this->render('ImerirNoyauBundle:default:index.html.twig');
     }
 }
