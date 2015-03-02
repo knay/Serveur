@@ -143,6 +143,7 @@ class SoapController extends ContainerAware
 	 */
 	public function ajoutLigneProduitAction($nom){
 		//on teste si l'utilisateur a les droits pour accéder à cette fonction
+		//coucou
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[ALP001] Vous n\'avez pas les droits nécessaires.');
 		if(!is_string($nom)) // Vérif des arguments
@@ -150,12 +151,12 @@ class SoapController extends ContainerAware
 		try {
 			$pdo = $this->container->get('bdd_service')->getPdo();
 			//on verifie si il y a deja la ligne produit
-			$sql = "SELECT * FROM ligne_produit WHERE nom='" . $nom . "'";
+			$sql = 'SELECT * FROM ligne_produit WHERE nom=' .$pdo->quote($nom) .'';
 
 			$resultat = $pdo->query($sql);
 			//si la ligne produit n'existe pas
 			if ($resultat->rowCount() == 0) {
-				$sql = "INSERT INTO ligne_produit(nom)VALUES('" . $nom . "');";
+				$sql = 'INSERT INTO ligne_produit(nom)VALUES(' .$pdo->quote($nom) . ')';
 				$pdo->query($sql);
 
 				return "OK";
@@ -504,7 +505,7 @@ class SoapController extends ContainerAware
 				}
 				
 				$sql = 'INSERT INTO ligne_produit_a_pour_attribut (ref_ligne_produit, ref_attribut)' .
-						'VALUES ('.$idLigneProduit.', '.$id.')'; 
+						'VALUES ('.$pdo->quote($idLigneProduit).', '.$pdo->quote($id).')';
 				$count = $pdo->exec($sql);
 			}
 		}
@@ -540,7 +541,7 @@ class SoapController extends ContainerAware
 				}
 				
 				$sql = 'INSERT INTO ligne_produit_a_pour_attribut (ref_ligne_produit, ref_attribut)' .
-						'VALUES ('.$idLigneProduit.', '.$idAttribut.')'; 
+						'VALUES ('.$pdo->quote($idLigneProduit).', '.$pdo->quote($idAttribut).')';
 				$count = $pdo->exec($sql);
 			}
 		}
@@ -706,11 +707,11 @@ class SoapController extends ContainerAware
 			$pdo = $this->container->get('bdd_service')->getPdo();
 
 			//on verifie si il y a deja le produit
-			$sql = "SELECT * FROM produit JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
-			WHERE produit.nom=" .$pdo->quote($nom). " AND ligne_produit.nom=".$pdo->quote($ligneProduit)."";
+			$sql = 'SELECT * FROM produit JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
+			WHERE produit.nom=' .$pdo->quote($nom). ' AND ligne_produit.nom='.$pdo->quote($ligneProduit).'';
 
 			//requête qui permet de récupérer l'identifiant de la ligne produit
-			$sql_lp = "SELECT * FROM ligne_produit WHERE nom=".$pdo->quote($ligneProduit)."";
+			$sql_lp = 'SELECT * FROM ligne_produit WHERE nom='.$pdo->quote($ligneProduit).'';
 
 			//on exécute les requêtes
 			$resultat = $pdo->query($sql);
@@ -722,7 +723,7 @@ class SoapController extends ContainerAware
 					$id = $row["id"];
 				}
 				//on insert le produit pour la ligne de produit $ligneProduit
-				$sql = "INSERT INTO produit(nom,ref_ligne_produit)VALUES('" . $nom . "','".$id."');";
+				$sql = 'INSERT INTO produit(nom,ref_ligne_produit)VALUES(' .$pdo->quote($nom) . ','.$pdo->quote($id).');';
 				$pdo->query($sql);
 
 				return "OK";
