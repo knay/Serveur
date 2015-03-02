@@ -111,6 +111,10 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$tabArticles = json_decode($articles);
 		
+		$sql = 'INSERT INTO facture (date_facture, est_visible) VALUE (NOW(), true)';
+		$resultat = $pdo->query($sql);
+		$ref_facture = $pdo->lastInsertId();
+		
 		foreach($tabArticles as $article) {
 			$code_barre = $article->codeBarre;
 			$quantite = $article->quantite;
@@ -127,6 +131,22 @@ class SoapController extends ContainerAware
 					VALUE ((SELECT id FROM article WHERE code_barre='.$pdo->quote($code_barre).'), 
 							NOW(), \''.(int)-$quantite.'\', false, true)';
 			
+			$resultat = $pdo->query($sql);
+			$ref_mvt_stock = $pdo->lastInsertId();
+			
+			$ref_remise = 0;
+			if (0 !== $promo) { // S'il y a une promo on l'enregistre dans la table remise
+				$sql = 'INSERT INTO remise (reduction, type_reduction) VALUE ('.(int)$promo.', \'taux\')';
+				$resultat = $pdo->query($sql);
+				$ref_remise = $pdo->lastInsertId();
+			}
+			
+			if ($ref_remise !== 0)
+				$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock, ref_remise)
+				     	VALUE ('.(int)$ref_facture.', '.(int)$ref_mvt_stock.', '.(int)$ref_remise.')';
+			else 
+				$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock)
+				     	VALUE ('.(int)$ref_facture.', '.(int)$ref_mvt_stock.')';
 			$resultat = $pdo->query($sql);
 		}
 		
@@ -673,7 +693,7 @@ class SoapController extends ContainerAware
 			return new \SoapFault('Server','[GPFCB001] Vous n\'avez pas les droits nécessaires.');
 		
 		if(!is_string($codeBarre)) // Vérif des arguments
-			return new \SoapFault('Server','[GPFCBA002] Paramètres invalides.');
+			return new \SoapFault('Server','[GPFCB002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($codeBarre);
