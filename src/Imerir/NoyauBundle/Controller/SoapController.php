@@ -111,6 +111,10 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$tabArticles = json_decode($articles);
 		
+		$sql = 'INSERT INTO facture (date_facture, est_visible) VALUE (NOW(), true)';
+		$resultat = $pdo->query($sql);
+		$ref_facture = $pdo->lastInsertId();
+		
 		foreach($tabArticles as $article) {
 			$code_barre = $article->codeBarre;
 			$quantite = $article->quantite;
@@ -127,6 +131,95 @@ class SoapController extends ContainerAware
 					VALUE ((SELECT id FROM article WHERE code_barre='.$pdo->quote($code_barre).'), 
 							NOW(), \''.(int)-$quantite.'\', false, true)';
 			
+			$resultat = $pdo->query($sql);
+			$ref_mvt_stock = $pdo->lastInsertId();
+			
+			$ref_remise = 0;
+			if (0 !== $promo) { // S'il y a une promo on l'enregistre dans la table remise
+				$sql = 'INSERT INTO remise (reduction, type_reduction) VALUE ('.(int)$promo.', \'taux\')';
+				$resultat = $pdo->query($sql);
+				$ref_remise = $pdo->lastInsertId();
+			}
+			
+			if ($ref_remise !== 0)
+				$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock, ref_remise)
+				     	VALUE ('.(int)$ref_facture.', '.(int)$ref_mvt_stock.', '.(int)$ref_remise.')';
+			else 
+				$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock)
+				     	VALUE ('.(int)$ref_facture.', '.(int)$ref_mvt_stock.')';
+			$resultat = $pdo->query($sql);
+		}
+		
+		return '';
+	}
+	
+	/**
+	 * TODO 
+	 * @Soap\Method("modifArticle")
+	 * @Soap\Param("article",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifArticleAction($article) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[MA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($article)) // Vérif des arguments
+			return new \SoapFault('Server','[MA002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$tabArticle = json_decode($article);
+		$result = array();
+		
+		$code_barre = $tabArticle->codeBarre;
+		$nom_produit = $tabArticle->produit;
+		$attributs = $tabArticle->attributs;
+		$prix = $tabArticle->prix;
+		
+		$sql = 'SELECT * FROM article WHERE code_barre='.$pdo->quote($code_barre);
+		$resultat = $pdo->query($sql);
+		
+		if ($resultat->rowCount() == 0) { // Si l'article n'existe pas on l'ajoute
+			$sql = 'SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit); // On récup l'id du produit
+			$resultat = $pdo->query($sql);
+			
+			foreach ($pdo->query($sql) as $row) {
+				$idProduit = $row['id'];
+			}
+			
+			$sql = 'INSERT INTO article(ref_produit, code_barre, est_visible) 
+				    VALUE (\''.$idProduit.'\', '.$pdo->quote($code_barre).', TRUE)';
+			$resultat = $pdo->query($sql);
+			$idArticle = $pdo->lastInsertId(); // On récup l'id de l'article créé
+		}
+		else { // Si l'article existe on recup juste son ID
+			foreach ($resultat as $row) {
+				$idArticle = $row['id'];
+			}
+			$sql = 'UPDATE article SET ref_produit=
+					(SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit).') 
+				    WHERE article.id = \''.$idArticle.'\'';
+			$resultat = $pdo->query($sql);
+		}
+		
+		$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
+					VALUE (\''.$idArticle.'\', 0, \''.(float)$prix.'\', NOW())';
+		$resultat = $pdo->query($sql);
+		
+		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\''.$idArticle.'\'';
+		$resultat = $pdo->query($sql); // On vide la table de correspondance pour cet article
+		
+		// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
+		foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
+			$sql = 'SELECT valeur_attribut.id AS vaid, attribut.id AS aid FROM valeur_attribut
+			        JOIN attribut ON ref_attribut = attribut.id
+			        WHERE attribut.nom='.$pdo->quote($nomAttribut).' AND valeur_attribut.libelle='.$pdo->quote($libelleValeurAttribut);
+			
+			foreach ($pdo->query($sql) as $row) {
+				$idValAttribut = $row['vaid'];
+			}
+			
+			$sql = 'INSERT INTO article_a_pour_val_attribut (ref_article, ref_val_attribut)
+					VALUE (\''.$idArticle.'\', \''.$idValAttribut.'\')'; // Insertion de la valeur attribut
 			$resultat = $pdo->query($sql);
 		}
 		
@@ -611,6 +704,8 @@ class SoapController extends ContainerAware
 					$dernierId = $row['aid'];
 					array_push($tabAttributs, $row['libelle']);
 				}
+				$ligne = array('id'=>$dernierId, 'nom'=>$dernierNom, 'attributs'=>$tabAttributs);
+				array_push($result, $ligne);
 			}
 			else {
 				$sql = 'SELECT id, nom FROM attribut a ';
@@ -671,7 +766,7 @@ class SoapController extends ContainerAware
 			return new \SoapFault('Server','[GPFCB001] Vous n\'avez pas les droits nécessaires.');
 		
 		if(!is_string($codeBarre)) // Vérif des arguments
-			return new \SoapFault('Server','[GPFCBA002] Paramètres invalides.');
+			return new \SoapFault('Server','[GPFCB002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($codeBarre);
@@ -853,67 +948,92 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
-	 * Permet de retourner le stock actuel.
+	 * Permet de retourner tous les produits en fonction de la ligne de produit
+	 *
+	 * @Soap\Method("getProduitFromLigneProduit")
+	 * @Soap\Param("LigneProduit",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 **/
+	public function getProduitFromLigneProduitAction($LigneProduit){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+		
+		if(!is_string($LigneProduit)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+	
+		if(!empty($LigneProduit)){
+			$sql_recupere_produit = 'SELECT nom FROM alba.produit WHERE est_visible = 1
+					 AND ref_ligne_produit = (SELECT id FROM alba.ligne_produit WHERE nom='.$pdo->quote($LigneProduit).')';
+		}
+		else{
+			$sql_recupere_produit = 'SELECT nom FROM alba.produit WHERE est_visible = 1';
+		}
+		
+		foreach ($pdo->query($sql_recupere_produit) as $row_produit) {
+			$ligne = array('produit' => $row_produit['nom']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+	}
+	
+	/**
+	 * Permet de retourner le stock actuel, en fonction des parametres demander.
 	 *
 	 * @Soap\Method("getStock")
+	 * @Soap\Param("LigneProduit",phpType="string")
+	 * @Soap\Param("Produit",phpType="string")
+	 * @Soap\Param("Article",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 */
-	public function getStock(){
+	 **/
+	public function getStockAction($LigneProduit,$Produit,$Article){
 		
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
 		
-// 		if(!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
-// 			return new SoapFault('Server','[LP002] Paramètres invalides.');
+		if(!is_string($LigneProduit) || !is_string($Produit) || !is_string($Article)) // Vérif des arguments
+			return new SoapFault('Server','[LP002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 		
-		//Recuperer l'id de toutes les lignes produits
-		$sql_recupere_ligne_produit = 'SELECT id,nom FROM alba.ligne_produit WHERE est_visible = 1';
+		$requete_stock = 'SELECT l.nom as ligne_produit_nom,p.nom as produit_nom,a.code_barre article_code_barre,a.id as id_article FROM alba.ligne_produit l
+						INNER JOIN alba.produit p ON p.ref_ligne_produit = l.id
+						INNER JOIN alba.article a ON a.ref_produit = p.id';
 		
-		//On parcourt les lignes produits
-		foreach ($pdo->query($sql_recupere_ligne_produit) as $row_ligne_produit) { 
-			//Recuperer l'id de tous les produits
-			$sql_recupere_produit = 'SELECT id,nom FROM alba.produit WHERE ref_ligne_produit = '.$row_ligne_produit['id'].' AND est_visible = 1';
+		//Si le parametre ligne de produit n'est pas vide
+		if(!empty($LigneProduit)){
+			// On verifie si l'utilisateur a selectionner un produit
+			// Si oui on fait la recherche par rapport a ce porduit et non a la ligne produit
+			if(!empty($Produit)){
+				$requete_stock = $requete_stock.' WHERE p.nom = '.$pdo->quote($Produit).'';
+			}
+			// sinon on recherche par la ligne produit
+			else{
+				$requete_stock = $requete_stock.' WHERE l.nom = '.$pdo->quote($LigneProduit).'';
+			}
+//  			$requete_stock = $requete_stock + 'SELECT id,nom FROM alba.ligne_produit WHERE nom='.$pdo->quote($LigneProduit).' AND est_visible = 1 ';
+ 			
+		}
+		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
+		// selection une ligne produit puis finalement s�lectionner biper un artcile.
+		// et on donnne la priorit� a l'article!
+		if (!empty($Article)){
+			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
+		}
 		
-			//On parcourt les produits de la ligne produit
-			foreach ($pdo->query($sql_recupere_produit) as $row_produit) {
-				//Recuperer l'id de tous les articles
-				$sql_recupere_article = 'SELECT id,code_barre FROM alba.article WHERE ref_produit = '.$row_produit['id'].' AND est_visible = 1';
-				
-				//On parcourt les articles du produit
-				foreach ($pdo->query($sql_recupere_article) as $row_article) {
-					
-					//Recupere l'id du stock
-					$sql_recupere_id_quantite_inventaire = 'SELECT id,quantite_mouvement FROM alba.mouvement_stock WHERE ref_article = '.$row_article['id'].' AND est_inventaire = 1 order by date_mouvement desc limit 1';
-					
-					//On parcourt les mouvements de stock de l'article
-					foreach ($pdo->query($sql_recupere_id_quantite_inventaire) as $row_inventaire) {
-						if(!empty($row_inventaire['id'])){
-							$sql_mouvement_stock = 'SELECT SUM(quantite_mouvement) as total_mouvement FROM alba.mouvement_stock WHERE ref_article = '.$row_article['id'].' AND id >'.$row_inventaire['id'];
-							
-							//On parcourt l
-							foreach ($pdo->query($sql_mouvement_stock) as $row_resultat) {
-								$resultat_stock = 0;
-								if(empty($row_resultat['total_mouvement'])){
-									$resultat_stock = $row_inventaire['quantite_mouvement'];
-								}
-								else{
-									if($row_resultat['total_mouvement'] > $row_inventaire['quantite_mouvement']){
-										$resultat_stock =  $row_resultat['total_mouvement'] + $row_inventaire['quantite_mouvement'];
-									}
-									else{
-										$resultat_stock =  $row_inventaire['quantite_mouvement']+$row_resultat['total_mouvement'];
-									}
-								}
-								
-								$ligne = array('ligne_produit' => $row_ligne_produit['nom'],'produit' => $row_produit['nom'],'article'=>$row_article['code_barre'],'quantite'=>$resultat_stock);
-								array_push($result, $ligne);
-							}
-						}
-					}
-				}
+		foreach ($pdo->query($requete_stock) as $row_ligne) {
+			$sql_quantite_article = 'SELECT SUM(quantite_mouvement) as total_mouvement FROM alba.mouvement_stock
+															WHERE ref_article = '.$row_ligne['id_article'].' AND date_mouvement >= (SELECT date_mouvement FROM alba.mouvement_stock
+															WHERE ref_article = '.$row_ligne['id_article'].'
+															AND est_inventaire = 1
+															order by date_mouvement desc limit 1)';
+			// On parcourt les mouvements de stock de l'article
+			foreach ($pdo->query($sql_quantite_article) as $row_quantite){
+				$ligne = array('ligne_produit' => $row_ligne['ligne_produit_nom'],'produit' => $row_ligne['produit_nom'],'article'=>$row_ligne['article_code_barre'],'quantite'=>$row_quantite['total_mouvement']);
+				array_push($result, $ligne);
 			}
 		}
 		
