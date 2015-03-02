@@ -610,6 +610,8 @@ class SoapController extends ContainerAware
 					$dernierId = $row['aid'];
 					array_push($tabAttributs, $row['libelle']);
 				}
+				$ligne = array('id'=>$dernierId, 'nom'=>$dernierNom, 'attributs'=>$tabAttributs);
+				array_push($result, $ligne);
 			}
 			else {
 				$sql = 'SELECT id, nom FROM attribut a ';
