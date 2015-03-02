@@ -1331,14 +1331,16 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 				$pdo->query($sql);
 
 				//return new \SoapFault('Server','[AA00011] '.$sql.'.');
-				return "OK";
+
 
 			}
 			else{
 				return new \SoapFault('Server','[AA002] Paramètres invalides.');
 			}
-		}
 
+			$i++;
+		}
+		return "OK";
 
 
 	}
