@@ -999,24 +999,24 @@ class SoapController extends ContainerAware
 		if (!is_string($nom)) // Vérif des arguments
 			return new \SoapFault('Server', '[AF002] Paramètres invalides.');
 
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		//$result = array();
 
-                $pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-                $result = array();
+		// Formation de la requete SQL
+		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom='.$pdo->quote($nom).'';
 
-                // Formation de la requete SQL
-                $sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom='.$pdo->quote($nom).'';
+		$resultat = $pdo->query($sql);
+		if($resultat->rowCount($sql) == 0) {
 
-                $resultat = $pdo->query($sql);
-                if($resultat->rowCount($sql) == 0) {
+			//on insert le fournisseur
+			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable)VALUES(' . $pdo->quote($nom) . ','.$pdo->quote($email).',
+			'.$pdo->quote($telephone_portable).');';
+			$pdo->query($sql);
 
-                    //on insert le fournisseur
-                    $sql = "INSERT INTO fournisseur(nom,email,telephone_portable)VALUES('" . $nom . "','".$email."','".$telephone_portable."');";
-                    $pdo->query($sql);
+			return "OK";
+		}
 
-                    return "OK";
-                }
-
-                return new \SoapFault('Server','[AF002] Paramètres invalides.');
+		return new \SoapFault('Server','[AF003] Paramètres invalides.');
 
 	}
 
@@ -1139,9 +1139,9 @@ class SoapController extends ContainerAware
 
 	/**
 	 * @Soap\Method("ajoutAdresse")
-	 * @Soap\Param("pays",phpType="string")
 	 * @Soap\Param("est_fournisseur",phpType="boolean")
-	 * @Soap\Param("ref_id",phpType="int")
+	 * @Soap\Param("ref_id",phpType="string")
+	 * @Soap\Param("pays",phpType="string")
 	 * @Soap\Param("ville",phpType="string")
 	 * @Soap\Param("voie",phpType="string")
 	 * @Soap\Param("num_voie",phpType="string")
@@ -1158,46 +1158,69 @@ class SoapController extends ContainerAware
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)
-		|| !is_bool($est_fournisseur) || !is_int($ref_id)) // Vérif des arguments
+		|| !is_bool($est_fournisseur) || !is_string($ref_id)) // Vérif des arguments
 			return new \SoapFault('Server', '[AA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
 		// Formation de la requete SQL
+		$tab_pays = json_decode($pays);
+		$tab_ville = json_decode($ville);
+		$tab_voie = json_decode($ville);
+		$tab_num_voie = json_decode($ville);
+		$tab_code_postal = json_decode($code_postal);
+		$tab_num_appartement = json_decode($num_appartement);
+		$tab_telephone_fixe = json_decode($telephone_fixe);
 
-		$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse
+		$i=0;
+		foreach($tab_pays as $pays){
+
+			$ville = $tab_ville[$i];
+			$voie = $tab_voie[$i];
+			$num_voie = $tab_num_voie[$i];
+			$code_postal = $tab_code_postal[$i];
+			$num_appartement = $tab_num_appartement[$i];
+			$telephone_fixe = $tab_telephone_fixe[$i];
+
+
+			$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse
 WHERE pays='.$pdo->quote($pays).' AND ville='.$pdo->quote($ville).' AND voie='.$pdo->quote($voie).'
 AND num_voie='.$pdo->quote($num_voie).' ';
 
-		if($est_fournisseur)
-			$sql .= 'AND ref_fournisseur='.$pdo->quote($ref_id).'';
-		else
-			$sql .= 'AND ref_contact='.$pdo->quote($ref_id).'';
+			if($est_fournisseur)
+				$sql .= 'AND ref_fournisseur='.$pdo->quote($ref_id).'';
+			else
+				$sql .= 'AND ref_contact='.$pdo->quote($ref_id).'';
 
-		//on teste si l'adresse existe déjà
-		$resultat = $pdo->query($sql);
+			//on teste si l'adresse existe déjà
+			$resultat = $pdo->query($sql);
 
-		if($resultat->rowCount() == 0){
-			//insertion des données
-			if($est_fournisseur){
-				$sql='INSERT INTO adresse(ref_fournisseur,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
+			if($resultat->rowCount() == 0){
+				//insertion des données
+				if($est_fournisseur){
+					$sql='INSERT INTO adresse(ref_fournisseur,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
 '.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
-'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).'';
+'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).')';
+				}
+				else{
+					$sql='INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
+'.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
+'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).')';
+				}
+				$pdo->query($sql);
+
+				//return new \SoapFault('Server','[AA00011] '.$sql.'.');
+				return "OK";
+
 			}
 			else{
-				$sql='INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
-'.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
-'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).'';
+				return new \SoapFault('Server','[AA002] Paramètres invalides.');
 			}
-			$pdo->query($sql);
-
-			return "OK";
-
 		}
-		else{
-			return new \SoapFault('Server','[AA002] Paramètres invalides.');
-		}
+
+
+
 	}
 
 	/**
