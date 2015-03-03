@@ -964,11 +964,14 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On rÃ©cup PDO depuis le service
 		$result = array();
 	
+		// Si la ligne de produit est differente de vide
 		if(!empty($LigneProduit)){
+			// Recuperer tous les produits de la ligne produit
 			$sql_recupere_produit = 'SELECT nom FROM alba.produit WHERE est_visible = 1
 					 AND ref_ligne_produit = (SELECT id FROM alba.ligne_produit WHERE nom='.$pdo->quote($LigneProduit).')';
 		}
 		else{
+			//Sinon on recupere tous les produits de toutes les lignes de produits.
 			$sql_recupere_produit = 'SELECT nom FROM alba.produit WHERE est_visible = 1';
 		}
 		
@@ -1003,10 +1006,18 @@ class SoapController extends ContainerAware
 						INNER JOIN alba.produit p ON p.ref_ligne_produit = l.id
 						INNER JOIN alba.article a ON a.ref_produit = p.id';
 		
+
+		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
+		// selection une ligne produit puis finalement sŽlectionner biper un artcile.
+		// et on donnne la prioritŽ a l'article!
+		
+		if (!empty($Article)){
+			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
+		}
 		//Si le parametre ligne de produit n'est pas vide
-		if(!empty($LigneProduit)){
+		else if(!empty($LigneProduit)){
 			// On verifie si l'utilisateur a selectionner un produit
-			// Si oui on fait la recherche par rapport a ce porduit et non a la ligne produit
+			// Si oui on fait la recherche par rapport a ce produit et non a la ligne produit
 			if(!empty($Produit)){
 				$requete_stock = $requete_stock.' WHERE p.nom = '.$pdo->quote($Produit).'';
 			}
@@ -1014,8 +1025,9 @@ class SoapController extends ContainerAware
 			else{
 				$requete_stock = $requete_stock.' WHERE l.nom = '.$pdo->quote($LigneProduit).'';
 			}
-//  			$requete_stock = $requete_stock + 'SELECT id,nom FROM alba.ligne_produit WHERE nom='.$pdo->quote($LigneProduit).' AND est_visible = 1 ';
- 			
+		}
+		else {
+			$requete_stock = $requete_stock;
 		}
 		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
 		// selection une ligne produit puis finalement sï¿½lectionner biper un artcile.
@@ -1023,6 +1035,7 @@ class SoapController extends ContainerAware
 		if (!empty($Article)){
 			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
 		}
+		$requete_stock = $requete_stock.' ORDER BY ligne_produit_nom,produit_nom ASC';
 		
 		foreach ($pdo->query($requete_stock) as $row_ligne) {
 			$sql_quantite_article = 'SELECT SUM(quantite_mouvement) as total_mouvement FROM alba.mouvement_stock
@@ -1039,6 +1052,29 @@ class SoapController extends ContainerAware
 		
 		return json_encode($result);
 		
+	}
+	
+	/**
+	 * Permet de retourner toutes les lignes produits
+	 *
+	 * @Soap\Method("getAllLigneProduit")
+	 * @Soap\Result(phpType = "string")
+	 **/
+	public function getAllLigneProduitAction(){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nÃ©cessaires.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On rÃ©cup PDO depuis le service
+		$result = array();
+	
+		$requete_tous_les_produits = 'SELECT nom as ligne_produit_nom FROM alba.ligne_produit ORDER BY nom ASC';
+	
+		foreach ($pdo->query($requete_tous_les_produits) as $row) {
+			$ligne = array('nom_ligne_produit' => $row['ligne_produit_nom']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
 	}
 	
 	/**
