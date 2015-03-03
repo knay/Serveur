@@ -1008,8 +1008,8 @@ class SoapController extends ContainerAware
 		
 
 		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
-		// selection une ligne produit puis finalement s�lectionner biper un artcile.
-		// et on donnne la priorit� a l'article!
+		// selection une ligne produit puis finalement s�lectionner biper un artcile.
+		// et on donnne la priorit� a l'article!
 		
 		if (!empty($Article)){
 			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
@@ -1282,11 +1282,11 @@ class SoapController extends ContainerAware
 			}
 			if(key($arguments[$i]) == 'ref_fournisseur' || key($arguments[$i]) == 'ref_contact'){
 
-				$sql .= ' '.key($arguments[$i]).'='.$pdo->quote($arguments[$i][key($arguments[$i])]).'';
+				$sql .= ' '.key($arguments[$i]).'='.$pdo->quote($arguments[$i][key($arguments[$i])]).' AND est_visible=\'1\'';
 			}
 			else{
 				$val = '%'.$arguments[$i][key($arguments[$i])].'%';
-				$sql .= ' '.key($arguments[$i]).' LIKE '.$pdo->quote($val).'';
+				$sql .= ' '.key($arguments[$i]).' LIKE '.$pdo->quote($val).' AND est_visible=\'1\'';
 			}
 
 			if ($offset != 0) {
@@ -1399,6 +1399,7 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 
 	/**
 	 * @Soap\Method("modifAdresse")
+	 * @Soap\Param("est_visible",phpType="string")
 	 * @Soap\Param("id_ad",phpType="string")
 	 * @Soap\Param("pays",phpType="string")
 	 * @Soap\Param("ville",phpType="string")
@@ -1409,13 +1410,13 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 	 * @Soap\Param("telephone_fixe",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function modifAdresseAction($id_ad,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe){
+	public function modifAdresseAction($est_visible,$id_ad,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe){
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[MA001] Vous n\'avez pas les droits nécessaires.');
 
 
-		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
+		if (!is_string($est_visible) || !is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)|| !is_string($id_ad)) // Vérif des arguments
 			return new \SoapFault('Server', '[MA002] Paramètres invalides.');
 
@@ -1423,6 +1424,7 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 		$result = array();
 
 		//Formation de la requête SQL
+		$tab_est_visible = json_decode($est_visible);
 		$tab_id = json_decode($id_ad);
 		$tab_pays = json_decode($pays);
 		$tab_ville = json_decode($ville);
@@ -1434,6 +1436,7 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 
 		$i=0;
 		foreach($tab_id as $id_ad) {
+			$est_visible = $tab_est_visible[$i];
 			$pays = $tab_pays[$i];
 			$ville = $tab_ville[$i];
 			$voie = $tab_voie[$i];
@@ -1442,7 +1445,7 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 			$num_appartement = $tab_num_appartement[$i];
 			$telephone_fixe = $tab_telephone_fixe[$i];
 
-			$sql = 'UPDATE adresse SET pays='.$pdo->quote($pays).', ville='.$pdo->quote($ville).', voie='.$pdo->quote($voie).',
+			$sql = 'UPDATE adresse SET est_visible='.$pdo->quote($est_visible).',pays='.$pdo->quote($pays).', ville='.$pdo->quote($ville).', voie='.$pdo->quote($voie).',
 		num_voie='.$pdo->quote($num_voie).',code_postal='.$pdo->quote($code_postal).',num_appartement='.$pdo->quote($num_appartement).',
 		telephone_fixe='.$pdo->quote($telephone_fixe).' WHERE id='.$pdo->quote($id_ad).'';
 
