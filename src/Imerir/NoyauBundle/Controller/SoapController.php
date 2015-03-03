@@ -121,6 +121,9 @@ class SoapController extends ContainerAware
 			$promo = $article->promo;
 			$prix = 0;
 			
+			if ($code_barre === '')
+				break;
+			
 			$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($code_barre);
 			$resultat = $pdo->query($sql);
 			foreach ($resultat as $row) {
@@ -1008,8 +1011,8 @@ class SoapController extends ContainerAware
 		
 
 		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
-		// selection une ligne produit puis finalement s�lectionner biper un artcile.
-		// et on donnne la priorit� a l'article!
+		// selection une ligne produit puis finalement s�lectionner biper un artcile.
+		// et on donnne la priorit� a l'article!
 		
 		if (!empty($Article)){
 			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
@@ -1379,6 +1382,66 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 		return "OK";
 
 
+	}
+	
+	/**
+	 * Permet d'avoir les statistiques des ventes par mois.
+	 * 
+	 * @Soap\Method("statsVenteMoyenneParMois")
+	 * @Soap\Param("nbMois",phpType="int")
+	 * @Soap\Result(phpType = "string") 
+	 */
+	public function statsVenteMoyenneParMoisAction($nbMois) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SVMVPM001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_int($nbMois)) // Vérif des arguments
+			return new \SoapFault('Server', '[SVMVPM002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		$sql = 'SELECT SUM(
+						CASE 
+					        WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction/100)*(-1*quantite_mouvement)
+					        WHEN type_reduction = \'remise\' THEN (montant_client-reduction)*(-1*quantite_mouvement)
+					        ELSE montant_client*(-1*quantite_mouvement)
+					    END) AS montant, DATE_FORMAT(date_facture,\'%d/%m/%y\') AS DateJour
+					FROM (SELECT ligne_facture_id,
+								 article_id, 
+								 MAX(prix_id), 
+								 date_facture, 
+								 reduction, 
+								 type_reduction,
+								 quantite_mouvement, 
+								 montant_client
+					        FROM(
+								SELECT facture.date_facture, 
+									   ligne_facture.id as "ligne_facture_id", 
+					                   article.id as "article_id", 
+					                   prix.id as "prix_id",
+					                   reduction, 
+									   type_reduction,
+									   quantite_mouvement, 
+									   montant_client
+								FROM facture  
+								JOIN ligne_facture ON facture.id = ligne_facture.ref_facture
+								JOIN mouvement_stock ON ligne_facture.ref_mvt_stock=mouvement_stock.id
+								JOIN article ON mouvement_stock.ref_article=article.id
+								JOIN prix ON prix.ref_article=article.id
+					            LEFT OUTER JOIN remise ON ligne_facture.ref_remise=remise.id
+								WHERE MONTH(facture.date_facture) = MONTH(NOW()))ta
+								GROUP BY article_id, ligne_facture_id
+					        
+						) t GROUP BY DAY(date_facture)';
+		
+		$resultat = $pdo->query($sql);
+		foreach ($resultat as $row) {
+			$jour = array('montant' => $row['montant'], 'jour' => $row['DateJour']);
+			array_push($result, $jour);
+		}
+		
+		return json_encode($result);
 	}
 
 	/**
