@@ -111,6 +111,10 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$tabArticles = json_decode($articles);
 		
+		$sql = 'INSERT INTO facture (date_facture, est_visible) VALUE (NOW(), true)';
+		$resultat = $pdo->query($sql);
+		$ref_facture = $pdo->lastInsertId();
+		
 		foreach($tabArticles as $article) {
 			$code_barre = $article->codeBarre;
 			$quantite = $article->quantite;
@@ -127,6 +131,95 @@ class SoapController extends ContainerAware
 					VALUE ((SELECT id FROM article WHERE code_barre='.$pdo->quote($code_barre).'), 
 							NOW(), \''.(int)-$quantite.'\', false, true)';
 			
+			$resultat = $pdo->query($sql);
+			$ref_mvt_stock = $pdo->lastInsertId();
+			
+			$ref_remise = 0;
+			if (0 !== $promo) { // S'il y a une promo on l'enregistre dans la table remise
+				$sql = 'INSERT INTO remise (reduction, type_reduction) VALUE ('.(int)$promo.', \'taux\')';
+				$resultat = $pdo->query($sql);
+				$ref_remise = $pdo->lastInsertId();
+			}
+			
+			if ($ref_remise !== 0)
+				$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock, ref_remise)
+				     	VALUE ('.(int)$ref_facture.', '.(int)$ref_mvt_stock.', '.(int)$ref_remise.')';
+			else 
+				$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock)
+				     	VALUE ('.(int)$ref_facture.', '.(int)$ref_mvt_stock.')';
+			$resultat = $pdo->query($sql);
+		}
+		
+		return '';
+	}
+	
+	/**
+	 * TODO 
+	 * @Soap\Method("modifArticle")
+	 * @Soap\Param("article",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifArticleAction($article) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[MA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if(!is_string($article)) // Vérif des arguments
+			return new \SoapFault('Server','[MA002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$tabArticle = json_decode($article);
+		$result = array();
+		
+		$code_barre = $tabArticle->codeBarre;
+		$nom_produit = $tabArticle->produit;
+		$attributs = $tabArticle->attributs;
+		$prix = $tabArticle->prix;
+		
+		$sql = 'SELECT * FROM article WHERE code_barre='.$pdo->quote($code_barre);
+		$resultat = $pdo->query($sql);
+		
+		if ($resultat->rowCount() == 0) { // Si l'article n'existe pas on l'ajoute
+			$sql = 'SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit); // On récup l'id du produit
+			$resultat = $pdo->query($sql);
+			
+			foreach ($pdo->query($sql) as $row) {
+				$idProduit = $row['id'];
+			}
+			
+			$sql = 'INSERT INTO article(ref_produit, code_barre, est_visible) 
+				    VALUE (\''.$idProduit.'\', '.$pdo->quote($code_barre).', TRUE)';
+			$resultat = $pdo->query($sql);
+			$idArticle = $pdo->lastInsertId(); // On récup l'id de l'article créé
+		}
+		else { // Si l'article existe on recup juste son ID
+			foreach ($resultat as $row) {
+				$idArticle = $row['id'];
+			}
+			$sql = 'UPDATE article SET ref_produit=
+					(SELECT id FROM produit WHERE nom='.$pdo->quote($nom_produit).') 
+				    WHERE article.id = \''.$idArticle.'\'';
+			$resultat = $pdo->query($sql);
+		}
+		
+		$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
+					VALUE (\''.$idArticle.'\', 0, \''.(float)$prix.'\', NOW())';
+		$resultat = $pdo->query($sql);
+		
+		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\''.$idArticle.'\'';
+		$resultat = $pdo->query($sql); // On vide la table de correspondance pour cet article
+		
+		// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
+		foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
+			$sql = 'SELECT valeur_attribut.id AS vaid, attribut.id AS aid FROM valeur_attribut
+			        JOIN attribut ON ref_attribut = attribut.id
+			        WHERE attribut.nom='.$pdo->quote($nomAttribut).' AND valeur_attribut.libelle='.$pdo->quote($libelleValeurAttribut);
+			
+			foreach ($pdo->query($sql) as $row) {
+				$idValAttribut = $row['vaid'];
+			}
+			
+			$sql = 'INSERT INTO article_a_pour_val_attribut (ref_article, ref_val_attribut)
+					VALUE (\''.$idArticle.'\', \''.$idValAttribut.'\')'; // Insertion de la valeur attribut
 			$resultat = $pdo->query($sql);
 		}
 		
@@ -673,7 +766,7 @@ class SoapController extends ContainerAware
 			return new \SoapFault('Server','[GPFCB001] Vous n\'avez pas les droits nécessaires.');
 		
 		if(!is_string($codeBarre)) // Vérif des arguments
-			return new \SoapFault('Server','[GPFCBA002] Paramètres invalides.');
+			return new \SoapFault('Server','[GPFCB002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($codeBarre);
@@ -936,6 +1029,12 @@ class SoapController extends ContainerAware
 		else {
 			$requete_stock = $requete_stock;
 		}
+		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
+		// selection une ligne produit puis finalement s�lectionner biper un artcile.
+		// et on donnne la priorit� a l'article!
+		if (!empty($Article)){
+			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
+		}
 		$requete_stock = $requete_stock.' ORDER BY ligne_produit_nom,produit_nom ASC';
 		
 		foreach ($pdo->query($requete_stock) as $row_ligne) {
@@ -1056,24 +1155,24 @@ class SoapController extends ContainerAware
 		if (!is_string($nom)) // Vérif des arguments
 			return new \SoapFault('Server', '[AF002] Paramètres invalides.');
 
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		//$result = array();
 
-                $pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-                $result = array();
+		// Formation de la requete SQL
+		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom='.$pdo->quote($nom).'';
 
-                // Formation de la requete SQL
-                $sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom='.$pdo->quote($nom).'';
+		$resultat = $pdo->query($sql);
+		if($resultat->rowCount($sql) == 0) {
 
-                $resultat = $pdo->query($sql);
-                if($resultat->rowCount($sql) == 0) {
+			//on insert le fournisseur
+			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable)VALUES(' . $pdo->quote($nom) . ','.$pdo->quote($email).',
+			'.$pdo->quote($telephone_portable).');';
+			$pdo->query($sql);
 
-                    //on insert le fournisseur
-                    $sql = "INSERT INTO fournisseur(nom,email,telephone_portable)VALUES('" . $nom . "','".$email."','".$telephone_portable."');";
-                    $pdo->query($sql);
+			return "OK";
+		}
 
-                    return "OK";
-                }
-
-                return new \SoapFault('Server','[AF002] Paramètres invalides.');
+		return new \SoapFault('Server','[AF003] Paramètres invalides.');
 
 	}
 
@@ -1196,9 +1295,9 @@ class SoapController extends ContainerAware
 
 	/**
 	 * @Soap\Method("ajoutAdresse")
-	 * @Soap\Param("pays",phpType="string")
 	 * @Soap\Param("est_fournisseur",phpType="boolean")
-	 * @Soap\Param("ref_id",phpType="int")
+	 * @Soap\Param("ref_id",phpType="string")
+	 * @Soap\Param("pays",phpType="string")
 	 * @Soap\Param("ville",phpType="string")
 	 * @Soap\Param("voie",phpType="string")
 	 * @Soap\Param("num_voie",phpType="string")
@@ -1215,46 +1314,71 @@ class SoapController extends ContainerAware
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)
-		|| !is_bool($est_fournisseur) || !is_int($ref_id)) // Vérif des arguments
+		|| !is_bool($est_fournisseur) || !is_string($ref_id)) // Vérif des arguments
 			return new \SoapFault('Server', '[AA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
 		// Formation de la requete SQL
+		$tab_pays = json_decode($pays);
+		$tab_ville = json_decode($ville);
+		$tab_voie = json_decode($ville);
+		$tab_num_voie = json_decode($ville);
+		$tab_code_postal = json_decode($code_postal);
+		$tab_num_appartement = json_decode($num_appartement);
+		$tab_telephone_fixe = json_decode($telephone_fixe);
 
-		$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse
+		$i=0;
+		foreach($tab_pays as $pays){
+
+			$ville = $tab_ville[$i];
+			$voie = $tab_voie[$i];
+			$num_voie = $tab_num_voie[$i];
+			$code_postal = $tab_code_postal[$i];
+			$num_appartement = $tab_num_appartement[$i];
+			$telephone_fixe = $tab_telephone_fixe[$i];
+
+
+			$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse
 WHERE pays='.$pdo->quote($pays).' AND ville='.$pdo->quote($ville).' AND voie='.$pdo->quote($voie).'
 AND num_voie='.$pdo->quote($num_voie).' ';
 
-		if($est_fournisseur)
-			$sql .= 'AND ref_fournisseur='.$pdo->quote($ref_id).'';
-		else
-			$sql .= 'AND ref_contact='.$pdo->quote($ref_id).'';
+			if($est_fournisseur)
+				$sql .= 'AND ref_fournisseur='.$pdo->quote($ref_id).'';
+			else
+				$sql .= 'AND ref_contact='.$pdo->quote($ref_id).'';
 
-		//on teste si l'adresse existe déjà
-		$resultat = $pdo->query($sql);
+			//on teste si l'adresse existe déjà
+			$resultat = $pdo->query($sql);
 
-		if($resultat->rowCount() == 0){
-			//insertion des données
-			if($est_fournisseur){
-				$sql='INSERT INTO adresse(ref_fournisseur,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
+			if($resultat->rowCount() == 0){
+				//insertion des données
+				if($est_fournisseur){
+					$sql='INSERT INTO adresse(ref_fournisseur,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
 '.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
-'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).'';
+'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).')';
+				}
+				else{
+					$sql='INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
+'.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
+'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).')';
+				}
+				$pdo->query($sql);
+
+				//return new \SoapFault('Server','[AA00011] '.$sql.'.');
+
+
 			}
 			else{
-				$sql='INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
-'.$pdo->quote($ref_id).','.$pdo->quote($pays).','.$pdo->quote($ville).','.$pdo->quote($voie).','.$pdo->quote($num_voie).',
-'.$pdo->quote($code_postal).','.$pdo->quote($num_appartement).','.$pdo->quote($telephone_fixe).'';
+				return new \SoapFault('Server','[AA002] Paramètres invalides.');
 			}
-			$pdo->query($sql);
 
-			return "OK";
+			$i++;
+		}
+		return "OK";
 
-		}
-		else{
-			return new \SoapFault('Server','[AA002] Paramètres invalides.');
-		}
+
 	}
 
 	/**
