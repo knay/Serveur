@@ -933,11 +933,11 @@ class SoapController extends ContainerAware
 		if ($this->container->get('user_service')->isOk('ROLE_GERANT')) {
 			$tableau_menu = array(
 				array('menu' => 'caisse','sous_menu' => array()),
-				array('menu' => 'client','sous_menu' => array('Info client','Stats')),
+				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
 				array('menu' => 'evenement','sous_menu' => array()),
-				array('menu' => 'fournisseur','sous_menu' => array('Fournisseur','Historique')),
-				array('menu' => 'produit','sous_menu' => array('Article', 'Attribut','Ligne produit','Produit','Reception','Stock','Inventaire')),
-				array('menu' => 'vente','sous_menu' => array('Moyen de payement','Stats','Factures','Retour')));
+				array('menu' => 'fournisseur','sous_menu' => array('Fournisseurs','Historique')),
+				array('menu' => 'produit','sous_menu' => array('Articles', 'Caractéristiques produits','Lignes produits','Produits','Reception','Stock','Inventaire')),
+				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour')));
 			return json_encode($tableau_menu);
 		}
 		
@@ -1398,6 +1398,61 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 		return "OK";
 
 
+	}
+	
+	/**
+	 * Permet d'avoir les statistiques des ventes par mois.
+	 *
+	 * @Soap\Method("statsVenteTopVente")
+	 * @Soap\Param("nbTop",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function statsVenteTopVenteAction($nbTop) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SVTVM001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($nbTop)) // Vérif des arguments
+			return new \SoapFault('Server', '[SVTV002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+	
+		$sql = 'SELECT nom, SUM(
+					CASE 
+				        WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction/100)*(-1*quantite_mouvement)
+				        WHEN type_reduction = \'remise\' THEN (montant_client-reduction)*(-1*quantite_mouvement)
+				        ELSE montant_client*(-1*quantite_mouvement)
+				    END) AS montant
+				FROM (
+				SELECT ligne_facture_id,article_id, MAX(prix_id), nom, montant_client, type_reduction, reduction, quantite_mouvement
+				        FROM(
+				        SELECT facture.date_facture,ligne_facture.id as "ligne_facture_id", 
+				               article.id as "article_id", 
+				               prix.id as "prix_id", 
+				               prix.montant_client,
+				               produit.nom, 
+				               reduction, 
+							   type_reduction,
+				               quantite_mouvement
+				        FROM facture  
+						JOIN ligne_facture ON facture.id = ligne_facture.ref_facture
+						JOIN mouvement_stock ON ligne_facture.ref_mvt_stock=mouvement_stock.id
+						JOIN article ON mouvement_stock.ref_article=article.id
+				        JOIN prix ON prix.ref_article=article.id
+				        JOIN produit ON article.ref_produit=produit.id
+				        LEFT OUTER JOIN remise ON ligne_facture.ref_remise=remise.id
+				        WHERE MONTH(facture.date_facture) = MONTH(NOW()))t
+				        GROUP BY article_id,ligne_facture_id) t 
+					GROUP BY nom
+				    LIMIT '.(int)$nbTop;
+	
+		$resultat = $pdo->query($sql);
+		foreach ($resultat as $row) {
+			$jour = array('produit' => $row['nom'], 'montant' => $row['montant']);
+			array_push($result, $jour);
+		}
+	
+		return json_encode($result);
 	}
 	
 	/**
