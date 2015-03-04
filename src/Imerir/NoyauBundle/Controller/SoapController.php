@@ -121,6 +121,9 @@ class SoapController extends ContainerAware
 			$promo = $article->promo;
 			$prix = 0;
 			
+			if ($code_barre === '')
+				break;
+			
 			$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre='.$pdo->quote($code_barre);
 			$resultat = $pdo->query($sql);
 			foreach ($resultat as $row) {
@@ -1006,10 +1009,9 @@ class SoapController extends ContainerAware
 						INNER JOIN alba.produit p ON p.ref_ligne_produit = l.id
 						INNER JOIN alba.article a ON a.ref_produit = p.id';
 		
-
-		// Si l'article est renseigner.L'utilisateur peut tres bien
-		// selection une ligne produit puis finalement biper un artcile.
-		// et on donnne la priorit� a l'article!
+		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
+		// selection une ligne produit puis finalement s�lectionner biper un artcile.
+		// et on donnne la priorit� a l'article!
 		
 		if (!empty($Article)){
 			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
@@ -1208,6 +1210,8 @@ class SoapController extends ContainerAware
 	 * @Soap\Method("getAdresses")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("est_fournisseur",phpType="boolean")
+	 * @Soap\Param("ref_id",phpType="int")
 	 * @Soap\Param("pays",phpType="string")
 	 * @Soap\Param("ville",phpType="string")
 	 * @Soap\Param("voie",phpType="string")
@@ -1217,7 +1221,7 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("telephone_fixe",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getAdressesAction($count, $offset, $pays, $ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe)
+	public function getAdressesAction($count, $offset,$est_fournisseur,$ref_id, $pays, $ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
@@ -1225,7 +1229,8 @@ class SoapController extends ContainerAware
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)
-			|| !is_int($offset) || !is_int($count)) // Vérif des arguments
+			|| !is_int($offset) || !is_int($count) || !is_bool($est_fournisseur)
+			 || !is_int($ref_id))// Vérif des arguments
 			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -1236,7 +1241,7 @@ class SoapController extends ContainerAware
 
 		$arguments = array();
 		if(!empty($pays) || !empty($ville) || !empty($voie) || !empty($num_voie) || !empty($code_postal) || !empty($num_appartement)
-			|| !empty($telephone_fixe)){
+			|| !empty($telephone_fixe) || !empty($ref_id)){
 
 			if(!empty($pays))
 				array_push($arguments,array('pays'=>$pays));
@@ -1252,22 +1257,35 @@ class SoapController extends ContainerAware
 				array_push($arguments,array('code_postal'=>$code_postal));
 			if(!empty($telephone_fixe))
 				array_push($arguments,array('telephone_fixe'=>$telephone_fixe));
+			if($est_fournisseur && !empty($ref_id))
+				array_push($arguments,array('ref_fournisseur'=>$ref_id));
+			if(!$est_fournisseur && !empty($ref_id))
+				array_push($arguments,array('ref_contact'=>$ref_id));
 
 			$sql.='WHERE ';
-			//on recupere la derniere clef du tableau
-			$lastKey = key(end($arguments));
-			reset($arguments);
-			while($arg = current($arguments)){
-				$val = '%'.$arg.'%';
-				if(key($arg)==$lastKey){
-					$sql .= key($arg).' LIKE '.$pdo->quote($val).' ';
+
+			$i=0;
+			$taille_avant_fin = count($arguments) - 1;
+			while($i < $taille_avant_fin){
+				if(key($arguments[$i]) == 'ref_fournisseur' || key($arguments[$i]) == 'ref_contact'){
+
+					$sql .= ' '.key($arguments[$i]).'='.$pdo->quote($arguments[$i][key($arguments[$i])]).' AND';
 				}
 				else{
-					$sql .= key($arg).' LIKE '.$pdo->quote($val).' AND ';
+					$val = '%'.$arguments[$i][key($arguments[$i])].'%';
+					$sql .= ' '.key($arguments[$i]).' LIKE '.$pdo->quote($val).' AND';
 				}
-				next($arguments);
+				$i++;
 			}
-			$sql .= '';
+			if(key($arguments[$i]) == 'ref_fournisseur' || key($arguments[$i]) == 'ref_contact'){
+
+				$sql .= ' '.key($arguments[$i]).'='.$pdo->quote($arguments[$i][key($arguments[$i])]).' AND est_visible=\'1\'';
+			}
+			else{
+				$val = '%'.$arguments[$i][key($arguments[$i])].'%';
+				$sql .= ' '.key($arguments[$i]).' LIKE '.$pdo->quote($val).' AND est_visible=\'1\'';
+			}
+
 			if ($offset != 0) {
 				$sql .= ' ORDER BY ville ASC LIMIT ' . (int)$offset;
 				if ($count != 0)
@@ -1284,8 +1302,8 @@ class SoapController extends ContainerAware
 				'telephone_fixe'=>$row['telephone_fixe']);
 			array_push($result, $ligne);
 		}
-
 		return json_encode($result);
+		//return new \SoapFault('Server', $sql);
 	}
 
 	/**
@@ -1309,7 +1327,7 @@ class SoapController extends ContainerAware
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)
-		|| !is_bool($est_fournisseur) || !is_string($ref_id)) // Vérif des arguments
+		|| !is_bool($est_fournisseur) || (!is_string($ref_id) && !is_int($ref_id))) // Vérif des arguments
 			return new \SoapFault('Server', '[AA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -1318,8 +1336,8 @@ class SoapController extends ContainerAware
 		// Formation de la requete SQL
 		$tab_pays = json_decode($pays);
 		$tab_ville = json_decode($ville);
-		$tab_voie = json_decode($ville);
-		$tab_num_voie = json_decode($ville);
+		$tab_voie = json_decode($voie);
+		$tab_num_voie = json_decode($num_voie);
 		$tab_code_postal = json_decode($code_postal);
 		$tab_num_appartement = json_decode($num_appartement);
 		$tab_telephone_fixe = json_decode($telephone_fixe);
@@ -1375,10 +1393,71 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 
 
 	}
+	
+	/**
+	 * Permet d'avoir les statistiques des ventes par mois.
+	 * 
+	 * @Soap\Method("statsVenteMoyenneParMois")
+	 * @Soap\Param("nbMois",phpType="int")
+	 * @Soap\Result(phpType = "string") 
+	 */
+	public function statsVenteMoyenneParMoisAction($nbMois) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SVMVPM001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_int($nbMois)) // Vérif des arguments
+			return new \SoapFault('Server', '[SVMVPM002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		$sql = 'SELECT SUM(
+						CASE 
+					        WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction/100)*(-1*quantite_mouvement)
+					        WHEN type_reduction = \'remise\' THEN (montant_client-reduction)*(-1*quantite_mouvement)
+					        ELSE montant_client*(-1*quantite_mouvement)
+					    END) AS montant, DATE_FORMAT(date_facture,\'%d/%m/%y\') AS DateJour
+					FROM (SELECT ligne_facture_id,
+								 article_id, 
+								 MAX(prix_id), 
+								 date_facture, 
+								 reduction, 
+								 type_reduction,
+								 quantite_mouvement, 
+								 montant_client
+					        FROM(
+								SELECT facture.date_facture, 
+									   ligne_facture.id as "ligne_facture_id", 
+					                   article.id as "article_id", 
+					                   prix.id as "prix_id",
+					                   reduction, 
+									   type_reduction,
+									   quantite_mouvement, 
+									   montant_client
+								FROM facture  
+								JOIN ligne_facture ON facture.id = ligne_facture.ref_facture
+								JOIN mouvement_stock ON ligne_facture.ref_mvt_stock=mouvement_stock.id
+								JOIN article ON mouvement_stock.ref_article=article.id
+								JOIN prix ON prix.ref_article=article.id
+					            LEFT OUTER JOIN remise ON ligne_facture.ref_remise=remise.id
+								WHERE MONTH(facture.date_facture) = MONTH(NOW()))ta
+								GROUP BY article_id, ligne_facture_id
+					        
+						) t GROUP BY DAY(date_facture)';
+		
+		$resultat = $pdo->query($sql);
+		foreach ($resultat as $row) {
+			$jour = array('montant' => $row['montant'], 'jour' => $row['DateJour']);
+			array_push($result, $jour);
+		}
+		
+		return json_encode($result);
+	}
 
 	/**
 	 * @Soap\Method("modifAdresse")
-	 * @Soap\Param("id_ad",phpType="int")
+	 * @Soap\Param("est_visible",phpType="string")
+	 * @Soap\Param("id_ad",phpType="string")
 	 * @Soap\Param("pays",phpType="string")
 	 * @Soap\Param("ville",phpType="string")
 	 * @Soap\Param("voie",phpType="string")
@@ -1388,25 +1467,51 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 	 * @Soap\Param("telephone_fixe",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function modifAdresseAction($id_ad,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe){
+	public function modifAdresseAction($est_visible,$id_ad,$pays,$ville, $voie, $num_voie, $code_postal, $num_appartement,$telephone_fixe){
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[MA001] Vous n\'avez pas les droits nécessaires.');
 
 
-		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
-			|| !is_string($num_appartement) || !is_string($telephone_fixe)|| !is_int($id_ad)) // Vérif des arguments
+		if (!is_string($est_visible) || !is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
+			|| !is_string($num_appartement) || !is_string($telephone_fixe)|| !is_string($id_ad)) // Vérif des arguments
 			return new \SoapFault('Server', '[MA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
 		//Formation de la requête SQL
-		$sql = 'UPDATE adresse SET pays='.$pdo->quote($pays).', ville='.$pdo->quote($ville).', voie='.$pdo->quote($voie).',
-		num_voie='.$pdo->quote($num_voie).',code_postal='.$pdo->quote($code_postal).',num_appartement='.$num_appartement.',
+		$tab_est_visible = json_decode($est_visible);
+		$tab_id = json_decode($id_ad);
+		$tab_pays = json_decode($pays);
+		$tab_ville = json_decode($ville);
+		$tab_voie = json_decode($voie);
+		$tab_num_voie = json_decode($num_voie);
+		$tab_code_postal = json_decode($code_postal);
+		$tab_num_appartement = json_decode($num_appartement);
+		$tab_telephone_fixe = json_decode($telephone_fixe);
+
+		$i=0;
+		foreach($tab_id as $id_ad) {
+			$est_visible = $tab_est_visible[$i];
+			$pays = $tab_pays[$i];
+			$ville = $tab_ville[$i];
+			$voie = $tab_voie[$i];
+			$num_voie = $tab_num_voie[$i];
+			$code_postal = $tab_code_postal[$i];
+			$num_appartement = $tab_num_appartement[$i];
+			$telephone_fixe = $tab_telephone_fixe[$i];
+
+			$sql = 'UPDATE adresse SET est_visible='.$pdo->quote($est_visible).',pays='.$pdo->quote($pays).', ville='.$pdo->quote($ville).', voie='.$pdo->quote($voie).',
+		num_voie='.$pdo->quote($num_voie).',code_postal='.$pdo->quote($code_postal).',num_appartement='.$pdo->quote($num_appartement).',
 		telephone_fixe='.$pdo->quote($telephone_fixe).' WHERE id='.$pdo->quote($id_ad).'';
 
-		$pdo->query($sql);
+			//return new \SoapFault('Server', $sql);
+			$pdo->query($sql);
+
+			$i++;
+		}
+
 		return "OK";
 
 	}
