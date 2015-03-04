@@ -239,7 +239,6 @@ class SoapController extends ContainerAware
 	 */
 	public function ajoutLigneProduitAction($nom){
 		//on teste si l'utilisateur a les droits pour accéder à cette fonction
-		//coucou
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[ALP001] Vous n\'avez pas les droits nécessaires.');
 		if(!is_string($nom)) // Vérif des arguments
@@ -263,6 +262,29 @@ class SoapController extends ContainerAware
 		} catch (Exception $e) {
 			return new \SoapFault("Server", "[ALP004] La ligne produit existe déjà");
 		}
+	}
+	
+	/**
+	 * Permet de récupérer tous les code barres de tout les articles.
+	 *
+	 * @Soap\Method("getAllCodeBarre")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAllCodeBarreAction() {
+		if (!($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) &&
+			!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GACB001] Vous n\'avez pas les droits nécessaires.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+	
+		$sql = 'SELECT code_barre FROM article';
+	
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			array_push($result, $row['code_barre']);
+		}
+	
+		return json_encode($result);
 	}
 	
 	/**
