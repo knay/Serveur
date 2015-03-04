@@ -1009,7 +1009,6 @@ class SoapController extends ContainerAware
 						INNER JOIN alba.produit p ON p.ref_ligne_produit = l.id
 						INNER JOIN alba.article a ON a.ref_produit = p.id';
 		
-
 		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
 		// selection une ligne produit puis finalement s�lectionner biper un artcile.
 		// et on donnne la priorit� a l'article!
@@ -1032,12 +1031,7 @@ class SoapController extends ContainerAware
 		else {
 			$requete_stock = $requete_stock;
 		}
-		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
-		// selection une ligne produit puis finalement s�lectionner biper un artcile.
-		// et on donnne la priorit� a l'article!
-		if (!empty($Article)){
-			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
-		}
+		
 		$requete_stock = $requete_stock.' ORDER BY ligne_produit_nom,produit_nom ASC';
 		
 		foreach ($pdo->query($requete_stock) as $row_ligne) {
@@ -1574,6 +1568,51 @@ AND num_voie='.$pdo->quote($num_voie).' ';
 		}
 
 		return "OK";
+
+	}
+
+	/**
+	 * @Soap\Method("ajoutContact")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("prenom",phpType="string")
+	 * @Soap\Param("date_naissance",phpType="string")
+	 * @Soap\Param("civilite",phpType="string")
+	 * @Soap\Param("email",phpType="string")
+	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("ok_sms",phpType="boolean")
+	 * @Soap\Param("ok_mail",phpType="boolean")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutContactAction($nom,$prenom,$date_naissance,$civilite,$email,$telephone_portable,$ok_sms,$ok_mail)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[AC001] Vous n\'avez pas les droits nécessaires.');
+
+		if (!is_string($nom)) // Vérif des arguments
+			return new \SoapFault('Server', '[AC002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		//$result = array();
+
+		// Formation de la requete SQL
+		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact WHERE nom='.$pdo->quote($nom).'
+		 AND prenom='.$pdo->quote($prenom).' AND date_naissance='.$pdo->quote($date_naissance).' AND civilite='.$civilite.'
+		 AND email='.$pdo->quote($email).' AND telephone_portable='.$pdo->quote($telephone_portable).' AND ok_sms='.$pdo->quote($ok_sms).'
+		  AND ok_mail='.$pdo->quote($ok_mail).'';
+
+		$resultat = $pdo->query($sql);
+		if($resultat->rowCount($sql) == 0) {
+
+			//on insert le fournisseur
+			$sql = 'INSERT INTO contact(nom,prenom,date_naissance,civilite,email,telephone_portable,ok_sms,ok_mail)
+VALUES(' . $pdo->quote($nom) . ','.$pdo->quote($prenom).','.$pdo->quote($date_naissance).','.$pdo->quote($civilite).','.$pdo->quote($email).',
+			'.$pdo->quote($telephone_portable).','.$pdo->quote($ok_sms).','.$pdo->quote($ok_mail).');';
+			$pdo->query($sql);
+
+			return "OK";
+		}
+
+		return new \SoapFault('Server','[AF003] Paramètres invalides.');
 
 	}
 
