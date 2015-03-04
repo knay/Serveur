@@ -1609,13 +1609,13 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 		 AND prenom=' . $pdo->quote($prenom) . ' AND date_naissance=' . $pdo->quote($date_naissance) . ' AND civilite=' . $pdo->quote($civilite) . '
 		 AND email=' . $pdo->quote($email) . ' AND telephone_portable=' . $pdo->quote($telephone_portable) . ' ';
 
-		if ($ok_sms == '1') {
+		if ($ok_sms == 'on') {
 			$int_ok_sms = 1;
 		} else {
 			$int_ok_sms = 0;
 		}
 
-		if ($ok_mail == '1') {
+		if ($ok_mail == 'on') {
 			$int_ok_mail = 1;
 		} else {
 			$int_ok_mail = 0;
@@ -1681,6 +1681,18 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			|| !empty($ok_mail)
 		) {
 
+			if ($ok_sms == 'on') {
+				$int_ok_sms = 1;
+			} else {
+				$int_ok_sms = 0;
+			}
+
+			if ($ok_mail == 'on') {
+				$int_ok_mail = 1;
+			} else {
+				$int_ok_mail = 0;
+			}
+
 			if (!empty($nom))
 				array_push($arguments, array('nom' => $nom));
 			if (!empty($prenom))
@@ -1694,9 +1706,9 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			if (!empty($telephone_portable))
 				array_push($arguments, array('telephone_portable' => $telephone_portable));
 			if (!empty($ok_sms))
-				array_push($arguments, array('ok_sms' => $ok_sms));
+				array_push($arguments, array('ok_sms' => $int_ok_sms));
 			if (!empty($ok_mail))
-				array_push($arguments, array('ok_mail' => $ok_mail));
+				array_push($arguments, array('ok_mail' => $int_ok_mail));
 
 			$sql .= 'WHERE ';
 
@@ -1732,6 +1744,57 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		}
 		return json_encode($result);
 		//return new \SoapFault('Server', $sql);
+	}
+
+	/**
+	 * @Soap\Method("modifContact")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("prenom",phpType="string")
+	 * @Soap\Param("date_naissance",phpType="string")
+	 * @Soap\Param("civilite",phpType="string")
+	 * @Soap\Param("email",phpType="string")
+	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("ok_sms",phpType="string")
+	 * @Soap\Param("ok_mail",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifContactAction($id, $nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
+
+		if (!is_string($nom) || !is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[MF002] Paramètres invalides.');
+
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+		if ($ok_sms == 'on') {
+			$int_ok_sms = 1;
+		} else {
+			$int_ok_sms = 0;
+		}
+
+		if ($ok_mail == 'on') {
+			$int_ok_mail = 1;
+		} else {
+			$int_ok_mail = 0;
+		}
+
+		// Formation de la requete SQL
+		$sql = 'UPDATE contact
+SET nom=' . $pdo->quote($nom) . ',prenom='.$pdo->quote($prenom).',date_naissance='.$pdo->quote($date_naissance).'
+,civilite='.$pdo->quote($civilite).',email=' . $pdo->quote($email) . ',telephone_portable=' . $pdo->quote($telephone_portable) . '
+,ok_sms='.$pdo->quote($int_ok_sms).',ok_mail='.$pdo->quote($int_ok_mail).'
+		WHERE id=' . $pdo->quote($id) . '';
+
+		$resultat = $pdo->query($sql);
+		$pdo->query($sql);
+
+		return "OK";
+
 	}
 
 }
