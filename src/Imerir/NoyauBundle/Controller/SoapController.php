@@ -1288,9 +1288,9 @@ class SoapController extends ContainerAware
 				array_push($arguments, array('code_postal' => $code_postal));
 			if (!empty($telephone_fixe))
 				array_push($arguments, array('telephone_fixe' => $telephone_fixe));
-			if ($est_fournisseur && !empty($ref_id))
+			if ($est_fournisseur==true && !empty($ref_id))
 				array_push($arguments, array('ref_fournisseur' => $ref_id));
-			if (!$est_fournisseur && !empty($ref_id))
+			if ($est_fournisseur==false && !empty($ref_id))
 				array_push($arguments, array('ref_contact' => $ref_id));
 
 			$sql .= 'WHERE ';
@@ -1626,6 +1626,23 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		//$result = array();
 
+		//test de la date de naissance
+		$split = array();
+		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_naissance, $split))
+		{
+			if(checkdate($split[2],$split[3],$split[1]))
+			{
+			}
+			else
+			{
+				$date_naissance='0000-00-00';
+			}
+		}
+		else
+		{
+			$date_naissance='0000-00-00';
+		}
+
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact WHERE nom=' . $pdo->quote($nom) . '
 		 AND prenom=' . $pdo->quote($prenom) . ' AND date_naissance=' . $pdo->quote($date_naissance) . ' AND civilite=' . $pdo->quote($civilite) . '
@@ -1660,7 +1677,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			//return new \SoapFault('Server',$sql);
 		}
 
-		return new \SoapFault('Server', '[AF003] Paramètres invalides.');
+		return new \SoapFault('Server', $sql);
 
 	}
 
@@ -1694,6 +1711,8 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
+
+
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail FROM contact ';
 
@@ -1719,8 +1738,24 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				array_push($arguments, array('nom' => $nom));
 			if (!empty($prenom))
 				array_push($arguments, array('prenom' => $prenom));
-			if (!empty($date_naissance))
+			if (!empty($date_naissance)){
+				$split = array();
+				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_naissance, $split))
+				{
+					if(checkdate($split[2],$split[3],$split[1]))
+					{
+					}
+					else
+					{
+						$date_naissance='0000-00-00';
+					}
+				}
+				else
+				{
+					$date_naissance='0000-00-00';
+				}
 				array_push($arguments, array('date_naissance' => $date_naissance));
+			}
 			if (!empty($civilite))
 				array_push($arguments, array('civilite' => $civilite));
 			if (!empty($email))
@@ -1803,6 +1838,22 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			$int_ok_mail = 1;
 		} else {
 			$int_ok_mail = 0;
+		}
+
+		$split = array();
+		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_naissance, $split))
+		{
+			if(checkdate($split[2],$split[3],$split[1]))
+			{
+			}
+			else
+			{
+				$date_naissance='0000-00-00';
+			}
+		}
+		else
+		{
+			$date_naissance='0000-00-00';
 		}
 
 		// Formation de la requete SQL
