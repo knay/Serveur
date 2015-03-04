@@ -1616,4 +1616,89 @@ VALUES(' . $pdo->quote($nom) . ','.$pdo->quote($prenom).','.$pdo->quote($date_na
 
 	}
 
+	/**
+	 * @Soap\Method("getContacts")
+	 * @Soap\Param("count",phpType="int")
+	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("prenom",phpType="string")
+	 * @Soap\Param("civilite",phpType="string")
+	 * @Soap\Param("email",phpType="string")
+	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("ok_sms",phpType="string")
+	 * @Soap\Param("ok_mail",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getContactsAction($count, $offset,$nom,$prenom, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if (!is_string($nom) || !is_string($prenom) || !is_string($civilite) || !is_string($email) || !is_string($telephone_portable)
+			|| !is_string($ok_sms) || !is_string($ok_mail)
+			|| !is_int($offset) || !is_int($count))// Vérif des arguments
+			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+		// Formation de la requete SQL
+		$sql = 'SELECT id, nom, prenom, civilite, email, telephone_portable, ok_sms, ok_mail FROM contact ';
+
+		$arguments = array();
+		if(!empty($nom) || !empty($prenom) || !empty($civilite) || !empty($email) || !empty($telephone_portable) ||
+			!empty($ok_sms)
+			|| !empty($ok_mail)){
+
+			if(!empty($nom))
+				array_push($arguments,array('nom'=>$nom));
+			if(!empty($prenom))
+				array_push($arguments,array('prenom'=>$prenom));
+			if(!empty($civilite))
+				array_push($arguments,array('civilite'=>$civilite));
+			if(!empty($email))
+				array_push($arguments,array('email'=>$email));
+			if(!empty($telephone_portable))
+				array_push($arguments,array('telephone_portable'=>$telephone_portable));
+			if(!empty($ok_sms))
+				array_push($arguments,array('ok_sms'=>$ok_sms));
+			if(!empty($ok_mail))
+				array_push($arguments,array('ok_mail'=>$ok_mail));
+
+			$sql.='WHERE ';
+
+			$i=0;
+			$taille_avant_fin = count($arguments) - 1;
+			while($i < $taille_avant_fin){
+
+				$val = '%'.$arguments[$i][key($arguments[$i])].'%';
+				$sql .= ' '.key($arguments[$i]).' LIKE '.$pdo->quote($val).' AND';
+
+				$i++;
+			}
+			$val = '%'.$arguments[$i][key($arguments[$i])].'%';
+			$sql .= ' '.key($arguments[$i]).' LIKE '.$pdo->quote($val).' AND est_visible=\'1\'';
+
+
+			if ($offset != 0) {
+				$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
+				if ($count != 0)
+					$sql .= ',' . (int)$count;
+			} else {
+				$sql .= ' ORDER BY nom ASC';
+			}
+		}
+
+		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom'], 'prenom' => $row['prenom'], 'civilite' => $row['civilite'],
+				'email'=>$row['email'],'telephone_portable'=>$row['telephone_portable'],'ok_sms'=>$row['ok_sms'],
+				'ok_mail'=>$row['ok_mail']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+		//return new \SoapFault('Server', $sql);
+	}
+
 }
