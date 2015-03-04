@@ -1007,8 +1007,8 @@ class SoapController extends ContainerAware
 						INNER JOIN alba.article a ON a.ref_produit = p.id';
 		
 
-		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
-		// selection une ligne produit puis finalement sŽlectionner biper un artcile.
+		// Si l'article est renseigner.L'utilisateur peut tres bien
+		// selection une ligne produit puis finalement biper un artcile.
 		// et on donnne la prioritŽ a l'article!
 		
 		if (!empty($Article)){
@@ -1029,12 +1029,7 @@ class SoapController extends ContainerAware
 		else {
 			$requete_stock = $requete_stock;
 		}
-		// Si l'article est renseigner. Pas de else if car l'utilisateur peut tres bien
-		// selection une ligne produit puis finalement sï¿½lectionner biper un artcile.
-		// et on donnne la prioritï¿½ a l'article!
-		if (!empty($Article)){
-			$requete_stock = $requete_stock.' WHERE a.code_barre = '.$pdo->quote($Article).'';
-		}
+		
 		$requete_stock = $requete_stock.' ORDER BY ligne_produit_nom,produit_nom ASC';
 		
 		foreach ($pdo->query($requete_stock) as $row_ligne) {
