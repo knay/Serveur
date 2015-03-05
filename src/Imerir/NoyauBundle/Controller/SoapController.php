@@ -970,7 +970,7 @@ class SoapController extends ContainerAware
 				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
 				array('menu' => 'evenement','sous_menu' => array()),
 				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
-				array('menu' => 'produit','sous_menu' => array('Articles', 'Caractéristiques produits','Lignes produits','Produits','Reception','Stock','Inventaire', 'Génération de codes barres')),
+				array('menu' => 'produit','sous_menu' => array('Articles', 'Caractéristiques produits','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
 				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour')));
 			return json_encode($tableau_menu);
 		} // Si il est employe
