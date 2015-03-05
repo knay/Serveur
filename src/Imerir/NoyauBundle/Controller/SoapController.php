@@ -316,8 +316,10 @@ class SoapController extends ContainerAware
 
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom FROM ligne_produit ';
-		if (!empty($nom))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' ';
+		if (!empty($nom)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE nom LIKE ' . $pdo->quote($nom) . ' ';
+		}
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -891,12 +893,21 @@ class SoapController extends ContainerAware
 		// Formation de la requete SQL selon les paramètres donnés
 		$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
 
-		if (!empty($nom) && !empty($ligneproduit))
-			$sql .= 'WHERE produit.nom=' . $pdo->quote($nom) . ' AND ligne_produit.nom=' . $pdo->quote($ligneproduit) . '';
-		elseif (empty($nom) && !empty($ligneproduit))
-			$sql .= 'WHERE ligne_produit.nom=' . $pdo->quote($ligneproduit) . '';
-		elseif (!empty($nom) && empty($ligneproduit))
-			$sql .= 'WHERE produit.nom=' . $pdo->quote($nom) . '';
+		if (!empty($nom) && !empty($ligneproduit)){
+			$nom = '%'.$nom.'%';
+			$ligneproduit= '%'.$ligneproduit.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
+		}
+
+		elseif (empty($nom) && !empty($ligneproduit)){
+			$ligneproduit= '%'.$ligneproduit.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
+		}
+		elseif (!empty($nom) && empty($ligneproduit)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '';
+		}
+
 		if ($offset != 0) {
 			$sql .= 'ORDER BY ligne_produit.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
