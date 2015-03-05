@@ -1105,7 +1105,30 @@ class SoapController extends ContainerAware
 	}
 
 	/**
-	 * @Soap\Method("getFournisseurs")
+<<<<<<< HEAD
+	 * Permet de retourner toutes les factures.
+	 *
+	 * @Soap\Method("getAllFacture")
+	 * @Soap\Result(phpType = "string")
+	 **/
+	public function getAllFactureAction(){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+	
+		$requete_toutes_les_lignes_factures = 'SELECT id,ref_facture FROM alba.ligne_facture';
+	
+		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
+			$ligne = array('id' => $row['id'],'ref'=>$row['ref_facture']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+	}
+
+	 /* @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
