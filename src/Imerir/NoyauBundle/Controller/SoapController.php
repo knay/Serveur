@@ -1163,76 +1163,94 @@ class SoapController extends ContainerAware
 		return json_encode($result);
 	}
 
-	 /** @Soap\Method("getFournisseurs")
+	/** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("reference_client",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getFournisseursAction($count, $offset, $nom, $email, $telephone_portable)
+	public function getFournisseursAction($count, $offset, $nom, $email, $telephone_portable, $reference_client)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[GF001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
 
-		if (!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
-			return new \SoapFault('Server', '[GF002] Paramètres invalides.');
+
+		if (!is_string($nom) || !is_string($email) || !is_string($telephone_portable)
+			|| !is_string($reference_client) || !is_int($offset) || !is_int($count)
+		)// Vérif des arguments
+			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
+
+
 		// Formation de la requete SQL
-		//$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE email='.$pdo->quote($email).'';
+		$sql = 'SELECT id, nom, email, telephone_portable, reference_client FROM fournisseur ';
 
-		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur ';
-		if (!empty($nom) && !empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' AND email=' . $pdo->quote($email) . '
-			AND telephone_portable=' . $pdo->quote($telephone_portable) . '';
+		$arguments = array();
+		if (!empty($nom) || !empty($email) || !empty($telephone_portable) || !empty($reference_client)) {
 
-		if (empty($nom) && !empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE email=' . $pdo->quote($email) . '
-			AND telephone_portable=' . $pdo->quote($telephone_portable) . '';
+			if (!empty($nom))
+				array_push($arguments, array('nom' => $nom));
+			if (!empty($email))
+				array_push($arguments, array('email' => $email));
+			if (!empty($telephone_portable))
+				array_push($arguments, array('telephone_portable' => $telephone_portable));
+			if (!empty($reference_client))
+				array_push($arguments, array('reference_client' => $reference_client));
 
-		if (empty($nom) && empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE telephone_portable=' . $pdo->quote($telephone_portable) . '';
+			$sql .= 'WHERE ';
+
+			$i = 0;
+			$taille_avant_fin = count($arguments) - 1;
+			while ($i < $taille_avant_fin) {
+
+				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
+
+				$i++;
+			}
+			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 
 
-		if (!empty($nom) && empty($email) && empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . '';
 
-		if (!empty($nom) && !empty($email) && empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' AND email=' . $pdo->quote($email) . '';
+		}
 
-		if (!empty($nom) && empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' AND telephone_portable=' . $pdo->quote($telephone_portable) . '';
-
-		if (empty($nom) && !empty($email) && empty($telephone_portable))
-			$sql .= 'WHERE email=' . $pdo->quote($email) . '';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
-		} else {
+		}
+		else {
 			$sql .= ' ORDER BY nom ASC';
 		}
 
+		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			$ligne = array('id' => $row['id'], 'nom' => $row['nom'], 'email' => $row['email'], 'telephone_portable' => $row['telephone_portable']);
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom'],
+				'email' => $row['email'], 'telephone_portable' => $row['telephone_portable'],
+				'reference_client'=>$row['reference_client']);
 			array_push($result, $ligne);
 		}
-
 		return json_encode($result);
+		//return new \SoapFault('Server', $sql);
 	}
+
 
 	/**
 	 * @Soap\Method("ajoutFournisseur")
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("reference_client",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function ajoutFournisseurAction($nom, $email, $telephone_portable)
+	public function ajoutFournisseurAction($nom, $email, $telephone_portable, $reference_client)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AF001] Vous n\'avez pas les droits nécessaires.');
@@ -1244,17 +1262,21 @@ class SoapController extends ContainerAware
 		//$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom=' . $pdo->quote($nom) . '';
-
+		$sql = 'SELECT id, nom, email, telephone_portable, reference_client FROM fournisseur WHERE
+nom=' . $pdo->quote($nom) . ' AND email='.$pdo->quote($email).' AND telephone_portable='.$pdo->quote($telephone_portable).'
+ AND reference_client='.$pdo->quote($reference_client).'';
+		//return new \SoapFault('Server', $sql);
 		$resultat = $pdo->query($sql);
 		if ($resultat->rowCount($sql) == 0) {
 
 			//on insert le fournisseur
-			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable)VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
-			' . $pdo->quote($telephone_portable) . ');';
+			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable,reference_client)
+VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
+			' . $pdo->quote($telephone_portable) . ','.$pdo->quote($reference_client).');';
 			$pdo->query($sql);
 
 			return "OK";
+			//return new \SoapFault('Server', $sql);
 		}
 
 		return new \SoapFault('Server', '[AF003] Paramètres invalides.');
@@ -1267,9 +1289,10 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("reference_client",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function modifFournisseurAction($id, $nom, $email, $telephone_portable)
+	public function modifFournisseurAction($id, $nom, $email, $telephone_portable, $reference_client)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
@@ -1282,7 +1305,8 @@ class SoapController extends ContainerAware
 		$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'UPDATE fournisseur SET nom=' . $pdo->quote($nom) . ',email=' . $pdo->quote($email) . ',telephone_portable=' . $pdo->quote($telephone_portable) . '
+		$sql = 'UPDATE fournisseur SET nom=' . $pdo->quote($nom) . ',email=' . $pdo->quote($email) . '
+		,telephone_portable=' . $pdo->quote($telephone_portable) . ',reference_client='.$pdo->quote($reference_client).'
 		WHERE id=' . $pdo->quote($id) . '';
 
 		$resultat = $pdo->query($sql);
@@ -1373,13 +1397,14 @@ class SoapController extends ContainerAware
 				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 			}
 
-			if ($offset != 0) {
-				$sql .= ' ORDER BY ville ASC LIMIT ' . (int)$offset;
-				if ($count != 0)
-					$sql .= ',' . (int)$count;
-			} else {
-				$sql .= ' ORDER BY ville ASC';
-			}
+
+		}
+		if ($offset != 0) {
+			$sql .= ' ORDER BY ville ASC LIMIT ' . (int)$offset;
+			if ($count != 0)
+				$sql .= ',' . (int)$count;
+		} else {
+			$sql .= ' ORDER BY ville ASC';
 		}
 
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
@@ -1844,13 +1869,15 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 
 
-			if ($offset != 0) {
-				$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
-				if ($count != 0)
-					$sql .= ',' . (int)$count;
-			} else {
-				$sql .= ' ORDER BY nom ASC';
-			}
+
+		}
+
+		if ($offset != 0) {
+			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
+			if ($count != 0)
+				$sql .= ',' . (int)$count;
+		} else {
+			$sql .= ' ORDER BY nom ASC';
 		}
 
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
