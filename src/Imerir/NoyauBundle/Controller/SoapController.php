@@ -998,7 +998,7 @@ class SoapController extends ContainerAware
 	 * @Soap\Method("getProduitFromLigneProduit")
 	 * @Soap\Param("LigneProduit",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getProduitFromLigneProduitAction($LigneProduit)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
@@ -1035,7 +1035,7 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("Produit",phpType="string")
 	 * @Soap\Param("Article",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getStockAction($LigneProduit, $Produit, $Article)
 	{
 
@@ -1096,7 +1096,7 @@ class SoapController extends ContainerAware
 	 *
 	 * @Soap\Method("getAllLigneProduit")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getAllLigneProduitAction()
 	{
 
@@ -1119,9 +1119,11 @@ class SoapController extends ContainerAware
 	 * Permet de retourner toutes les factures.
 	 *
 	 * @Soap\Method("getAllFacture")
+	 * @Soap\Param("date",phpType="string")
+	 * @Soap\Param("client",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
-	public function getAllFactureAction(){
+	 */
+	public function getAllFactureAction($date,$client){
 	
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
@@ -1129,6 +1131,10 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 	
+		if (!is_string($date) || !is_string($client) ) // Vérif des arguments
+			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+		
+		
 		$requete_toutes_les_lignes_factures = 'SELECT id_ligne_facture ,id_facture , date_de_facture, nom_contact , article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE 
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
@@ -1160,9 +1166,19 @@ class SoapController extends ContainerAware
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
 						WHERE f.date_facture > 
 							( SELECT p.date_modif as "date_modification_prix" FROM prix p
-								WHERE p.date_modif ORDER BY date_modification_prix desc limit 1)
-				        ) t GROUP BY id_facture ORDER BY ligne_facture_id';
-	
+							  ORDER BY date_modification_prix desc limit 1)';
+				      
+
+		if($date != ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND f.date_facture > ' . $pdo->quote($date) . '';
+		}
+		if($client != ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND c.nom = ' . $pdo->quote($client) . '';
+		}
+		
+		//On ajoute a la requete la fin
+		$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
+		
 		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
 			$ligne = array('numero' => $row['id_facture'],
 					'client'=>$row['nom_contact'],
