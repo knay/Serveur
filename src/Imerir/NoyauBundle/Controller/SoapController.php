@@ -1722,15 +1722,15 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			|| !empty($ok_mail)
 		) {
 
-			if ($ok_sms == 'on') {
+			if (!empty($ok_sms) && ($ok_sms == 'on' || $ok_sms=='1')) {
 				$int_ok_sms = 1;
-			} else {
+			} elseif(!empty($ok_sms) && ($ok_sms == 'off' || $ok_sms=='0')) {
 				$int_ok_sms = 0;
 			}
 
-			if ($ok_mail == 'on') {
+			if (!empty($ok_mail) && ($ok_mail == 'on' || $ok_mail=='1')) {
 				$int_ok_mail = 1;
-			} else {
+			} elseif(!empty($ok_mail) && ($ok_mail == 'off' || $ok_mail=='0')) {
 				$int_ok_mail = 0;
 			}
 
@@ -1762,9 +1762,9 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				array_push($arguments, array('email' => $email));
 			if (!empty($telephone_portable))
 				array_push($arguments, array('telephone_portable' => $telephone_portable));
-			if (!empty($ok_sms))
+			if (!empty($int_ok_sms))
 				array_push($arguments, array('ok_sms' => $int_ok_sms));
-			if (!empty($ok_mail))
+			if (!empty($int_ok_mail))
 				array_push($arguments, array('ok_mail' => $int_ok_mail));
 
 			$sql .= 'WHERE ';
