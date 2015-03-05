@@ -1823,17 +1823,21 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			|| !empty($ok_mail) || !empty($notes)
 		) {
 
-			if (!empty($ok_sms) && ($ok_sms == 'on' || $ok_sms=='1')) {
-				$int_ok_sms = 1;
-			} elseif(!empty($ok_sms) && ($ok_sms == 'off' || $ok_sms=='0')) {
-				$int_ok_sms = 0;
+			//return new \SoapFault('Server', $ok_mail);
+
+			if (!empty($ok_sms) && ($ok_sms == 'on' || $ok_sms=='1' || $ok_sms==1 || $ok_sms=='Oui')) {
+				array_push($arguments,array('ok_sms'=>1));
+			} elseif(!empty($ok_sms) && ($ok_sms == 'off' || $ok_sms=='Non' || $ok_sms=='0')) {
+				array_push($arguments,array('ok_sms'=>0));
 			}
 
-			if (!empty($ok_mail) && ($ok_mail == 'on' || $ok_mail=='1')) {
-				$int_ok_mail = 1;
-			} elseif(!empty($ok_mail) && ($ok_mail == 'off' || $ok_mail=='0')) {
-				$int_ok_mail = 0;
+			if (!empty($ok_mail) && ($ok_mail == 'on' || $ok_mail=='1'|| $ok_mail==1 || $ok_mail=='Oui')) {
+				array_push($arguments,array('ok_mail'=>1));
+			} elseif(!empty($ok_mail) && ($ok_mail == 'off' || $ok_mail=='Non' || $ok_mail=='0')) {
+				array_push($arguments,array('ok_mail'=>0));
 			}
+
+			//return new \SoapFault('Server', $int_ok_mail);
 
 			if (!empty($nom))
 				array_push($arguments, array('nom' => $nom));
@@ -1863,10 +1867,6 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				array_push($arguments, array('email' => $email));
 			if (!empty($telephone_portable))
 				array_push($arguments, array('telephone_portable' => $telephone_portable));
-			if (!empty($int_ok_sms))
-				array_push($arguments, array('ok_sms' => $int_ok_sms));
-			if (!empty($int_ok_mail))
-				array_push($arguments, array('ok_mail' => $int_ok_mail));
 			if (!empty($notes))
 				array_push($arguments, array('notes' => $notes));
 
