@@ -43,7 +43,8 @@ class BDDService
 		else
 			$dsn = 'mysql:host='.$dbhost.';dbname='.$dbname;
 		
-		$this->pdoConn = new \PDO($dsn, $dbuser, $dbpasswd);
+		$this->pdoConn = new \PDO($dsn, $dbuser, $dbpasswd,array(1002 => 'SET NAMES utf8'));
+		//$this->pdoConn->exec("SET CHARACTER SET utf8");
     }
     
     /**
