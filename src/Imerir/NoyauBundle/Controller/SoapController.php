@@ -1116,7 +1116,6 @@ class SoapController extends ContainerAware
 	}
 
 	/**
-<<<<<<< HEAD
 	 * Permet de retourner toutes les factures.
 	 *
 	 * @Soap\Method("getAllFacture")
