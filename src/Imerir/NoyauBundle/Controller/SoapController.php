@@ -1671,9 +1671,10 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 	 * @Soap\Param("telephone_portable",phpType="string")
 	 * @Soap\Param("ok_sms",phpType="boolean")
 	 * @Soap\Param("ok_mail",phpType="boolean")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function ajoutContactAction($nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail)
+	public function ajoutContactAction($nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AC001] Vous n\'avez pas les droits nécessaires.');
@@ -1726,9 +1727,9 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 
 			//on insert le fournisseur
 
-			$sql = 'INSERT INTO contact(nom,prenom,date_naissance,civilite,email,telephone_portable,ok_sms,ok_mail)
+			$sql = 'INSERT INTO contact(nom,prenom,date_naissance,civilite,email,telephone_portable,ok_sms,ok_mail,notes)
 VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($date_naissance) . ',' . $pdo->quote($civilite) . ',' . $pdo->quote($email) . ',
-			' . $pdo->quote($telephone_portable) . ',' . $pdo->quote($int_ok_sms) . ',' . $pdo->quote($int_ok_mail) . ');';
+			' . $pdo->quote($telephone_portable) . ',' . $pdo->quote($int_ok_sms) . ',' . $pdo->quote($int_ok_mail) . ','.$pdo->quote($notes).');';
 			$pdo->query($sql);
 
 			return "OK";
@@ -1751,9 +1752,10 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 	 * @Soap\Param("telephone_portable",phpType="string")
 	 * @Soap\Param("ok_sms",phpType="string")
 	 * @Soap\Param("ok_mail",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getContactsAction($count, $offset, $nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail)
+	public function getContactsAction($count, $offset, $nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
@@ -1761,7 +1763,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 
 		if (!is_string($nom) || !is_string($prenom) || !is_string($date_naissance)
 			|| !is_string($civilite) || !is_string($email) || !is_string($telephone_portable)
-			|| !is_string($ok_sms) || !is_string($ok_mail)
+			|| !is_string($ok_sms) || !is_string($ok_mail) || !is_string($notes)
 			|| !is_int($offset) || !is_int($count)
 		)// Vérif des arguments
 			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
@@ -1772,12 +1774,12 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail FROM contact ';
+		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail, notes FROM contact ';
 
 		$arguments = array();
 		if (!empty($nom) || !empty($prenom) || !empty($date_naissance) || !empty($civilite) || !empty($email) || !empty($telephone_portable) ||
 			!empty($ok_sms)
-			|| !empty($ok_mail)
+			|| !empty($ok_mail) || !empty($notes)
 		) {
 
 			if (!empty($ok_sms) && ($ok_sms == 'on' || $ok_sms=='1')) {
@@ -1824,6 +1826,8 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				array_push($arguments, array('ok_sms' => $int_ok_sms));
 			if (!empty($int_ok_mail))
 				array_push($arguments, array('ok_mail' => $int_ok_mail));
+			if (!empty($notes))
+				array_push($arguments, array('notes' => $notes));
 
 			$sql .= 'WHERE ';
 
@@ -1854,7 +1858,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			$ligne = array('id' => $row['id'], 'nom' => $row['nom'], 'prenom' => $row['prenom'],'date_naissance'=>
 			$row['date_naissance'], 'civilite' => $row['civilite'],
 				'email' => $row['email'], 'telephone_portable' => $row['telephone_portable'], 'ok_sms' => $row['ok_sms'],
-				'ok_mail' => $row['ok_mail']);
+				'ok_mail' => $row['ok_mail'],'notes'=>$row['notes']);
 			array_push($result, $ligne);
 		}
 		return json_encode($result);
@@ -1872,9 +1876,10 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 	 * @Soap\Param("telephone_portable",phpType="string")
 	 * @Soap\Param("ok_sms",phpType="string")
 	 * @Soap\Param("ok_mail",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function modifContactAction($id, $nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail)
+	public function modifContactAction($id, $nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail,$notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
@@ -1918,13 +1923,14 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		$sql = 'UPDATE contact
 SET nom=' . $pdo->quote($nom) . ',prenom='.$pdo->quote($prenom).',date_naissance='.$pdo->quote($date_naissance).'
 ,civilite='.$pdo->quote($civilite).',email=' . $pdo->quote($email) . ',telephone_portable=' . $pdo->quote($telephone_portable) . '
-,ok_sms='.$pdo->quote($int_ok_sms).',ok_mail='.$pdo->quote($int_ok_mail).'
+,ok_sms='.$pdo->quote($int_ok_sms).',ok_mail='.$pdo->quote($int_ok_mail).',notes='.$pdo->quote($notes).'
 		WHERE id=' . $pdo->quote($id) . '';
 
 		$resultat = $pdo->query($sql);
 		$pdo->query($sql);
 
 		return "OK";
+		//return new \SoapFault('Server', $sql);
 
 	}
 
