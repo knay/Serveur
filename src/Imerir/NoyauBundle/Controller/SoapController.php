@@ -1163,7 +1163,7 @@ class SoapController extends ContainerAware
 		return json_encode($result);
 	}
 
-	 /* @Soap\Method("getFournisseurs")
+	 /** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
