@@ -1170,16 +1170,17 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
 	 * @Soap\Param("reference_client",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getFournisseursAction($count, $offset, $nom, $email, $telephone_portable, $reference_client)
+	public function getFournisseursAction($count, $offset, $nom, $email, $telephone_portable, $reference_client, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if (!is_string($nom) || !is_string($email) || !is_string($telephone_portable)
-			|| !is_string($reference_client) || !is_int($offset) || !is_int($count)
+			|| !is_string($reference_client) || !is_string($notes) || !is_int($offset) || !is_int($count)
 		)// Vérif des arguments
 			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
 
@@ -1189,10 +1190,10 @@ class SoapController extends ContainerAware
 
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom, email, telephone_portable, reference_client FROM fournisseur ';
+		$sql = 'SELECT id, nom, email, telephone_portable, reference_client, notes FROM fournisseur ';
 
 		$arguments = array();
-		if (!empty($nom) || !empty($email) || !empty($telephone_portable) || !empty($reference_client)) {
+		if (!empty($nom) || !empty($email) || !empty($telephone_portable) || !empty($reference_client) || !empty($notes)) {
 
 			if (!empty($nom))
 				array_push($arguments, array('nom' => $nom));
@@ -1202,6 +1203,8 @@ class SoapController extends ContainerAware
 				array_push($arguments, array('telephone_portable' => $telephone_portable));
 			if (!empty($reference_client))
 				array_push($arguments, array('reference_client' => $reference_client));
+			if (!empty($notes))
+				array_push($arguments, array('notes' => $notes));
 
 			$sql .= 'WHERE ';
 
@@ -1234,7 +1237,7 @@ class SoapController extends ContainerAware
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 			$ligne = array('id' => $row['id'], 'nom' => $row['nom'],
 				'email' => $row['email'], 'telephone_portable' => $row['telephone_portable'],
-				'reference_client'=>$row['reference_client']);
+				'reference_client'=>$row['reference_client'],'notes'=>$row['notes']);
 			array_push($result, $ligne);
 		}
 		return json_encode($result);
@@ -1248,9 +1251,10 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
 	 * @Soap\Param("reference_client",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function ajoutFournisseurAction($nom, $email, $telephone_portable, $reference_client)
+	public function ajoutFournisseurAction($nom, $email, $telephone_portable, $reference_client, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AF001] Vous n\'avez pas les droits nécessaires.');
@@ -1270,9 +1274,9 @@ nom=' . $pdo->quote($nom) . ' AND email='.$pdo->quote($email).' AND telephone_po
 		if ($resultat->rowCount($sql) == 0) {
 
 			//on insert le fournisseur
-			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable,reference_client)
+			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable,reference_client,notes)
 VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
-			' . $pdo->quote($telephone_portable) . ','.$pdo->quote($reference_client).');';
+			' . $pdo->quote($telephone_portable) . ','.$pdo->quote($reference_client).','.$pdo->quote($notes).');';
 			$pdo->query($sql);
 
 			return "OK";
@@ -1290,9 +1294,10 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
 	 * @Soap\Param("reference_client",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function modifFournisseurAction($id, $nom, $email, $telephone_portable, $reference_client)
+	public function modifFournisseurAction($id, $nom, $email, $telephone_portable, $reference_client, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
@@ -1307,7 +1312,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 		// Formation de la requete SQL
 		$sql = 'UPDATE fournisseur SET nom=' . $pdo->quote($nom) . ',email=' . $pdo->quote($email) . '
 		,telephone_portable=' . $pdo->quote($telephone_portable) . ',reference_client='.$pdo->quote($reference_client).'
-		WHERE id=' . $pdo->quote($id) . '';
+		,notes='.$pdo->quote($notes).' WHERE id=' . $pdo->quote($id) . '';
 
 		$resultat = $pdo->query($sql);
 		$pdo->query($sql);
