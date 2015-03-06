@@ -2114,36 +2114,102 @@ SET nom=' . $pdo->quote($nom) . ',prenom='.$pdo->quote($prenom).',date_naissance
 
 	}
 
+	/**
+	 * @Soap\Method("getNombreContactsSmsMail")
+	 * @Soap\result(phpType="string")
+	 */
+	public function getNombreContactsSmsMailAction(){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GNCSM001] Vous n\'avez pas les droits nécessaires.');
 
-	//STATS CLIENTS : % des personnes voulant des sms, % des personnes voulant des mails, % des personnes voulant les deux
-	/*
-	 * select (select count(id) from contact
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		//definition de la requête sql
+		$sql='select (select count(id) from contact
 where ok_sms=1 and ok_mail=0) as "ok_sms_only",
 (select count(id) from contact
  where ok_mail=1 and ok_sms=1) as "ok_mail_only",
  (select count(id) from contact
  where ok_mail=1 and ok_sms=1) as "ok_sms_mail",
  (select count(id) from contact
- where ok_mail=0 and ok_sms=0)as "nok_sms_mail"
-	 */
+ where ok_mail=0 and ok_sms=0)as "nok_sms_mail"';
+		try{
+			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+				$ligne = array('ok_sms_only' => $row['ok_sms_only'], 'ok_mail_only' => $row['ok_mail_only'],
+					'ok_sms_mail' => $row['ok_sms_mail'], 'nok_sms_mail' => $row['nok_sms_mail']);
+				array_push($result, $ligne);
+			}
+			return json_encode($result);
+		}
+		catch (\Exception $e) {
+			return new \SoapFault('Server', '[GNCSM002] Problème de connexion au serveur de base de données.');
 
-	// nombre de personnes par tranche d'age (ex 20 personnes ont moins de 25 ans, 15 plus de 50, 60 entre les deux)
-	/*
-select (select count(id) from contact
+		}
+
+
+	}
+
+
+	/**
+	 * @Soap\Method("getNombreContactsParTrancheAge")
+	 * @Soap\result(phpType="string")
+	 */
+	public function getNombreContactsParTrancheAgeAction(){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GNCPTA001] Vous n\'avez pas les droits nécessaires.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		//definition de la requête sql
+		$sql='select (select count(id) from contact
 where year(date_naissance)<>0 and (year(now())-year(date_naissance))<25) as "1_25",
 (select count(id) from contact
 where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 25 and 40) as "25_40",
 (select count(id) from contact
 where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 40 and 60) as "40_60",
 (select count(id) from contact
-where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "60-99";
-	*/
+where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "60-99";';
+		try{
+			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+				$ligne = array('1_25' => $row['1_25'], '25_40' => $row['25_40'],
+					'40_60' => $row['40_60'], '60_99' => $row['60_99']);
+				array_push($result, $ligne);
+			}
+			return json_encode($result);
+		}
+		catch (\Exception $e) {
+			return new \SoapFault('Server', '[GNCPTA002] Problème de connexion au serveur de base de données.');
 
-	// nombre de clients par ville
-	/*
-	 * select ville, count(contact.id) as "nb_personne" from contact
-join adresse on adresse.ref_contact=contact.id
-group by ville;
+		}
+
+
+	}
+
+	/**
+	 * @Soap\Method("getNombreContactsParVille")
+	 * @Soap\result(phpType="string")
 	 */
+	public function getNombreContactsParVilleAction(){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GNCPV001] Vous n\'avez pas les droits nécessaires.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		//definition de la requête sql
+		$sql='select ville, count(contact.id) as "nb_personne" from contact
+join adresse on adresse.ref_contact=contact.id
+group by ville;';
+		try{
+			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+				$ligne = array('ville' => $row['ville'], 'nb_personne' => $row['nb_personne']);
+				array_push($result, $ligne);
+			}
+			return json_encode($result);
+		}
+		catch (\Exception $e) {
+			return new \SoapFault('Server', '[GNCPV002] Problème de connexion au serveur de base de données.');
+
+		}
+
+
+	}
+
 
 }
