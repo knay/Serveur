@@ -537,8 +537,8 @@ class SoapController extends ContainerAware
 		$tabValAttribut = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT att_nom AS nom, libelle, est_visible FROM (
-				SELECT produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle, valeur_attribut.est_visible
+		$sql = 'SELECT att_nom AS nom, libelle, est_visible, aid FROM (
+				SELECT attribut.id AS aid, produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle, valeur_attribut.est_visible
 				FROM produit 
 				JOIN ligne_produit ON ligne_produit.id = produit.ref_ligne_produit
 				JOIN ligne_produit_a_pour_attribut ON ligne_produit_a_pour_attribut.ref_ligne_produit = ligne_produit.id
@@ -546,22 +546,25 @@ class SoapController extends ContainerAware
 				JOIN valeur_attribut ON attribut.id = valeur_attribut.ref_attribut
 				)t
 				WHERE est_visible = TRUE AND nom=' . $pdo->quote($nom) .
-			'GROUP BY att_nom, libelle';
+			'GROUP BY aid, att_nom, libelle';
 
 		$dernierNomAttribut = '';
+		$dernierId = 0;
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 			if ($dernierNomAttribut === '') { // Premier tour de boucle, on a pas encore de nom d'attribut
 				$dernierNomAttribut = $row['nom'];
+				$dernierId = $row['aid'];
 			}
 
 			if ($row['nom'] !== $dernierNomAttribut) { // Si on change de nom d'attribut, on a fini de travailler avec ses valeurs donc on push
-				array_push($result, array('nom' => $dernierNomAttribut, 'valeurs' => $tabValAttribut));
+				array_push($result, array('nom' => $dernierNomAttribut, 'id'=> $dernierId, 'valeurs' => $tabValAttribut));
 				$tabValAttribut = array();
 				$dernierNomAttribut = $row['nom'];
+				$dernierId = $row['aid'];
 			}
 			array_push($tabValAttribut, $row['libelle']);
 		}
-		array_push($result, array('nom' => $dernierNomAttribut, 'valeurs' => $tabValAttribut));
+		array_push($result, array('nom' => $dernierNomAttribut, 'id'=> $dernierId, 'valeurs' => $tabValAttribut));
 
 		return json_encode($result);
 	}
