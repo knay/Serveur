@@ -178,7 +178,8 @@ class SoapController extends ContainerAware
 		$code_barre = $tabArticle->codeBarre;
 		$nom_produit = $tabArticle->produit;
 		$attributs = $tabArticle->attributs;
-		$prix = $tabArticle->prix;
+		$prixClient = $tabArticle->prixClient;
+		$prixFournisseur = $tabArticle->prixFournisseur;
 
 		$sql = 'SELECT * FROM article WHERE code_barre=' . $pdo->quote($code_barre);
 		$resultat = $pdo->query($sql);
@@ -206,7 +207,7 @@ class SoapController extends ContainerAware
 		}
 
 		$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
-					VALUE (\'' . $idArticle . '\', 0, \'' . (float)$prix . '\', NOW())';
+					VALUE (\'' . $idArticle . '\', ' . (float)$prixFournisseur . ', \'' . (float)$prixClient . '\', NOW())';
 		$resultat = $pdo->query($sql);
 
 		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\'' . $idArticle . '\'';
@@ -301,10 +302,13 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("attribut_nom",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getLigneProduitAction($count, $offset, $nom)
+	public function getLigneProduitAction($count, $offset, $nom, $attribut_nom)
 	{
+
+
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GLP001] Vous n\'avez pas les droits nécessaires.');
 
@@ -315,25 +319,41 @@ class SoapController extends ContainerAware
 		$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom FROM ligne_produit ';
-		if (!empty($nom)){
+		$sql = 'SELECT ligne_produit.id, ligne_produit.nom, GROUP_CONCAT(attribut.nom) as "attribut_nom" FROM ligne_produit
+left outer join ligne_produit_a_pour_attribut on ligne_produit_a_pour_attribut.ref_ligne_produit = ligne_produit.id
+left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribut.id ';
+		//return new \SoapFault('Server',$sql);
+		if (!empty($nom) && !empty($attribut_nom)){
+			$attribut_nom = '%'.$attribut_nom.'%';
 			$nom = '%'.$nom.'%';
-			$sql .= 'WHERE nom LIKE ' . $pdo->quote($nom) . ' ';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND attribut.nom LIKE '.$pdo->quote($attribut_nom).'';
 		}
+
+		if (!empty($nom) && empty($attribut_nom)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' ';
+		}
+
+		if (empty($nom) && !empty($attribut_nom)){
+			$attribut_nom = '%'.$attribut_nom.'%';
+			$sql .= 'WHERE attribut.nom LIKE ' . $pdo->quote($attribut_nom) . ' ';
+		}
+		$sql.= 'group by ligne_produit.id,ligne_produit.nom';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY ligne_produit.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		} else {
-			$sql .= ' ORDER BY nom ASC';
+			$sql .= ' ORDER BY ligne_produit.nom ASC';
 		}
 
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			$ligne = array('id' => $row['id'], 'nom' => $row['nom']);
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom'],'attribut_nom'=>$row['attribut_nom']);
 			array_push($result, $ligne);
 		}
 
 		return json_encode($result);
+		//return new \SoapFault('Server',$sql);
 	}
 
 	/**
@@ -876,9 +896,10 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("ligneproduit",phpType="string")
+	 * @Soap\Param("attribut",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getProduitAction($count, $offset, $nom, $ligneproduit)
+	public function getProduitAction($count, $offset, $nom, $ligneproduit, $attribut)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GP001] Vous n\'avez pas les droits nécessaires.');
@@ -891,23 +912,54 @@ class SoapController extends ContainerAware
 
 
 		// Formation de la requete SQL selon les paramètres donnés
-		$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+		//$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
 
-		if (!empty($nom) && !empty($ligneproduit)){
+		$sql='select ligne_produit.nom as "lp_nom", produit.id as "p_id", produit.nom as "p_nom"  from produit
+join ligne_produit on ligne_produit.id = produit.ref_ligne_produit
+left outer join article on article.ref_produit = produit.id
+left outer join ligne_produit_a_pour_attribut on ligne_produit.id = ligne_produit_a_pour_attribut.ref_ligne_produit
+left outer join attribut on attribut.id = ligne_produit_a_pour_attribut.ref_attribut
+left outer join article_a_pour_val_attribut on article_a_pour_val_attribut.ref_article=article.id
+left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attribut.ref_val_attribut ';
+
+		if (!empty($nom) && !empty($ligneproduit) && !empty($attribut)){
 			$nom = '%'.$nom.'%';
 			$ligneproduit= '%'.$ligneproduit.'%';
-			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
+			$attribut = '%'.$attribut.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
+			 AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
 		}
 
-		elseif (empty($nom) && !empty($ligneproduit)){
+		elseif (empty($nom) && !empty($ligneproduit) && empty($attribut)){
 			$ligneproduit= '%'.$ligneproduit.'%';
 			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
 		}
-		elseif (!empty($nom) && empty($ligneproduit)){
+		elseif (!empty($nom) && empty($ligneproduit) && empty($attribut)){
 			$nom = '%'.$nom.'%';
 			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '';
 		}
-
+		elseif (empty($nom) && empty($ligneproduit) && !empty($attribut)){
+			$attribut = '%'.$attribut.'%';
+			$sql .= 'WHERE (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+		}
+		elseif (!empty($nom) && !empty($ligneproduit) && empty($attribut)){
+			$ligneproduit= '%'.$ligneproduit.'%';
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
+			AND produit.nom LIKE '.$pdo->quote($nom).'';
+		}
+		elseif (empty($nom) && !empty($ligneproduit) && !empty($attribut)){
+			$ligneproduit = '%'.$ligneproduit.'%';
+			$attribut = '%'.$attribut.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
+			AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+		}
+		elseif (!empty($nom) && empty($ligneproduit) && !empty($attribut)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '
+			AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+		}
+		$sql.= 'group by ligne_produit.nom, produit.id, produit.nom;';
 		if ($offset != 0) {
 			$sql .= 'ORDER BY ligne_produit.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -981,7 +1033,7 @@ class SoapController extends ContainerAware
 				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
 				array('menu' => 'evenement','sous_menu' => array()),
 				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
-				array('menu' => 'produit','sous_menu' => array('Articles', 'Caractéristiques produits','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
+				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
 				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour')));
 			return json_encode($tableau_menu);
 		} // Si il est employe
