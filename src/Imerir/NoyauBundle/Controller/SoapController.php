@@ -178,7 +178,8 @@ class SoapController extends ContainerAware
 		$code_barre = $tabArticle->codeBarre;
 		$nom_produit = $tabArticle->produit;
 		$attributs = $tabArticle->attributs;
-		$prix = $tabArticle->prix;
+		$prixClient = $tabArticle->prixClient;
+		$prixFournisseur = $tabArticle->prixFournisseur;
 
 		$sql = 'SELECT * FROM article WHERE code_barre=' . $pdo->quote($code_barre);
 		$resultat = $pdo->query($sql);
@@ -206,7 +207,7 @@ class SoapController extends ContainerAware
 		}
 
 		$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
-					VALUE (\'' . $idArticle . '\', 0, \'' . (float)$prix . '\', NOW())';
+					VALUE (\'' . $idArticle . '\', ' . (float)$prixFournisseur . ', \'' . (float)$prixClient . '\', NOW())';
 		$resultat = $pdo->query($sql);
 
 		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\'' . $idArticle . '\'';
@@ -1000,7 +1001,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
 				array('menu' => 'evenement','sous_menu' => array()),
 				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
-				array('menu' => 'produit','sous_menu' => array('Articles', 'Caractéristiques produits','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
+				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
 				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour')));
 			return json_encode($tableau_menu);
 		} // Si il est employe
@@ -1017,14 +1018,14 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 	 * @Soap\Method("getProduitFromLigneProduit")
 	 * @Soap\Param("LigneProduit",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getProduitFromLigneProduitAction($LigneProduit)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GPFLP001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($LigneProduit)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new SoapFault('Server', '[GPFLP002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1054,15 +1055,15 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 	 * @Soap\Param("Produit",phpType="string")
 	 * @Soap\Param("Article",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getStockAction($LigneProduit, $Produit, $Article)
 	{
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GS001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($LigneProduit) || !is_string($Produit) || !is_string($Article)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new SoapFault('Server', '[GS002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1115,12 +1116,12 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 	 *
 	 * @Soap\Method("getAllLigneProduit")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getAllLigneProduitAction()
 	{
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GALP001] Vous n\'avez pas les droits nécessaires.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1138,16 +1139,22 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 	 * Permet de retourner toutes les factures.
 	 *
 	 * @Soap\Method("getAllFacture")
+	 * @Soap\Param("date",phpType="string")
+	 * @Soap\Param("client",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
-	public function getAllFactureAction(){
+	 */
+	public function getAllFactureAction($date,$client){
 	
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GAF001] Vous n\'avez pas les droits nécessaires.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 	
+		if (!is_string($date) || !is_string($client) ) // Vérif des arguments
+			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
+		
+		
 		$requete_toutes_les_lignes_factures = 'SELECT id_ligne_facture ,id_facture , date_de_facture, nom_contact , article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE 
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
@@ -1179,9 +1186,19 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
 						WHERE f.date_facture > 
 							( SELECT p.date_modif as "date_modification_prix" FROM prix p
-								WHERE p.date_modif ORDER BY date_modification_prix desc limit 1)
-				        ) t GROUP BY id_facture ORDER BY ligne_facture_id';
-	
+							  ORDER BY date_modification_prix desc limit 1)';
+				      
+
+		if($date != ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND f.date_facture > ' . $pdo->quote($date) . '';
+		}
+		if($client != ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND c.nom = ' . $pdo->quote($client) . '';
+		}
+		
+		//On ajoute a la requete la fin
+		$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
+		
 		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
 			$ligne = array('numero' => $row['id_facture'],
 					'client'=>$row['nom_contact'],
@@ -1192,6 +1209,76 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		return json_encode($result);
 	}
 
+	/**
+	 * Permet de retourner les details d'une seul facture
+	 *
+	 * @Soap\Method("getDetailFromOneFacture")
+	 * @Soap\Param("id_facture",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getDetailFromOneFactureAction($id_facture){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GDFOF001] Vous n\'avez pas les droits nécessaires.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+	
+		if (!is_string($id_facture) ) // Vérif des arguments
+			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
+	
+	
+		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact , article_id , nb_article, prix_id ,reduction_article,
+						SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS montant
+				        FROM(
+				        SELECT f.date_facture,
+							   lf.id as "ligne_facture_id",
+				               a.id as "article_id",
+				               px.montant_client as "prix_id",
+				               lf.id as "id_ligne_facture" ,
+				               f.id as "id_facture" ,
+				               f.date_facture "date_de_facture",
+				               c.nom "nom_contact",
+				               a.id as "id_article",
+				               r.reduction as "reduction_article",
+				               m.quantite_mouvement as "nb_article",
+				               r.type_reduction as "type_reduction",
+				               px.montant_client as "montant_client"
+				      
+				        FROM facture f
+						JOIN ligne_facture lf ON f.id = lf.ref_facture
+						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
+						JOIN article a ON m.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id
+				        JOIN produit pt ON a.ref_produit = pt.id
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
+				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
+						WHERE f.date_facture >
+							( SELECT p.date_modif as "date_modification_prix" FROM prix p
+							  ORDER BY date_modification_prix desc limit 1)
+						AND f.id = '.$pdo->quote($id_facture).'
+						 ) t GROUP BY id_facture ORDER BY id_facture DESC';
+	
+		foreach ($pdo->query($requete_detail_factures) as $row) {
+			$ligne = array('numero_facture' => $row['id_facture'],
+					'date_facture'=>$row['date_de_facture'],
+					'nom_client'=>$row['nom_contact'],
+					'nom_article'=>$row['article_id'],
+					'nombre_article'=>$row['nb_article'],
+					'prix_article'=>$row['prix_id'],
+					'reduction_article'=>$row['reduction_article'],
+					'montant_facture'=>$row['montant']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+	}
+	
+	
+	
 	/** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
