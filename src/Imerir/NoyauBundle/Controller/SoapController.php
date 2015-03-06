@@ -2131,7 +2131,10 @@ where ok_sms=1 and ok_mail=0) as "ok_sms_only",
  (select count(id) from contact
  where ok_mail=1 and ok_sms=1) as "ok_sms_mail",
  (select count(id) from contact
- where ok_mail=0 and ok_sms=0)as "nok_sms_mail"';
+ where ok_mail=0 and ok_sms=0)as "nok_sms_mail";';
+
+			//return new \SoapFault('Server', $sql);
+		$result = array();
 		try{
 			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 				$ligne = array('ok_sms_only' => $row['ok_sms_only'], 'ok_mail_only' => $row['ok_mail_only'],
@@ -2139,6 +2142,7 @@ where ok_sms=1 and ok_mail=0) as "ok_sms_only",
 				array_push($result, $ligne);
 			}
 			return json_encode($result);
+
 		}
 		catch (\Exception $e) {
 			return new \SoapFault('Server', '[GNCSM002] Problème de connexion au serveur de base de données.');
@@ -2160,17 +2164,19 @@ where ok_sms=1 and ok_mail=0) as "ok_sms_only",
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		//definition de la requête sql
 		$sql='select (select count(id) from contact
-where year(date_naissance)<>0 and (year(now())-year(date_naissance))<25) as "1_25",
+where year(date_naissance)<>0 and (year(now())-year(date_naissance))<25) as "moins25",
 (select count(id) from contact
-where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 25 and 40) as "25_40",
+where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 25 and 40) as "entre25_40",
 (select count(id) from contact
-where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 40 and 60) as "40_60",
+where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 40 and 60) as "entre40_60",
 (select count(id) from contact
-where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "60-99";';
+where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "plus60";';
+
+		$result = array();
 		try{
 			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-				$ligne = array('1_25' => $row['1_25'], '25_40' => $row['25_40'],
-					'40_60' => $row['40_60'], '60_99' => $row['60_99']);
+				$ligne = array('moins25' => $row['moins25'], 'entre25_40' => $row['entre25_40'],
+					'entre40_60' => $row['entre40_60'], 'plus60' => $row['plus60']);
 				array_push($result, $ligne);
 			}
 			return json_encode($result);
@@ -2196,6 +2202,8 @@ where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "60
 		$sql='select ville, count(contact.id) as "nb_personne" from contact
 join adresse on adresse.ref_contact=contact.id
 group by ville;';
+
+		$result = array();
 		try{
 			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 				$ligne = array('ville' => $row['ville'], 'nb_personne' => $row['nb_personne']);
