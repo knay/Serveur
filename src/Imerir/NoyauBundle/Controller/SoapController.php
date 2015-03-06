@@ -317,8 +317,10 @@ class SoapController extends ContainerAware
 
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom FROM ligne_produit ';
-		if (!empty($nom))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' ';
+		if (!empty($nom)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE nom LIKE ' . $pdo->quote($nom) . ' ';
+		}
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -892,12 +894,21 @@ class SoapController extends ContainerAware
 		// Formation de la requete SQL selon les paramètres donnés
 		$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
 
-		if (!empty($nom) && !empty($ligneproduit))
-			$sql .= 'WHERE produit.nom=' . $pdo->quote($nom) . ' AND ligne_produit.nom=' . $pdo->quote($ligneproduit) . '';
-		elseif (empty($nom) && !empty($ligneproduit))
-			$sql .= 'WHERE ligne_produit.nom=' . $pdo->quote($ligneproduit) . '';
-		elseif (!empty($nom) && empty($ligneproduit))
-			$sql .= 'WHERE produit.nom=' . $pdo->quote($nom) . '';
+		if (!empty($nom) && !empty($ligneproduit)){
+			$nom = '%'.$nom.'%';
+			$ligneproduit= '%'.$ligneproduit.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
+		}
+
+		elseif (empty($nom) && !empty($ligneproduit)){
+			$ligneproduit= '%'.$ligneproduit.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
+		}
+		elseif (!empty($nom) && empty($ligneproduit)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '';
+		}
+
 		if ($offset != 0) {
 			$sql .= 'ORDER BY ligne_produit.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -988,14 +999,14 @@ class SoapController extends ContainerAware
 	 * @Soap\Method("getProduitFromLigneProduit")
 	 * @Soap\Param("LigneProduit",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getProduitFromLigneProduitAction($LigneProduit)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GPFLP001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($LigneProduit)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new SoapFault('Server', '[GPFLP002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1025,15 +1036,15 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("Produit",phpType="string")
 	 * @Soap\Param("Article",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getStockAction($LigneProduit, $Produit, $Article)
 	{
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GS001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($LigneProduit) || !is_string($Produit) || !is_string($Article)) // Vérif des arguments
-			return new SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new SoapFault('Server', '[GS002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1086,12 +1097,12 @@ class SoapController extends ContainerAware
 	 *
 	 * @Soap\Method("getAllLigneProduit")
 	 * @Soap\Result(phpType = "string")
-	 **/
+	 */
 	public function getAllLigneProduitAction()
 	{
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GALP001] Vous n\'avez pas les droits nécessaires.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1106,20 +1117,25 @@ class SoapController extends ContainerAware
 	}
 
 	/**
-<<<<<<< HEAD
 	 * Permet de retourner toutes les factures.
 	 *
 	 * @Soap\Method("getAllFacture")
+	 * @Soap\Param("date",phpType="string")
+	 * @Soap\Param("client",phpType="string")
 	 * @Soap\Result(phpType = "string")
-	 **/
-	public function getAllFactureAction(){
+	 */
+	public function getAllFactureAction($date,$client){
 	
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GAF001] Vous n\'avez pas les droits nécessaires.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 	
+		if (!is_string($date) || !is_string($client) ) // Vérif des arguments
+			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
+		
+		
 		$requete_toutes_les_lignes_factures = 'SELECT id_ligne_facture ,id_facture , date_de_facture, nom_contact , article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE 
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
@@ -1151,9 +1167,19 @@ class SoapController extends ContainerAware
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
 						WHERE f.date_facture > 
 							( SELECT p.date_modif as "date_modification_prix" FROM prix p
-								WHERE p.date_modif ORDER BY date_modification_prix desc limit 1)
-				        ) t GROUP BY id_facture ORDER BY ligne_facture_id';
-	
+							  ORDER BY date_modification_prix desc limit 1)';
+				      
+
+		if($date != ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND f.date_facture > ' . $pdo->quote($date) . '';
+		}
+		if($client != ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND c.nom = ' . $pdo->quote($client) . '';
+		}
+		
+		//On ajoute a la requete la fin
+		$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
+		
 		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
 			$ligne = array('numero' => $row['id_facture'],
 					'client'=>$row['nom_contact'],
@@ -1164,76 +1190,168 @@ class SoapController extends ContainerAware
 		return json_encode($result);
 	}
 
-	 /** @Soap\Method("getFournisseurs")
+	/**
+	 * Permet de retourner les details d'une seul facture
+	 *
+	 * @Soap\Method("getDetailFromOneFacture")
+	 * @Soap\Param("id_facture",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getDetailFromOneFactureAction($id_facture){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GDFOF001] Vous n\'avez pas les droits nécessaires.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+	
+		if (!is_string($id_facture) ) // Vérif des arguments
+			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
+	
+	
+		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact , article_id , nb_article, prix_id ,reduction_article,
+						SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS montant
+				        FROM(
+				        SELECT f.date_facture,
+							   lf.id as "ligne_facture_id",
+				               a.id as "article_id",
+				               px.montant_client as "prix_id",
+				               lf.id as "id_ligne_facture" ,
+				               f.id as "id_facture" ,
+				               f.date_facture "date_de_facture",
+				               c.nom "nom_contact",
+				               a.id as "id_article",
+				               r.reduction as "reduction_article",
+				               m.quantite_mouvement as "nb_article",
+				               r.type_reduction as "type_reduction",
+				               px.montant_client as "montant_client"
+				      
+				        FROM facture f
+						JOIN ligne_facture lf ON f.id = lf.ref_facture
+						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
+						JOIN article a ON m.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id
+				        JOIN produit pt ON a.ref_produit = pt.id
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
+				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
+						WHERE f.date_facture >
+							( SELECT p.date_modif as "date_modification_prix" FROM prix p
+							  ORDER BY date_modification_prix desc limit 1)
+						AND f.id = '.$pdo->quote($id_facture).'
+						 ) t GROUP BY id_facture ORDER BY id_facture DESC';
+	
+		foreach ($pdo->query($requete_detail_factures) as $row) {
+			$ligne = array('numero_facture' => $row['id_facture'],
+					'date_facture'=>$row['date_de_facture'],
+					'nom_client'=>$row['nom_contact'],
+					'nom_article'=>$row['article_id'],
+					'nombre_article'=>$row['nb_article'],
+					'prix_article'=>$row['prix_id'],
+					'reduction_article'=>$row['reduction_article'],
+					'montant_facture'=>$row['montant']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+	}
+	
+	
+	
+	/** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("reference_client",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getFournisseursAction($count, $offset, $nom, $email, $telephone_portable)
+	public function getFournisseursAction($count, $offset, $nom, $email, $telephone_portable, $reference_client, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[GF001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
 
-		if (!is_string($nom) || !is_int($offset) || !is_int($count)) // Vérif des arguments
-			return new \SoapFault('Server', '[GF002] Paramètres invalides.');
+
+		if (!is_string($nom) || !is_string($email) || !is_string($telephone_portable)
+			|| !is_string($reference_client) || !is_string($notes) || !is_int($offset) || !is_int($count)
+		)// Vérif des arguments
+			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
+
+
 		// Formation de la requete SQL
-		//$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE email='.$pdo->quote($email).'';
+		$sql = 'SELECT id, nom, email, telephone_portable, reference_client, notes FROM fournisseur ';
 
-		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur ';
-		if (!empty($nom) && !empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' AND email=' . $pdo->quote($email) . '
-			AND telephone_portable=' . $pdo->quote($telephone_portable) . '';
+		$arguments = array();
+		if (!empty($nom) || !empty($email) || !empty($telephone_portable) || !empty($reference_client) || !empty($notes)) {
 
-		if (empty($nom) && !empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE email=' . $pdo->quote($email) . '
-			AND telephone_portable=' . $pdo->quote($telephone_portable) . '';
+			if (!empty($nom))
+				array_push($arguments, array('nom' => $nom));
+			if (!empty($email))
+				array_push($arguments, array('email' => $email));
+			if (!empty($telephone_portable))
+				array_push($arguments, array('telephone_portable' => $telephone_portable));
+			if (!empty($reference_client))
+				array_push($arguments, array('reference_client' => $reference_client));
+			if (!empty($notes))
+				array_push($arguments, array('notes' => $notes));
 
-		if (empty($nom) && empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE telephone_portable=' . $pdo->quote($telephone_portable) . '';
+			$sql .= 'WHERE ';
+
+			$i = 0;
+			$taille_avant_fin = count($arguments) - 1;
+			while ($i < $taille_avant_fin) {
+
+				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
+
+				$i++;
+			}
+			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 
 
-		if (!empty($nom) && empty($email) && empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . '';
 
-		if (!empty($nom) && !empty($email) && empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' AND email=' . $pdo->quote($email) . '';
+		}
 
-		if (!empty($nom) && empty($email) && !empty($telephone_portable))
-			$sql .= 'WHERE nom=' . $pdo->quote($nom) . ' AND telephone_portable=' . $pdo->quote($telephone_portable) . '';
-
-		if (empty($nom) && !empty($email) && empty($telephone_portable))
-			$sql .= 'WHERE email=' . $pdo->quote($email) . '';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
-		} else {
+		}
+		else {
 			$sql .= ' ORDER BY nom ASC';
 		}
 
+		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			$ligne = array('id' => $row['id'], 'nom' => $row['nom'], 'email' => $row['email'], 'telephone_portable' => $row['telephone_portable']);
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom'],
+				'email' => $row['email'], 'telephone_portable' => $row['telephone_portable'],
+				'reference_client'=>$row['reference_client'],'notes'=>$row['notes']);
 			array_push($result, $ligne);
 		}
-
 		return json_encode($result);
+		//return new \SoapFault('Server', $sql);
 	}
+
 
 	/**
 	 * @Soap\Method("ajoutFournisseur")
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("reference_client",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function ajoutFournisseurAction($nom, $email, $telephone_portable)
+	public function ajoutFournisseurAction($nom, $email, $telephone_portable, $reference_client, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AF001] Vous n\'avez pas les droits nécessaires.');
@@ -1245,17 +1363,21 @@ class SoapController extends ContainerAware
 		//$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom, email, telephone_portable FROM fournisseur WHERE nom=' . $pdo->quote($nom) . '';
-
+		$sql = 'SELECT id, nom, email, telephone_portable, reference_client FROM fournisseur WHERE
+nom=' . $pdo->quote($nom) . ' AND email='.$pdo->quote($email).' AND telephone_portable='.$pdo->quote($telephone_portable).'
+ AND reference_client='.$pdo->quote($reference_client).'';
+		//return new \SoapFault('Server', $sql);
 		$resultat = $pdo->query($sql);
 		if ($resultat->rowCount($sql) == 0) {
 
 			//on insert le fournisseur
-			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable)VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
-			' . $pdo->quote($telephone_portable) . ');';
+			$sql = 'INSERT INTO fournisseur(nom,email,telephone_portable,reference_client,notes)
+VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
+			' . $pdo->quote($telephone_portable) . ','.$pdo->quote($reference_client).','.$pdo->quote($notes).');';
 			$pdo->query($sql);
 
 			return "OK";
+			//return new \SoapFault('Server', $sql);
 		}
 
 		return new \SoapFault('Server', '[AF003] Paramètres invalides.');
@@ -1268,9 +1390,11 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("email",phpType="string")
 	 * @Soap\Param("telephone_portable",phpType="string")
+	 * @Soap\Param("reference_client",phpType="string")
+	 * @Soap\Param("notes",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function modifFournisseurAction($id, $nom, $email, $telephone_portable)
+	public function modifFournisseurAction($id, $nom, $email, $telephone_portable, $reference_client, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
@@ -1283,8 +1407,9 @@ class SoapController extends ContainerAware
 		$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'UPDATE fournisseur SET nom=' . $pdo->quote($nom) . ',email=' . $pdo->quote($email) . ',telephone_portable=' . $pdo->quote($telephone_portable) . '
-		WHERE id=' . $pdo->quote($id) . '';
+		$sql = 'UPDATE fournisseur SET nom=' . $pdo->quote($nom) . ',email=' . $pdo->quote($email) . '
+		,telephone_portable=' . $pdo->quote($telephone_portable) . ',reference_client='.$pdo->quote($reference_client).'
+		,notes='.$pdo->quote($notes).' WHERE id=' . $pdo->quote($id) . '';
 
 		$resultat = $pdo->query($sql);
 		$pdo->query($sql);
@@ -1374,13 +1499,14 @@ class SoapController extends ContainerAware
 				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 			}
 
-			if ($offset != 0) {
-				$sql .= ' ORDER BY ville ASC LIMIT ' . (int)$offset;
-				if ($count != 0)
-					$sql .= ',' . (int)$count;
-			} else {
-				$sql .= ' ORDER BY ville ASC';
-			}
+
+		}
+		if ($offset != 0) {
+			$sql .= ' ORDER BY ville ASC LIMIT ' . (int)$offset;
+			if ($count != 0)
+				$sql .= ',' . (int)$count;
+		} else {
+			$sql .= ' ORDER BY ville ASC';
 		}
 
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
@@ -1783,17 +1909,21 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			|| !empty($ok_mail) || !empty($notes)
 		) {
 
-			if (!empty($ok_sms) && ($ok_sms == 'on' || $ok_sms=='1')) {
-				$int_ok_sms = 1;
-			} elseif(!empty($ok_sms) && ($ok_sms == 'off' || $ok_sms=='0')) {
-				$int_ok_sms = 0;
+			//return new \SoapFault('Server', $ok_mail);
+
+			if (!empty($ok_sms) && ($ok_sms == 'on' || $ok_sms=='1' || $ok_sms==1 || $ok_sms=='Oui')) {
+				array_push($arguments,array('ok_sms'=>1));
+			} elseif(!empty($ok_sms) && ($ok_sms == 'off' || $ok_sms=='Non' || $ok_sms=='0')) {
+				array_push($arguments,array('ok_sms'=>0));
 			}
 
-			if (!empty($ok_mail) && ($ok_mail == 'on' || $ok_mail=='1')) {
-				$int_ok_mail = 1;
-			} elseif(!empty($ok_mail) && ($ok_mail == 'off' || $ok_mail=='0')) {
-				$int_ok_mail = 0;
+			if (!empty($ok_mail) && ($ok_mail == 'on' || $ok_mail=='1'|| $ok_mail==1 || $ok_mail=='Oui')) {
+				array_push($arguments,array('ok_mail'=>1));
+			} elseif(!empty($ok_mail) && ($ok_mail == 'off' || $ok_mail=='Non' || $ok_mail=='0')) {
+				array_push($arguments,array('ok_mail'=>0));
 			}
+
+			//return new \SoapFault('Server', $int_ok_mail);
 
 			if (!empty($nom))
 				array_push($arguments, array('nom' => $nom));
@@ -1823,10 +1953,6 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				array_push($arguments, array('email' => $email));
 			if (!empty($telephone_portable))
 				array_push($arguments, array('telephone_portable' => $telephone_portable));
-			if (!empty($int_ok_sms))
-				array_push($arguments, array('ok_sms' => $int_ok_sms));
-			if (!empty($int_ok_mail))
-				array_push($arguments, array('ok_mail' => $int_ok_mail));
 			if (!empty($notes))
 				array_push($arguments, array('notes' => $notes));
 
@@ -1845,13 +1971,15 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 
 
-			if ($offset != 0) {
-				$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
-				if ($count != 0)
-					$sql .= ',' . (int)$count;
-			} else {
-				$sql .= ' ORDER BY nom ASC';
-			}
+
+		}
+
+		if ($offset != 0) {
+			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
+			if ($count != 0)
+				$sql .= ',' . (int)$count;
+		} else {
+			$sql .= ' ORDER BY nom ASC';
 		}
 
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
