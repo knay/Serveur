@@ -1193,10 +1193,10 @@ class SoapController extends ContainerAware
 	 * Permet de retourner les details d'une seul facture
 	 *
 	 * @Soap\Method("getDetailFromOneFacture")
-	 * @Soap\Param("id_facture",phpType="int")
+	 * @Soap\Param("numero",phpType="int")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getDetailFromOneFactureAction($id_facture){
+	public function getDetailFromOneFactureAction($numero){
 	
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[GDFOF001] Vous n\'avez pas les droits nécessaires.');
@@ -1204,7 +1204,7 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 	
-		if (!is_string($id_facture) ) // Vérif des arguments
+		if (!is_int($numero) ) // Vérif des arguments
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
@@ -1240,7 +1240,7 @@ class SoapController extends ContainerAware
 						WHERE f.date_facture >
 							( SELECT p.date_modif as "date_modification_prix" FROM prix p
 							  ORDER BY date_modification_prix desc limit 1)
-						AND f.id = '.$pdo->quote($id_facture).'
+						AND f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY id_facture ORDER BY id_facture DESC';
 	
 		foreach ($pdo->query($requete_detail_factures) as $row) {
