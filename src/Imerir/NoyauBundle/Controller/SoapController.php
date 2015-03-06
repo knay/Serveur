@@ -2114,4 +2114,36 @@ SET nom=' . $pdo->quote($nom) . ',prenom='.$pdo->quote($prenom).',date_naissance
 
 	}
 
+
+	//STATS CLIENTS : % des personnes voulant des sms, % des personnes voulant des mails, % des personnes voulant les deux
+	/*
+	 * select (select count(id) from contact
+where ok_sms=1 and ok_mail=0) as "ok_sms_only",
+(select count(id) from contact
+ where ok_mail=1 and ok_sms=1) as "ok_mail_only",
+ (select count(id) from contact
+ where ok_mail=1 and ok_sms=1) as "ok_sms_mail",
+ (select count(id) from contact
+ where ok_mail=0 and ok_sms=0)as "nok_sms_mail"
+	 */
+
+	// nombre de personnes par tranche d'age (ex 20 personnes ont moins de 25 ans, 15 plus de 50, 60 entre les deux)
+	/*
+select (select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance))<25) as "1_25",
+(select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 25 and 40) as "25_40",
+(select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 40 and 60) as "40_60",
+(select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "60-99";
+	*/
+
+	// nombre de clients par ville
+	/*
+	 * select ville, count(contact.id) as "nb_personne" from contact
+join adresse on adresse.ref_contact=contact.id
+group by ville;
+	 */
+
 }
