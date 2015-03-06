@@ -178,7 +178,8 @@ class SoapController extends ContainerAware
 		$code_barre = $tabArticle->codeBarre;
 		$nom_produit = $tabArticle->produit;
 		$attributs = $tabArticle->attributs;
-		$prix = $tabArticle->prix;
+		$prixClient = $tabArticle->prixClient;
+		$prixFournisseur = $tabArticle->prixFournisseur;
 
 		$sql = 'SELECT * FROM article WHERE code_barre=' . $pdo->quote($code_barre);
 		$resultat = $pdo->query($sql);
@@ -206,7 +207,7 @@ class SoapController extends ContainerAware
 		}
 
 		$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
-					VALUE (\'' . $idArticle . '\', 0, \'' . (float)$prix . '\', NOW())';
+					VALUE (\'' . $idArticle . '\', ' . (float)$prixFournisseur . ', \'' . (float)$prixClient . '\', NOW())';
 		$resultat = $pdo->query($sql);
 
 		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\'' . $idArticle . '\'';
@@ -970,7 +971,7 @@ class SoapController extends ContainerAware
 				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
 				array('menu' => 'evenement','sous_menu' => array()),
 				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
-				array('menu' => 'produit','sous_menu' => array('Articles', 'Caractéristiques produits','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
+				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
 				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour')));
 			return json_encode($tableau_menu);
 		} // Si il est employe
