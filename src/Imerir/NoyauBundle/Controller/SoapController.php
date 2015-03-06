@@ -896,9 +896,10 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
 	 * @Soap\Param("ligneproduit",phpType="string")
+	 * @Soap\Param("attribut",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getProduitAction($count, $offset, $nom, $ligneproduit)
+	public function getProduitAction($count, $offset, $nom, $ligneproduit, $attribut)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GP001] Vous n\'avez pas les droits nécessaires.');
@@ -911,23 +912,54 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 
 		// Formation de la requete SQL selon les paramètres donnés
-		$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
+		//$sql = 'SELECT ligne_produit.nom as "lp_nom",produit.id as "p_id", produit.nom as "p_nom" FROM produit JOIN ligne_produit ON produit.ref_ligne_produit=ligne_produit.id ';
 
-		if (!empty($nom) && !empty($ligneproduit)){
+		$sql='select ligne_produit.nom as "lp_nom", produit.id as "p_id", produit.nom as "p_nom"  from produit
+join ligne_produit on ligne_produit.id = produit.ref_ligne_produit
+left outer join article on article.ref_produit = produit.id
+left outer join ligne_produit_a_pour_attribut on ligne_produit.id = ligne_produit_a_pour_attribut.ref_ligne_produit
+left outer join attribut on attribut.id = ligne_produit_a_pour_attribut.ref_attribut
+left outer join article_a_pour_val_attribut on article_a_pour_val_attribut.ref_article=article.id
+left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attribut.ref_val_attribut ';
+
+		if (!empty($nom) && !empty($ligneproduit) && !empty($attribut)){
 			$nom = '%'.$nom.'%';
 			$ligneproduit= '%'.$ligneproduit.'%';
-			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
+			$attribut = '%'.$attribut.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
+			 AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
 		}
 
-		elseif (empty($nom) && !empty($ligneproduit)){
+		elseif (empty($nom) && !empty($ligneproduit) && empty($attribut)){
 			$ligneproduit= '%'.$ligneproduit.'%';
 			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
 		}
-		elseif (!empty($nom) && empty($ligneproduit)){
+		elseif (!empty($nom) && empty($ligneproduit) && empty($attribut)){
 			$nom = '%'.$nom.'%';
 			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '';
 		}
-
+		elseif (empty($nom) && empty($ligneproduit) && !empty($attribut)){
+			$attribut = '%'.$attribut.'%';
+			$sql .= 'WHERE (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+		}
+		elseif (!empty($nom) && !empty($ligneproduit) && empty($attribut)){
+			$ligneproduit= '%'.$ligneproduit.'%';
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
+			AND produit.nom LIKE '.$pdo->quote($nom).'';
+		}
+		elseif (empty($nom) && !empty($ligneproduit) && !empty($attribut)){
+			$ligneproduit = '%'.$ligneproduit.'%';
+			$attribut = '%'.$attribut.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
+			AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+		}
+		elseif (!empty($nom) && empty($ligneproduit) && !empty($attribut)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '
+			AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+		}
+		$sql.= 'group by ligne_produit.nom, produit.id, produit.nom;';
 		if ($offset != 0) {
 			$sql .= 'ORDER BY ligne_produit.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
