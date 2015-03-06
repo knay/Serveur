@@ -301,10 +301,13 @@ class SoapController extends ContainerAware
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Param("attribut_nom",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getLigneProduitAction($count, $offset, $nom)
+	public function getLigneProduitAction($count, $offset, $nom, $attribut_nom)
 	{
+
+
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GLP001] Vous n\'avez pas les droits nécessaires.');
 
@@ -315,25 +318,41 @@ class SoapController extends ContainerAware
 		$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom FROM ligne_produit ';
-		if (!empty($nom)){
+		$sql = 'SELECT ligne_produit.id, ligne_produit.nom, GROUP_CONCAT(attribut.nom) as "attribut_nom" FROM ligne_produit
+left outer join ligne_produit_a_pour_attribut on ligne_produit_a_pour_attribut.ref_ligne_produit = ligne_produit.id
+left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribut.id ';
+		//return new \SoapFault('Server',$sql);
+		if (!empty($nom) && !empty($attribut_nom)){
+			$attribut_nom = '%'.$attribut_nom.'%';
 			$nom = '%'.$nom.'%';
-			$sql .= 'WHERE nom LIKE ' . $pdo->quote($nom) . ' ';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND attribut.nom LIKE '.$pdo->quote($attribut_nom).'';
 		}
+
+		if (!empty($nom) && empty($attribut_nom)){
+			$nom = '%'.$nom.'%';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' ';
+		}
+
+		if (empty($nom) && !empty($attribut_nom)){
+			$attribut_nom = '%'.$attribut_nom.'%';
+			$sql .= 'WHERE attribut.nom LIKE ' . $pdo->quote($attribut_nom) . ' ';
+		}
+		$sql.= 'group by ligne_produit.id,ligne_produit.nom';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY ligne_produit.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		} else {
-			$sql .= ' ORDER BY nom ASC';
+			$sql .= ' ORDER BY ligne_produit.nom ASC';
 		}
 
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			$ligne = array('id' => $row['id'], 'nom' => $row['nom']);
+			$ligne = array('id' => $row['id'], 'nom' => $row['nom'],'attribut_nom'=>$row['attribut_nom']);
 			array_push($result, $ligne);
 		}
 
 		return json_encode($result);
+		//return new \SoapFault('Server',$sql);
 	}
 
 	/**
