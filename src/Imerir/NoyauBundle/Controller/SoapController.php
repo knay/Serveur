@@ -56,7 +56,7 @@ class SoapController extends ContainerAware
 		$queryUser = $dm->createQuery($sql)->setParameters(array('username' => $username));
 		$users = $queryUser->getResult();
 		if (count($users) === 0) {
-			return new \SoapFault('Server', 'Vos identifiants de connexion sont invalides.');
+			return new \SoapFault('Server', 'Le mot de passe que vous avez saisi est incorrect.');
 		}
 
 		//on récupère l'encoder du password dans la base de données pour ensuite hasher le mot de passe et tester
@@ -745,7 +745,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 				if (!empty($nom)) {
 					$nom = '%' . $nom . '%';
-					$sql .= ' AND a.nom LIKE ' . $pdo->quote($nom);
+					$sql .= ' AND a.nom LIKE '.$pdo->quote($nom).' OR v.libelle LIKE '.$pdo->quote($nom);
 				}
 
 				$sql .= ' GROUP BY libelle ORDER BY nom ASC';
