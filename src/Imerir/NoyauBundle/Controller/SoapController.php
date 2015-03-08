@@ -56,7 +56,7 @@ class SoapController extends ContainerAware
 		$queryUser = $dm->createQuery($sql)->setParameters(array('username' => $username));
 		$users = $queryUser->getResult();
 		if (count($users) === 0) {
-			return new \SoapFault('Server', 'Vos identifiants de connexion sont invalides.');
+			return new \SoapFault('Server', 'Le mot de passe que vous avez saisi est incorrect.');
 		}
 
 		//on récupère l'encoder du password dans la base de données pour ensuite hasher le mot de passe et tester
@@ -556,8 +556,8 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		$tabValAttribut = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT att_nom AS nom, libelle, est_visible FROM (
-				SELECT produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle, valeur_attribut.est_visible
+		$sql = 'SELECT att_nom AS nom, libelle, est_visible, aid FROM (
+				SELECT attribut.id AS aid, produit.nom, attribut.nom AS "att_nom", valeur_attribut.libelle, valeur_attribut.est_visible
 				FROM produit 
 				JOIN ligne_produit ON ligne_produit.id = produit.ref_ligne_produit
 				JOIN ligne_produit_a_pour_attribut ON ligne_produit_a_pour_attribut.ref_ligne_produit = ligne_produit.id
@@ -565,22 +565,25 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 				JOIN valeur_attribut ON attribut.id = valeur_attribut.ref_attribut
 				)t
 				WHERE est_visible = TRUE AND nom=' . $pdo->quote($nom) .
-			'GROUP BY att_nom, libelle';
+			'GROUP BY aid, att_nom, libelle';
 
 		$dernierNomAttribut = '';
+		$dernierId = 0;
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 			if ($dernierNomAttribut === '') { // Premier tour de boucle, on a pas encore de nom d'attribut
 				$dernierNomAttribut = $row['nom'];
+				$dernierId = $row['aid'];
 			}
 
 			if ($row['nom'] !== $dernierNomAttribut) { // Si on change de nom d'attribut, on a fini de travailler avec ses valeurs donc on push
-				array_push($result, array('nom' => $dernierNomAttribut, 'valeurs' => $tabValAttribut));
+				array_push($result, array('nom' => $dernierNomAttribut, 'id'=> $dernierId, 'valeurs' => $tabValAttribut));
 				$tabValAttribut = array();
 				$dernierNomAttribut = $row['nom'];
+				$dernierId = $row['aid'];
 			}
 			array_push($tabValAttribut, $row['libelle']);
 		}
-		array_push($result, array('nom' => $dernierNomAttribut, 'valeurs' => $tabValAttribut));
+		array_push($result, array('nom' => $dernierNomAttribut, 'id'=> $dernierId, 'valeurs' => $tabValAttribut));
 
 		return json_encode($result);
 	}
@@ -742,7 +745,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 				if (!empty($nom)) {
 					$nom = '%' . $nom . '%';
-					$sql .= ' AND a.nom LIKE ' . $pdo->quote($nom);
+					$sql .= ' AND a.nom LIKE '.$pdo->quote($nom).' OR v.libelle LIKE '.$pdo->quote($nom);
 				}
 
 				$sql .= ' GROUP BY libelle ORDER BY nom ASC';
@@ -2115,5 +2118,111 @@ SET nom=' . $pdo->quote($nom) . ',prenom='.$pdo->quote($prenom).',date_naissance
 		//return new \SoapFault('Server', $sql);
 
 	}
+
+	/**
+	 * @Soap\Method("getNombreContactsSmsMail")
+	 * @Soap\result(phpType="string")
+	 */
+	public function getNombreContactsSmsMailAction(){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GNCSM001] Vous n\'avez pas les droits nécessaires.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		//definition de la requête sql
+		$sql='select (select count(id) from contact
+where ok_sms=1 and ok_mail=0) as "ok_sms_only",
+(select count(id) from contact
+ where ok_mail=1 and ok_sms=1) as "ok_mail_only",
+ (select count(id) from contact
+ where ok_mail=1 and ok_sms=1) as "ok_sms_mail",
+ (select count(id) from contact
+ where ok_mail=0 and ok_sms=0)as "nok_sms_mail";';
+
+			//return new \SoapFault('Server', $sql);
+		$result = array();
+		try{
+			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+				$ligne = array('ok_sms_only' => $row['ok_sms_only'], 'ok_mail_only' => $row['ok_mail_only'],
+					'ok_sms_mail' => $row['ok_sms_mail'], 'nok_sms_mail' => $row['nok_sms_mail']);
+				array_push($result, $ligne);
+			}
+			return json_encode($result);
+
+		}
+		catch (\Exception $e) {
+			return new \SoapFault('Server', '[GNCSM002] Problème de connexion au serveur de base de données.');
+
+		}
+
+
+	}
+
+
+	/**
+	 * @Soap\Method("getNombreContactsParTrancheAge")
+	 * @Soap\result(phpType="string")
+	 */
+	public function getNombreContactsParTrancheAgeAction(){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GNCPTA001] Vous n\'avez pas les droits nécessaires.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		//definition de la requête sql
+		$sql='select (select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance))<25) as "moins25",
+(select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 25 and 40) as "entre25_40",
+(select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance)) between 40 and 60) as "entre40_60",
+(select count(id) from contact
+where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "plus60";';
+
+		$result = array();
+		try{
+			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+				$ligne = array('moins25' => $row['moins25'], 'entre25_40' => $row['entre25_40'],
+					'entre40_60' => $row['entre40_60'], 'plus60' => $row['plus60']);
+				array_push($result, $ligne);
+			}
+			return json_encode($result);
+		}
+		catch (\Exception $e) {
+			return new \SoapFault('Server', '[GNCPTA002] Problème de connexion au serveur de base de données.');
+
+		}
+
+
+	}
+
+	/**
+	 * @Soap\Method("getNombreContactsParVille")
+	 * @Soap\result(phpType="string")
+	 */
+	public function getNombreContactsParVilleAction(){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GNCPV001] Vous n\'avez pas les droits nécessaires.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		//definition de la requête sql
+		$sql='select ville, count(contact.id) as "nb_personne" from contact
+join adresse on adresse.ref_contact=contact.id
+group by ville;';
+
+		$result = array();
+		try{
+			foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+				$ligne = array('ville' => $row['ville'], 'nb_personne' => $row['nb_personne']);
+				array_push($result, $ligne);
+			}
+			return json_encode($result);
+		}
+		catch (\Exception $e) {
+			return new \SoapFault('Server', '[GNCPV002] Problème de connexion au serveur de base de données.');
+
+		}
+
+
+	}
+
 
 }
