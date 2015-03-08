@@ -1260,7 +1260,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
-		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact , article_id , nb_article, prix_id ,reduction_article,
+		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact , nom_article ,article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
@@ -1270,6 +1270,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        SELECT f.date_facture,
 							   lf.id as "ligne_facture_id",
 				               a.id as "article_id",
+							   a.code_barre "nom_article",
 				               px.montant_client as "prix_id",
 				               lf.id as "id_ligne_facture" ,
 				               f.id as "id_facture" ,
@@ -1293,14 +1294,15 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 							( SELECT p.date_modif as "date_modification_prix" FROM prix p
 							  ORDER BY date_modification_prix desc limit 1)
 						AND f.id = '.$pdo->quote($numero).'
-						 ) t GROUP BY id_facture ORDER BY id_facture DESC';
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
 		foreach ($pdo->query($requete_detail_factures) as $row) {
+			$nombre_article = substr($row['nb_article'],1);
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
 					'nom_client'=>$row['nom_contact'],
-					'nom_article'=>$row['article_id'],
-					'nombre_article'=>$row['nb_article'],
+					'nom_article'=>$row['nom_article'],
+					'nombre_article'=>$nombre_article,
 					'prix_article'=>$row['prix_id'],
 					'reduction_article'=>$row['reduction_article'],
 					'montant_facture'=>$row['montant']);
