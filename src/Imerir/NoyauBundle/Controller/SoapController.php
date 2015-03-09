@@ -616,6 +616,15 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		$tabAttributs = json_decode($attributs);
 		if ($tabLgProduit === NULL || $tabAttributs === NULL || empty($nom)) // On vérif qu'on arrive à decoder le json 
 			return new \SoapFault('Server', '[SA003] Paramètres invalides, JSON attendu.');
+		
+		if (strpos($nom, '_') !== false) {
+			return new \SoapFault('Server', '[SA008] Le caractère \'_\' n\'est pas autorisé dans les attributs ('.$nom.').');
+		}
+		// On vérifie qu'il n'y a pas de caractères génants ('_')
+		foreach ($tabAttributs as $attribut) {
+			if (strpos($attribut, '_') !== false)
+				return new \SoapFault('Server', '[SA007] Le caractère \'_\' n\'est pas autorisé dans les attributs ('.$attribut.').');
+		}
 
 		// Si on veut modifier un attribut existant
 		if ($id !== 0) {
