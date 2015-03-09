@@ -1257,12 +1257,18 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        SELECT 
 							   lf.id as "ligne_facture_id",
 				               a.id as "article_id",
-							   a.code_barre "nom_article",
+							   a.code_barre as "nom_article",
 				               px.montant_client as "prix_id",
 				               lf.id as "id_ligne_facture" ,
 				               f.id as "id_facture" ,
-				               f.date_facture "date_de_facture",
-				               c.nom "nom_contact",
+				               f.date_facture as "date_de_facture",
+				               c.nom as "nom_contact",
+							   c.id as "id_contact",
+							   ad.num_voie as "adresse_numero",
+							   ad.voie as "adresse_rue",
+							   ad.code_postal as "adresse_code_postal",
+							   ad.ville as "adresse_ville",
+							   ad.pays as "adresse_pays",
 				               r.reduction as "reduction_article",
 				               m.quantite_mouvement as "nb_article",
 				               r.type_reduction as "type_reduction",
@@ -1277,6 +1283,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
+						JOIN adresse ad ON ad.ref_contact = c.id
 					
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
@@ -1286,6 +1293,11 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
 					'nom_client'=>$row['nom_contact'],
+					'adresse_numero'=>$row['adresse_numero'],
+					'adresse_rue'=>$row['adresse_rue'],
+					'adresse_code_postal'=>$row['adresse_code_postal'],
+					'adresse_ville'=>$row['adresse_ville'],
+					'adresse_pays'=>$row['adresse_pays'],
 					'nom_article'=>$row['nom_article'],
 					'nombre_article'=>$nombre_article,
 					'prix_article'=>$row['prix_id'],
