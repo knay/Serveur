@@ -112,11 +112,12 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$tabArticles = json_decode($articles);
 
-		$sql = 'INSERT INTO facture (date_facture, est_visible) VALUE (NOW(), true)';
+		$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact) VALUE (NOW(), true, '.(int)$tabArticles->idClient.')';
+		
 		$resultat = $pdo->query($sql);
 		$ref_facture = $pdo->lastInsertId();
 
-		foreach ($tabArticles as $article) {
+		foreach ($tabArticles->article as $article) {
 			$code_barre = $article->codeBarre;
 			$quantite = $article->quantite;
 			$promo = $article->promo;
@@ -819,6 +820,46 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		return json_encode($result);
 	}
 
+	/**
+	 * Permet de rechercher un contact depuis n'importe quel critère.
+	 *
+	 * @param $codeBarre Le code barre du produit recherché.
+	 *
+	 * @Soap\Method("getContactFromEverything")
+	 * @Soap\Param("critere",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getContactFromEverythingAction($critere) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT')) && 
+			!($this->container->get('user_service')->isOk('ROLE_EMPLOYE'))) // On check les droits
+			return new \SoapFault('Server', '[GCFE001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_string($critere) || empty ($critere)) // Vérif des arguments
+			return new \SoapFault('Server', '[GCFE002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		$reponse = array();
+		
+		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact
+				WHERE CONCAT (nom, prenom, date_naissance, email, telephone_portable) 
+				REGEXP replace('.$pdo->quote($critere).', \' \', \'|\')';
+		$resultat = $pdo->query($sql);
+		
+		foreach ($resultat as $row) {
+			$ligne = array();
+			$ligne['id'] = $row['id'];
+			$ligne['nom'] = $row['nom'];
+			$ligne['prenom'] = $row['prenom'];
+			$ligne['date_naissance'] = $row['date_naissance'];
+			$ligne['civilite'] = $row['civilite'];
+			$ligne['email'] = $row['email'];
+			$ligne['telephone_portable'] = $row['telephone_portable'];
+			array_push($reponse, $ligne);
+		}
+		
+		return json_encode($reponse);
+	}
+	
 	/**
 	 * Permet de récupérer le prix depuis le code barre.
 	 *
