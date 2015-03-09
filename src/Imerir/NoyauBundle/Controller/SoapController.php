@@ -1199,7 +1199,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
 		
 		
-		$requete_toutes_les_lignes_factures = 'SELECT id_ligne_facture ,id_facture , date_de_facture, nom_contact , article_id , nb_article, prix_id ,reduction_article,
+		$requete_toutes_les_lignes_factures = 'SELECT id_facture , date_de_facture, nom_contact,
 						SUM(CASE 
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
@@ -1227,17 +1227,14 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        JOIN prix px ON px.ref_article = a.id
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
-				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
-						WHERE f.date_facture > 
-							( SELECT p.date_modif as "date_modification_prix" FROM prix p
-							  ORDER BY date_modification_prix desc limit 1)';
+				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id';
 				      
 
 		if($date != ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND f.date_facture > ' . $pdo->quote($date) . '';
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE f.date_facture > ' . $pdo->quote($date) . '';
 		}
 		if($client != ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND c.nom = ' . $pdo->quote($client) . '';
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE c.nom = ' . $pdo->quote($client) . '';
 		}
 		
 		//On ajoute a la requete la fin
@@ -1279,7 +1276,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 							ELSE montant_client*(-1*nb_article)
 						END) AS montant
 				        FROM(
-				        SELECT f.date_facture,
+				        SELECT 
 							   lf.id as "ligne_facture_id",
 				               a.id as "article_id",
 							   a.code_barre "nom_article",
@@ -1288,7 +1285,6 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               f.id as "id_facture" ,
 				               f.date_facture "date_de_facture",
 				               c.nom "nom_contact",
-				               a.id as "id_article",
 				               r.reduction as "reduction_article",
 				               m.quantite_mouvement as "nb_article",
 				               r.type_reduction as "type_reduction",
@@ -1298,14 +1294,13 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						JOIN ligne_facture lf ON f.id = lf.ref_facture
 						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
 						JOIN article a ON m.ref_article = a.id
-				        JOIN prix px ON px.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id AND px.id = 
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif>f.date_facture)
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
-						WHERE f.date_facture >
-							( SELECT p.date_modif as "date_modification_prix" FROM prix p
-							  ORDER BY date_modification_prix desc limit 1)
-						AND f.id = '.$pdo->quote($numero).'
+					
+						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
 		foreach ($pdo->query($requete_detail_factures) as $row) {
@@ -2214,7 +2209,7 @@ where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "pl
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		//definition de la requête sql
 		$sql='select ville, count(contact.id) as "nb_personne" from contact
-join adresse on adresse.ref_contact=contact.id
+join adresse on adresse.ref_contact=contact.id where ville<>\'\'
 group by ville;';
 
 		$result = array();
