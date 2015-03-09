@@ -1240,36 +1240,13 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
 		
 		
-		$requete_toutes_les_lignes_factures = 'SELECT id_facture , date_de_facture, nom_contact,
+		$requete_toutes_les_lignes_factures = 'SELECT id_facture, date_de_facture, nom_contact,
 						SUM(CASE 
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
 						END) AS montant
-				        FROM(
-				        SELECT f.date_facture,
-							   lf.id as "ligne_facture_id", 
-				               a.id as "article_id", 
-				               px.montant_client as "prix_id", 
-				               lf.id as "id_ligne_facture" ,
-				               f.id as "id_facture" ,
-				               f.date_facture "date_de_facture",
-				               c.nom "nom_contact",
-				               a.id as "id_article",
-				               r.reduction as "reduction_article",
-				               m.quantite_mouvement as "nb_article",
-				               r.type_reduction as "type_reduction",
-				               px.montant_client as "montant_client"
-				               
-				        FROM facture f  
-						JOIN ligne_facture lf ON f.id = lf.ref_facture
-						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
-						JOIN article a ON m.ref_article = a.id
-				        JOIN prix px ON px.ref_article = a.id AND px.id = 
-                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture)
-				        JOIN produit pt ON a.ref_produit = pt.id
-				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
-				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id';
+				        FROM( SELECT * FROM ventes_contact';
 				      
 
 		if($date != ''){
@@ -1333,11 +1310,11 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               px.montant_client as "montant_client"
 				      
 				        FROM facture f
-						JOIN ligne_facture lf ON f.id = lf.ref_facture
+						JOIN ligne_facture lf ON lf.ref_facture = f.id 
 						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
 						JOIN article a ON m.ref_article = a.id
 				        JOIN prix px ON px.ref_article = a.id AND px.id = 
-                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture)
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
