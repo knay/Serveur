@@ -1215,7 +1215,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						JOIN ligne_facture lf ON f.id = lf.ref_facture
 						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
 						JOIN article a ON m.ref_article = a.id
-				        JOIN prix px ON px.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id AND px.id = 
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif>f.date_facture)
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id';
