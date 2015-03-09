@@ -2200,7 +2200,7 @@ where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "pl
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		//definition de la requête sql
 		$sql='select ville, count(contact.id) as "nb_personne" from contact
-join adresse on adresse.ref_contact=contact.id
+join adresse on adresse.ref_contact=contact.id where ville<>\'\'
 group by ville;';
 
 		$result = array();
