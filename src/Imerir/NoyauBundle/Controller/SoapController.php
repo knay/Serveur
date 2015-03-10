@@ -1162,16 +1162,16 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		// et on donnne la priorit� a l'article!
 
 		if (!empty($Article)) {
-			$requete_stock = $requete_stock . ' WHERE a.code_barre = ' . $pdo->quote($Article) . '';
+			$requete_stock = $requete_stock . ' WHERE a.code_barre = ' . $pdo->quote($Article) . ' AND a.est_visible=1';
 		} //Si le parametre ligne de produit n'est pas vide
 		else if (!empty($LigneProduit)) {
 			// On verifie si l'utilisateur a selectionner un produit
 			// Si oui on fait la recherche par rapport a ce produit et non a la ligne produit
 			if (!empty($Produit)) {
-				$requete_stock = $requete_stock . ' WHERE p.nom = ' . $pdo->quote($Produit) . '';
+				$requete_stock = $requete_stock . ' WHERE p.nom = ' . $pdo->quote($Produit) . ' AND p.est_visible=1 ';
 			} // sinon on recherche par la ligne produit
 			else {
-				$requete_stock = $requete_stock . ' WHERE l.nom = ' . $pdo->quote($LigneProduit) . '';
+				$requete_stock = $requete_stock . ' WHERE l.nom = ' . $pdo->quote($LigneProduit) . ' AND l.est_visible=1';
 			}
 		} else {
 			$requete_stock = $requete_stock;
@@ -1184,6 +1184,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 															WHERE ref_article = ' . $row_ligne['id_article'] . ' AND date_mouvement >= (SELECT date_mouvement FROM alba.mouvement_stock
 															WHERE ref_article = ' . $row_ligne['id_article'] . '
 															AND est_inventaire = 1
+															AND est_visible = 1
 															order by date_mouvement desc limit 1)';
 			// On parcourt les mouvements de stock de l'article
 			foreach ($pdo->query($sql_quantite_article) as $row_quantite) {
@@ -1211,7 +1212,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
-		$requete_tous_les_produits = 'SELECT nom as ligne_produit_nom FROM alba.ligne_produit ORDER BY nom ASC';
+		$requete_tous_les_produits = 'SELECT nom as ligne_produit_nom FROM alba.ligne_produit WHERE est_visible = 1 ORDER BY nom ASC';
 
 		foreach ($pdo->query($requete_tous_les_produits) as $row) {
 			$ligne = array('nom_ligne_produit' => $row['ligne_produit_nom']);
@@ -1374,7 +1375,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		
 		if($date != ''){
 			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
-			WHERE date_naissance BETWEEN '.$pdo->quote($date).' AND curdate()';
+			WHERE month(date_naissance) BETWEEN month('.$pdo->quote($date).') AND curdate()';
 			
 			foreach ($pdo->query($requete_date_anniversaire) as $row) {
 				$ligne = array(
