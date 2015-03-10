@@ -1288,12 +1288,12 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
-		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact , nom_article ,article_id , nb_article, prix_id ,reduction_article,
+		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact, prenom_contact, nom_article ,article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
-						END) AS montant
+						END) AS montant,adresse_numero,adresse_rue,adresse_code_postal,adresse_ville,adresse_pays
 				        FROM(
 				        SELECT 
 							   lf.id as "ligne_facture_id",
@@ -1304,6 +1304,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               f.id as "id_facture" ,
 				               f.date_facture as "date_de_facture",
 				               c.nom as "nom_contact",
+							   c.prenom as "prenom_contact",
 							   c.id as "id_contact",
 							   ad.num_voie as "adresse_numero",
 							   ad.voie as "adresse_rue",
@@ -1324,7 +1325,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
-						JOIN adresse ad ON ad.ref_contact = c.id
+						RIGHT OUTER JOIN adresse ad ON c.id = ad.ref_contact
 					
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
@@ -1334,6 +1335,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
 					'nom_client'=>$row['nom_contact'],
+					'prenom_client'=>$row['prenom_contact'],
 					'adresse_numero'=>$row['adresse_numero'],
 					'adresse_rue'=>$row['adresse_rue'],
 					'adresse_code_postal'=>$row['adresse_code_postal'],
