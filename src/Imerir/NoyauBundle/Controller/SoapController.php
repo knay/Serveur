@@ -186,8 +186,7 @@ class SoapController extends ContainerAware
 				LEFT OUTER JOIN attribut ON valeur_attribut.ref_attribut = attribut.id
 				WHERE produit.nom LIKE '.$pdo->quote($nomProduit).' AND ligne_produit.nom LIKE '.$pdo->quote($nomLigneProduit).'
 				      AND produit.est_visible = true AND ligne_produit.est_visible = true
-				      AND attribut.est_visible = true AND valeur_attribut.est_visible = true
-				      AND article.est_visible = true
+				      AND attribut.est_visible = true AND article.est_visible = true
 				ORDER BY article.code_barre ASC';
 		
 		$resultat = $pdo->query($sql);
@@ -1430,7 +1429,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	
 	/**
 	 * Permet de retourner tous les anniversaires du jour si il n'y a pas 
-	 * de date pass en parametre, sinon les anniversaires depuis la date pass en parametre
+	 * de date passï¿½ en parametre, sinon les anniversaires depuis la date passï¿½ en parametre
 	 * jusqu'a aujourd'hui
 	 *
 	 * @Soap\Method("getAnniversaire")
