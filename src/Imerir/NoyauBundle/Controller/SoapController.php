@@ -2224,8 +2224,6 @@ group by ville;';
 			return new \SoapFault('Server', '[GNCPV002] Problème de connexion au serveur de base de données.');
 
 		}
-
-
 	}
 
 
