@@ -112,11 +112,12 @@ class SoapController extends ContainerAware
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$tabArticles = json_decode($articles);
 
-		$sql = 'INSERT INTO facture (date_facture, est_visible) VALUE (NOW(), true)';
+		$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact) VALUE (NOW(), true, '.(int)$tabArticles->idClient.')';
+		
 		$resultat = $pdo->query($sql);
 		$ref_facture = $pdo->lastInsertId();
 
-		foreach ($tabArticles as $article) {
+		foreach ($tabArticles->article as $article) {
 			$code_barre = $article->codeBarre;
 			$quantite = $article->quantite;
 			$promo = $article->promo;
@@ -820,6 +821,46 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 	}
 
 	/**
+	 * Permet de rechercher un contact depuis n'importe quel critère.
+	 *
+	 * @param $codeBarre Le code barre du produit recherché.
+	 *
+	 * @Soap\Method("getContactFromEverything")
+	 * @Soap\Param("critere",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getContactFromEverythingAction($critere) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT')) && 
+			!($this->container->get('user_service')->isOk('ROLE_EMPLOYE'))) // On check les droits
+			return new \SoapFault('Server', '[GCFE001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_string($critere) || empty ($critere)) // Vérif des arguments
+			return new \SoapFault('Server', '[GCFE002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		$reponse = array();
+		
+		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact
+				WHERE CONCAT (nom, prenom, date_naissance, email, telephone_portable) 
+				REGEXP replace('.$pdo->quote($critere).', \' \', \'|\')';
+		$resultat = $pdo->query($sql);
+		
+		foreach ($resultat as $row) {
+			$ligne = array();
+			$ligne['id'] = $row['id'];
+			$ligne['nom'] = $row['nom'];
+			$ligne['prenom'] = $row['prenom'];
+			$ligne['date_naissance'] = $row['date_naissance'];
+			$ligne['civilite'] = $row['civilite'];
+			$ligne['email'] = $row['email'];
+			$ligne['telephone_portable'] = $row['telephone_portable'];
+			array_push($reponse, $ligne);
+		}
+		
+		return json_encode($reponse);
+	}
+	
+	/**
 	 * Permet de récupérer le prix depuis le code barre.
 	 *
 	 * @param $codeBarre Le code barre du produit recherché.
@@ -1199,35 +1240,13 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
 		
 		
-		$requete_toutes_les_lignes_factures = 'SELECT id_facture , date_de_facture, nom_contact,
+		$requete_toutes_les_lignes_factures = 'SELECT id_facture, date_de_facture, nom_contact,
 						SUM(CASE 
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
 						END) AS montant
-				        FROM(
-				        SELECT f.date_facture,
-							   lf.id as "ligne_facture_id", 
-				               a.id as "article_id", 
-				               px.montant_client as "prix_id", 
-				               lf.id as "id_ligne_facture" ,
-				               f.id as "id_facture" ,
-				               f.date_facture "date_de_facture",
-				               c.nom "nom_contact",
-				               a.id as "id_article",
-				               r.reduction as "reduction_article",
-				               m.quantite_mouvement as "nb_article",
-				               r.type_reduction as "type_reduction",
-				               px.montant_client as "montant_client"
-				               
-				        FROM facture f  
-						JOIN ligne_facture lf ON f.id = lf.ref_facture
-						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
-						JOIN article a ON m.ref_article = a.id
-				        JOIN prix px ON px.ref_article = a.id
-				        JOIN produit pt ON a.ref_produit = pt.id
-				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
-				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id';
+				        FROM( SELECT * FROM ventes_contact';
 				      
 
 		if($date != ''){
@@ -1269,37 +1288,46 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
-		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact , nom_article ,article_id , nb_article, prix_id ,reduction_article,
+		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, nom_contact, prenom_contact, nom_article ,article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
-						END) AS montant
+						END) AS montant,adresse_numero,adresse_rue,adresse_code_postal,adresse_ville,adresse_pays
 				        FROM(
 				        SELECT 
 							   lf.id as "ligne_facture_id",
 				               a.id as "article_id",
-							   a.code_barre "nom_article",
+							   a.code_barre as "nom_article",
 				               px.montant_client as "prix_id",
 				               lf.id as "id_ligne_facture" ,
 				               f.id as "id_facture" ,
-				               f.date_facture "date_de_facture",
-				               c.nom "nom_contact",
+				               f.date_facture as "date_de_facture",
+				               c.nom as "nom_contact",
+							   c.prenom as "prenom_contact",
+							   c.id as "id_contact",
+							   ad.num_voie as "adresse_numero",
+							   ad.voie as "adresse_rue",
+							   ad.code_postal as "adresse_code_postal",
+							   ad.ville as "adresse_ville",
+							   ad.pays as "adresse_pays",
 				               r.reduction as "reduction_article",
 				               m.quantite_mouvement as "nb_article",
 				               r.type_reduction as "type_reduction",
-				               px.montant_client as "montant_client"
+				               px.montant_client as "montant_client",
+							   pt.nom as "nom_produit"
 				      
 				        FROM facture f
-						JOIN ligne_facture lf ON f.id = lf.ref_facture
+						JOIN ligne_facture lf ON lf.ref_facture = f.id 
 						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
 						JOIN article a ON m.ref_article = a.id
 				        JOIN prix px ON px.ref_article = a.id AND px.id = 
-                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif>f.date_facture)
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
-					
+						RIGHT OUTER JOIN adresse ad ON c.id = ad.ref_contact
+						
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
@@ -1307,7 +1335,14 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			$nombre_article = substr($row['nb_article'],1);
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
+					'nom_produit'=>$row['nom_produit'],
 					'nom_client'=>$row['nom_contact'],
+					'prenom_client'=>$row['prenom_contact'],
+					'adresse_numero'=>$row['adresse_numero'],
+					'adresse_rue'=>$row['adresse_rue'],
+					'adresse_code_postal'=>$row['adresse_code_postal'],
+					'adresse_ville'=>$row['adresse_ville'],
+					'adresse_pays'=>$row['adresse_pays'],
 					'nom_article'=>$row['nom_article'],
 					'nombre_article'=>$nombre_article,
 					'prix_article'=>$row['prix_id'],
