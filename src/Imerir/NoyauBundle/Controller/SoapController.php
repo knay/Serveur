@@ -159,7 +159,67 @@ class SoapController extends ContainerAware
 	}
 
 	/**
-	 * TODO
+	 * @Soap\Method("rechercheArticle")
+	 * @Soap\Param("nomLigneProduit",phpType="string")
+	 * @Soap\Param("nomProduit",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function rechercheArticleAction($nomLigneProduit, $nomProduit) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[RA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_string($nomLigneProduit) || !is_string($nomProduit)) // Vérif des arguments
+			return new \SoapFault('Server', '[RA002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		$nomLigneProduit = '%'.$nomLigneProduit.'%';
+		$nomProduit = '%'.$nomProduit.'%';
+		
+		$sql = 'SELECT code_barre, produit.nom AS nomProduit, ligne_produit.nom AS nomLigne, 
+				       attribut.nom AS attribut, valeur_attribut.libelle AS valAttribut
+				FROM article 
+				JOIN produit ON article.ref_produit = produit.id
+				JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
+				LEFT OUTER JOIN article_a_pour_val_attribut ON article_a_pour_val_attribut.ref_article = article.id
+				LEFT OUTER JOIN valeur_attribut ON article_a_pour_val_attribut.ref_val_attribut = valeur_attribut.id
+				LEFT OUTER JOIN attribut ON valeur_attribut.ref_attribut = attribut.id
+				WHERE produit.nom LIKE '.$pdo->quote($nomProduit).' AND ligne_produit.nom LIKE '.$pdo->quote($nomLigneProduit).'
+				      AND produit.est_visible = true AND ligne_produit.est_visible = true
+				      AND attribut.est_visible = true AND valeur_attribut.est_visible = true
+				      AND article.est_visible = true
+				ORDER BY article.code_barre ASC';
+		
+		$resultat = $pdo->query($sql);
+		
+		$ligne = array();
+		$tabAttributs = array();
+		$dernierCodeBarre = '';
+		$dernierLigneProduit = '';
+		$dernierProduit = '';
+		$dernierAttribut = '';
+		foreach ($resultat as $row) {
+			if ($dernierCodeBarre !== $row['code_barre']) {
+				$ligne = array('codeBarre' => $dernierCodeBarre, 'ligneProduit' => $dernierLigneProduit, 
+						       'produit' => $dernierProduit, 'valAttribut' => $tabAttributs);
+				array_push($result, $ligne);
+				$tabAttributs = array();
+			}
+			$dernierLigneProduit = $row['nomLigne'];
+			$dernierProduit = $row['nomProduit'];
+			$dernierCodeBarre = $row['code_barre'];
+			$dernierAttribut = $row['attribut'];
+			array_push($tabAttributs, $row['valAttribut']);
+		}
+		
+		$ligne = array('codeBarre' => $dernierCodeBarre, 'ligneProduit' => $dernierLigneProduit, 
+					   'produit' => $dernierProduit, 'valAttribut' => $tabAttributs);
+		array_push($result, $ligne);
+		
+		return json_encode($result);
+	}
+	
+	/**
 	 * @Soap\Method("modifArticle")
 	 * @Soap\Param("article",phpType="string")
 	 * @Soap\Result(phpType = "string")
@@ -181,6 +241,10 @@ class SoapController extends ContainerAware
 		$attributs = $tabArticle->attributs;
 		$prixClient = $tabArticle->prixClient;
 		$prixFournisseur = $tabArticle->prixFournisseur;
+		$quantite = -1;
+		if(isset ($tabArticle->quantite) && is_int($tabArticle->quantite) && $tabArticle->quantite >= 0) {
+			$quantite = $tabArticle->quantite;
+		}
 
 		$sql = 'SELECT * FROM article WHERE code_barre=' . $pdo->quote($code_barre);
 		$resultat = $pdo->query($sql);
@@ -213,6 +277,12 @@ class SoapController extends ContainerAware
 
 		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\'' . $idArticle . '\'';
 		$resultat = $pdo->query($sql); // On vide la table de correspondance pour cet article
+		
+		if($quantite >= 0) { // Si on a précisé une quantite on vient l'insérer
+			$sql = 'INSERT INTO mouvement_stock (ref_article, quantite_mouvement, date_mouvement, est_inventaire)
+					VALUES (\'' . $idArticle . '\', ' . $quantite . ', NOW(), TRUE)'; // Insertion du mouvement de stock
+			$resultat = $pdo->query($sql); // On valide l'inventaire de ce produit
+		}
 
 		// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
 		foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
@@ -267,6 +337,8 @@ class SoapController extends ContainerAware
 			return new \SoapFault("Server", "[ALP004] La ligne produit existe déjà");
 		}
 	}
+	
+	
 
 	/**
 	 * Permet de récupérer tous les code barres de tout les articles.
@@ -878,15 +950,17 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 			return new \SoapFault('Server', '[GPFCB002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo();
-		$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre=' . $pdo->quote($codeBarre);
+		$sql = 'SELECT montant_client, montant_fournisseur FROM prix JOIN article ON ref_article=article.id WHERE code_barre=' . $pdo->quote($codeBarre);
 		$resultat = $pdo->query($sql);
+		$res = array();
 
 		$prix = 0;
 		foreach ($resultat as $row) {
-			$prix = $row["montant_client"];
+			$res['montant_client'] = $row["montant_client"];
+			$res['montant_fournisseur'] = $row['montant_fournisseur'];
 		}
 
-		return '' . $prix;
+		return json_encode($res);
 	}
 
 	/**
