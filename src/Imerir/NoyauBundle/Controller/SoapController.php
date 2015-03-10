@@ -1449,7 +1449,24 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		
 		if($date != ''){
 			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
-			WHERE month(date_naissance) BETWEEN month('.$pdo->quote($date).') AND curdate()';
+			WHERE date_naissance BETWEEN '.$pdo->quote($date).' AND curdate()';
+			
+// 			SELECT
+// 			civilite,
+// 			nom,
+// 			prenom,
+// 			email,
+// 			CASE
+// 			WHEN month(curdate()) > month('1999-01-03')
+// 			THEN ( SELECT date_naissance
+// 			FROM alba.contact
+// 			WHERE month(date_naissance) BETWEEN month(curdate()) AND month('1999-01-03'))
+// 			WHEN month(curdate()) < month('1999-01-03')
+// 			THEN ( SELECT date_naissance
+// 			FROM alba.contact
+// 			WHERE month(date_naissance) BETWEEN month('1999-01-03') AND month(curdate()))
+// 			END AS date_naissance
+// 			FROM alba.contact;
 			
 			foreach ($pdo->query($requete_date_anniversaire) as $row) {
 				$ligne = array(
@@ -1465,7 +1482,6 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		else if ($date == '') {
 			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
 			WHERE month(date_naissance) = month(now())
-			AND year(date_naissance) = year(now())
 			AND day(date_naissance) = day(now())';
 				
 			foreach ($pdo->query($requete_date_anniversaire) as $row) {
@@ -1484,8 +1500,116 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		}
 		return json_encode($result);
 		
+	}	
+
+	/**
+	 * Permet de retourner tous les moyen de paiement accepter par le magasin
+	 *
+	 * @Soap\Method("getAllModePaiement")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAllModePaiementAction(){
+		
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GAMP001] Vous n\'avez pas les droits nécessaires.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		$requete_mode_paiement = 'SELECT id,nom FROM alba.moyen_paiement ORDER BY nom ASC';
+		
+		foreach ($pdo->query($requete_mode_paiement) as $row) {
+			$ligne = array(
+					'paiement_id' => $row['id'],
+					'paiement_nom' => $row['nom'],
+			);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
 	}
 	
+	/**
+	 * Permet de retourner tous les moyen de paiement accepter par le magasin
+	 *
+	 * @Soap\Method("modifierModePaiement")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifierModePaiementAction($id,$nom){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[MMP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($id) || !is_string($nom) ) // Vérif des arguments
+			return new SoapFault('Server', '[MMP002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service	
+		
+		if($id != ''){
+			$requete_modifier_mode_paiement = 'UPDATE alba.moyen_paiement SET nom='.$pdo->quote($nom).' WHERE id='.$pdo->quote($id).' ';
+			$pdo->query($requete_modifier_mode_paiement);
+			return 'OK';
+		}
+		else{
+			return new SoapFault('Server', '[MMP003] Paramètres invalides.');
+		}
+	}
+	
+	/**
+	 * Permet de retourner tous les moyen de paiement accepter par le magasin
+	 *
+	 * @Soap\Method("supprimerModePaiement")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprimerModePaiementAction($id){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[SMP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($id) ) // Vérif des arguments
+			return new SoapFault('Server', '[SMP002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if($id != ''){
+			$requete_supprimer_mode_paiement = 'DELETE FROM alba.moyen_paiement WHERE id = '.$pdo->quote($id).'';
+			$pdo->query($requete_supprimer_mode_paiement);
+			return 'OK';
+		}
+		else{
+			return new SoapFault('Server', '[SMP003] Paramètres invalides.');
+		}
+	}
+	
+	/**
+	 * Permet d'inserer un nouveau mode de paiement
+	 *
+	 * @Soap\Method("insererModePaiement")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function insererModePaiementAction($nom){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[IMP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_string($nom) ) // Vérif des arguments
+			return new SoapFault('Server', '[IMP002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		if($nom != ''){
+			$requete_mode_paiement = 'INSERT INTO alba.moyen_paiement(nom) VALUES('.$pdo->quote($nom).')';
+			$pdo->query($requete_mode_paiement);
+			return 'OK';
+		}
+		else{
+			return new SoapFault('Server', '[IMP003] Paramètres invalides.');
+		}
+	}
 	
 	/** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
