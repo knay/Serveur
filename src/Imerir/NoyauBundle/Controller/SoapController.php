@@ -1288,7 +1288,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
-		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact, prenom_contact, nom_article ,article_id , nb_article, prix_id ,reduction_article,
+		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, nom_contact, prenom_contact, nom_article ,article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
@@ -1314,7 +1314,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               r.reduction as "reduction_article",
 				               m.quantite_mouvement as "nb_article",
 				               r.type_reduction as "type_reduction",
-				               px.montant_client as "montant_client"
+				               px.montant_client as "montant_client",
+							   pt.nom as "nom_produit"
 				      
 				        FROM facture f
 						JOIN ligne_facture lf ON lf.ref_facture = f.id 
@@ -1326,7 +1327,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
 						RIGHT OUTER JOIN adresse ad ON c.id = ad.ref_contact
-					
+						
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
@@ -1334,6 +1335,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			$nombre_article = substr($row['nb_article'],1);
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
+					'nom_produit'=>$row['nom_produit'],
 					'nom_client'=>$row['nom_contact'],
 					'prenom_client'=>$row['prenom_contact'],
 					'adresse_numero'=>$row['adresse_numero'],
