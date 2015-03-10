@@ -1083,7 +1083,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		if ($this->container->get('user_service')->isOk('ROLE_GERANT')) {
 			$tableau_menu = array(
 				array('menu' => 'caisse','sous_menu' => array()),
-				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
+				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques','Anniversaires')),
 				array('menu' => 'evenement','sous_menu' => array()),
 				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
 				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
@@ -1353,6 +1353,63 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		return json_encode($result);
 	}
 	
+	/**
+	 * Permet de retourner tous les anniversaires du jour si il n'y a pas 
+	 * de date pass� en parametre, sinon les anniversaires depuis la date pass� en parametre
+	 * jusqu'a aujourd'hui
+	 *
+	 * @Soap\Method("getAnniversaire")
+	 * @Soap\Param("date",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAnniversaireAction($date){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		if (!is_string($date) ) // Vérif des arguments
+			return new SoapFault('Server', '[GA002] Paramètres invalides.');
+		
+		if($date != ''){
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
+			WHERE date_naissance BETWEEN '.$pdo->quote($date).' AND curdate()';
+			
+			foreach ($pdo->query($requete_date_anniversaire) as $row) {
+				$ligne = array(
+						'client_civilite' => $row['civilite'],
+						'client_nom' => $row['nom'],
+						'client_prenom' => $row['prenom'],
+						'client_date' => $row['date_naissance'],
+						'client_email' => $row['email'],
+						);
+				array_push($result, $ligne);
+			}
+		}
+		else if ($date == '') {
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
+			WHERE month(date_naissance) = month(now())
+			AND year(date_naissance) = year(now())
+			AND day(date_naissance) = day(now())';
+				
+			foreach ($pdo->query($requete_date_anniversaire) as $row) {
+				$ligne = array(
+						'client_civilite' => $row['civilite'],
+						'client_nom' => $row['nom'],
+						'client_prenom' => $row['prenom'],
+						'client_date' => $row['date_naissance'],
+						'client_email' => $row['email'],
+				);
+				array_push($result, $ligne);
+			}
+		}
+		else {
+			return new SoapFault('Server', '[GA003] Paramètres invalides.');
+		}
+		return json_encode($result);
+		
+	}
 	
 	
 	/** @Soap\Method("getFournisseurs")
