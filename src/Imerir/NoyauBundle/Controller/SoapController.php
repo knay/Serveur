@@ -1157,7 +1157,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		if ($this->container->get('user_service')->isOk('ROLE_GERANT')) {
 			$tableau_menu = array(
 				array('menu' => 'caisse','sous_menu' => array()),
-				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
+				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques','Anniversaires')),
 				array('menu' => 'evenement','sous_menu' => array()),
 				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
 				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
@@ -1362,12 +1362,12 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
-		$requete_detail_factures = 'SELECT id_facture , date_de_facture, nom_contact , nom_article ,article_id , nb_article, prix_id ,reduction_article,
+		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, nom_contact, prenom_contact, nom_article ,article_id , nb_article, prix_id ,reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
-						END) AS montant
+						END) AS montant,adresse_numero,adresse_rue,adresse_code_postal,adresse_ville,adresse_pays
 				        FROM(
 				        SELECT 
 							   lf.id as "ligne_facture_id",
@@ -1378,6 +1378,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               f.id as "id_facture" ,
 				               f.date_facture as "date_de_facture",
 				               c.nom as "nom_contact",
+							   c.prenom as "prenom_contact",
 							   c.id as "id_contact",
 							   ad.num_voie as "adresse_numero",
 							   ad.voie as "adresse_rue",
@@ -1387,7 +1388,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               r.reduction as "reduction_article",
 				               m.quantite_mouvement as "nb_article",
 				               r.type_reduction as "type_reduction",
-				               px.montant_client as "montant_client"
+				               px.montant_client as "montant_client",
+							   pt.nom as "nom_produit"
 				      
 				        FROM facture f
 						JOIN ligne_facture lf ON lf.ref_facture = f.id 
@@ -1398,8 +1400,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
-						JOIN adresse ad ON ad.ref_contact = c.id
-					
+						RIGHT OUTER JOIN adresse ad ON c.id = ad.ref_contact
+						
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
@@ -1407,7 +1409,9 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			$nombre_article = substr($row['nb_article'],1);
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
+					'nom_produit'=>$row['nom_produit'],
 					'nom_client'=>$row['nom_contact'],
+					'prenom_client'=>$row['prenom_contact'],
 					'adresse_numero'=>$row['adresse_numero'],
 					'adresse_rue'=>$row['adresse_rue'],
 					'adresse_code_postal'=>$row['adresse_code_postal'],
@@ -1423,6 +1427,63 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		return json_encode($result);
 	}
 	
+	/**
+	 * Permet de retourner tous les anniversaires du jour si il n'y a pas 
+	 * de date pass� en parametre, sinon les anniversaires depuis la date pass� en parametre
+	 * jusqu'a aujourd'hui
+	 *
+	 * @Soap\Method("getAnniversaire")
+	 * @Soap\Param("date",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAnniversaireAction($date){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		if (!is_string($date) ) // Vérif des arguments
+			return new SoapFault('Server', '[GA002] Paramètres invalides.');
+		
+		if($date != ''){
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
+			WHERE date_naissance BETWEEN '.$pdo->quote($date).' AND curdate()';
+			
+			foreach ($pdo->query($requete_date_anniversaire) as $row) {
+				$ligne = array(
+						'client_civilite' => $row['civilite'],
+						'client_nom' => $row['nom'],
+						'client_prenom' => $row['prenom'],
+						'client_date' => $row['date_naissance'],
+						'client_email' => $row['email'],
+						);
+				array_push($result, $ligne);
+			}
+		}
+		else if ($date == '') {
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
+			WHERE month(date_naissance) = month(now())
+			AND year(date_naissance) = year(now())
+			AND day(date_naissance) = day(now())';
+				
+			foreach ($pdo->query($requete_date_anniversaire) as $row) {
+				$ligne = array(
+						'client_civilite' => $row['civilite'],
+						'client_nom' => $row['nom'],
+						'client_prenom' => $row['prenom'],
+						'client_date' => $row['date_naissance'],
+						'client_email' => $row['email'],
+				);
+				array_push($result, $ligne);
+			}
+		}
+		else {
+			return new SoapFault('Server', '[GA003] Paramètres invalides.');
+		}
+		return json_encode($result);
+		
+	}
 	
 	
 	/** @Soap\Method("getFournisseurs")
@@ -2329,8 +2390,6 @@ group by ville;';
 			return new \SoapFault('Server', '[GNCPV002] Problème de connexion au serveur de base de données.');
 
 		}
-
-
 	}
 
 
