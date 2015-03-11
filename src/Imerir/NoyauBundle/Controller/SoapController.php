@@ -1447,22 +1447,22 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	 * jusqu'a aujourd'hui
 	 *
 	 * @Soap\Method("getAnniversaire")
-	 * @Soap\Param("date",phpType="string")
+	 * @Soap\Param("mois",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function getAnniversaireAction($date){
+	public function getAnniversaireAction($mois){
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 		
-		if (!is_string($date) ) // Vérif des arguments
+		if (!is_string($mois) ) // Vérif des arguments
 			return new SoapFault('Server', '[GA002] Paramètres invalides.');
 		
-		if($date != ''){
-			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
-			WHERE date_naissance BETWEEN '.$pdo->quote($date).' AND curdate()';
+		if($mois != ''){
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
+			WHERE month(date_naissance) = '.$pdo->quote($mois).'';
 			
 			foreach ($pdo->query($requete_date_anniversaire) as $row) {
 				$ligne = array(
@@ -1471,12 +1471,13 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						'client_prenom' => $row['prenom'],
 						'client_date' => $row['date_naissance'],
 						'client_email' => $row['email'],
+						'client_age' => $row['age']
 						);
 				array_push($result, $ligne);
 			}
 		}
-		else if ($date == '') {
-			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
+		else if ($mois == '') {
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
 			WHERE month(date_naissance) = month(now())
 			AND day(date_naissance) = day(now())';
 				
@@ -1487,6 +1488,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						'client_prenom' => $row['prenom'],
 						'client_date' => $row['date_naissance'],
 						'client_email' => $row['email'],
+						'client_age' => $row['age']
 				);
 				array_push($result, $ligne);
 			}
