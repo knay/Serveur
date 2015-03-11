@@ -1314,7 +1314,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function getAllFactureAction($date,$client){
-	
+		
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server','[GAF001] Vous n\'avez pas les droits nécessaires.');
 	
@@ -1322,7 +1322,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$result = array();
 	
 		if (!is_string($date) || !is_string($client) ) // Vérif des arguments
-			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GAF002] Paramètres invalides.');
 		
 		
 		$requete_toutes_les_lignes_factures = 'SELECT id_facture, date_de_facture, nom_contact,
@@ -1333,16 +1333,25 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						END) AS montant
 				        FROM( SELECT * FROM ventes_contact';
 				      
-
-		if($date != ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE f.date_facture > ' . $pdo->quote($date) . '';
+		if($date !== ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE date_de_facture > ' . $pdo->quote($date) . '';
+			if($client !== ''){
+				$client = $pdo->quote('%'.$client.'%');
+				$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' AND nom_contact LIKE ' . $client . '';
+			}
 		}
-		if($client != ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE c.nom = ' . $pdo->quote($client) . '';
+		else {
+			if($client !== ''){
+				$client = $pdo->quote('%'.$client.'%');
+				$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE nom_contact LIKE ' . $client . '';
+			}
 		}
+		
 		
 		//On ajoute a la requete la fin
 		$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
+		
+		//return new \SoapFault('Server', '[GAF002] '.$requete_toutes_les_lignes_factures);
 		
 		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
 			$ligne = array('numero' => $row['id_facture'],
@@ -1351,6 +1360,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 					'montant'=>$row['montant']);
 			array_push($result, $ligne);
 		}
+		
 		return json_encode($result);
 	}
 	
@@ -1420,7 +1430,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 	
-		if (!is_int($numero) ) // Vérif des arguments
+		if (!is_int($numero) || $numero < 0) // Vérif des arguments
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
@@ -1466,7 +1476,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						LEFT OUTER JOIN adresse ad ON c.id = ad.ref_contact
                         LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
 						
-						WHERE f.id = '.$pdo->quote($numero).'
+						WHERE f.id = '.(int)$numero.'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
 		foreach ($pdo->query($requete_detail_factures) as $row) {
