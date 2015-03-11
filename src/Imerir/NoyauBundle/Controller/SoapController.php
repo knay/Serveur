@@ -1412,8 +1412,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
-						RIGHT OUTER JOIN adresse ad ON c.id = ad.ref_contact
-						LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
+						LEFT OUTER JOIN adresse ad ON c.id = ad.ref_contact
+                        LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
 						
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
