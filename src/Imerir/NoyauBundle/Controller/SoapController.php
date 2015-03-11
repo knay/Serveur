@@ -2262,4 +2262,212 @@ group by ville;';
 	}
 
 
+	/**
+	 * @Soap\Method("ajoutCommandeFournisseur")
+	 * @Soap\Param("fournisseur_id",phpType="string")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Param("date_commande",phpType="string")
+	 * @Soap\Param("quantite_souhaite",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutCommandeFournisseurAction($fournisseur_id, $article_code, $date_commande, $quantite_souhaite)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[ACF001] Vous n\'avez pas les droits nécessaires.');
+
+
+
+		if ((!is_string($fournisseur_id) && !is_int($fournisseur_id)) || (!is_string($article_code) && !is_int($article_code))
+			|| (!is_string($quantite_souhaite) && !is_int($quantite_souhaite))) // Vérif des arguments
+			return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+
+		// Formation de la requete SQL
+		$tab_fournisseur_id = array(json_decode($fournisseur_id));
+		$tab_article_code = array(json_decode($article_code));
+		$tab_quantite_souhaite = array(json_decode($quantite_souhaite));
+		$tab_date_commande = array(json_decode($date_commande));
+
+
+
+		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
+
+		foreach($tab_article_code as $article_code){
+
+			$sql = 'SELECT * FROM article WHERE code_barre='.$pdo->quote($article_code).';';
+			$resultat = $pdo->query($sql);
+
+			if ($resultat->rowCount() == 0) {
+				return new \SoapFault('Server', '[ACF003] Article '.$article_code.' invalide.');
+			}
+		}
+		//insertion des données
+
+		$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
+		'.$pdo->quote($tab_date_commande[0]).')';
+
+		//return new \SoapFault('Server', $sql);
+		$pdo->query($sql);
+
+		$i = 0;
+		foreach ($tab_article_code as $article_code) {
+
+			$quantite_souhaite = $tab_quantite_souhaite[$i];
+			$sql_f = 'SELECT MAX(id) as "max_id" FROM commande_fournisseur;';
+			$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code).';';
+			$result_f = $pdo->query($sql_f);
+
+			foreach($pdo->query($sql_a) as $row){
+				$id_article = $row['max_id_article'];
+			}
+
+			if($result_f->rowCount() == 0)
+				$id_commande = 1;
+			else{
+				foreach($result_f as $row){
+					$id_commande = $row['max_id'];
+				}
+			}
+			//insertion des données
+				$sql = 'INSERT INTO ligne_commande_fournisseur(ref_commande_fournisseur,ref_article,quantite_souhaite)
+VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote($quantite_souhaite).')';
+
+			$pdo->query($sql);
+			//return new \SoapFault('Server','[AA00011] '.$sql.'.');
+
+
+			$i++;
+		}
+
+		return "OK";
+	}
+
+
+	/** @Soap\Method("getCommandesFournisseurs")
+	 * @Soap\Param("count",phpType="int")
+	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("fournisseur_id",phpType="string")
+	 * @Soap\Param("fournisseur_nom",phpType="string")
+	 * @Soap\Param("commande_id",phpType="string")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getCommandesFournisseursAction($count, $offset, $fournisseur_id, $fournisseur_nom, $commande_id, $article_code)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if ((!is_int($fournisseur_id) && !is_string($fournisseur_id)) || (!is_int($commande_id) && !is_string($commande_id))
+			|| !is_int($offset) || !is_int($count) || (!is_int($article_code) && !is_string($article_code) || !is_string($fournisseur_nom))
+		)// Vérif des arguments
+			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+
+
+		// Formation de la requete SQL
+		$sql = 'select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
+JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
+JOIN article on article.id = ligne_commande_fournisseur.ref_article
+JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
+LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
+LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
+
+		$arguments = array();
+		if (!empty($fournisseur_id) || !empty($commande_id) || !empty($article_code)) {
+
+			if (!empty($fournisseur_id))
+				array_push($arguments, array('commande_fournisseur.ref_fournisseur' => $fournisseur_id));
+			if (!empty($commande_id))
+				array_push($arguments, array('commande.id' => $commande_id));
+			if (!empty($article_code))
+				array_push($arguments, array('ligne_commande.ref_article' => $article_code));
+			if (!empty($fournisseur_nom))
+				array_push($arguments, array('fournisseur.nom' => $fournisseur_nom));
+
+			$sql .= 'WHERE ';
+
+			$i = 0;
+			$taille_avant_fin = count($arguments) - 1;
+			while ($i < $taille_avant_fin) {
+
+				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
+
+				$i++;
+			}
+			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+
+
+
+		}
+
+		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre';
+		if ($offset != 0) {
+			$sql .= ' ORDER BY fournisseur.nom ASC LIMIT ' . (int)$offset;
+			if ($count != 0)
+				$sql .= ',' . (int)$count;
+		}
+		else {
+			$sql .= ' ORDER BY fournisseur.nom ASC';
+		}
+
+		/*
+		 * select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+SUM(quantite_mouvement) AS "quantite_recu"
+		 */
+		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			$ligne = array('fournisseur_nom' => $row['fournisseur_nom'], 'commande_id' => $row['commande_id'],
+				'date_commande' => $row['date_commande'], 'code_barre' => $row['code_barre'],
+				'quantite_souhaite'=>$row['quantite_souhaite'],'quantite_recu'=>$row['quantite_recu']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+		//return new \SoapFault('Server', $sql);
+	}
+
+
+	/**
+	 * @Soap\Method("modifCommandeFournisseur")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Param("quantite_souhaite",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifLigneCommandeFournisseurAction($id, $article_code, $quantite_souhaite)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
+
+		if (!is_string($article_code) || !is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[MF002] Paramètres invalides.');
+
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+
+		// Formation de la requete SQL
+		$sql = 'UPDATE ligne_commande_fournisseur SET code_barre='.$pdo->quote($article_code).'
+		, quantite_souhaite='.$pdo->quote($quantite_souhaite).' WHERE id='.$pdo->quote($id).';';
+
+		$resultat = $pdo->query($sql);
+		$pdo->query($sql);
+
+		return "OK";
+		//return new \SoapFault('Server', $sql);
+
+	}
+
+
 }
