@@ -1353,6 +1353,57 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		}
 		return json_encode($result);
 	}
+	
+	/**
+	 * Permet de retourner toutes les factures en filtrant avec certains critere.
+	 *
+	 * @Soap\Method("getFactureFromCritere")
+	 * @Soap\Param("dateDebut",phpType="string")
+	 * @Soap\Param("dateFin",phpType="string")
+	 * @Soap\Param("ligneProduit",phpType="string")
+	 * @Soap\Param("produit",phpType="string")
+	 * @Soap\Param("client",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getFactureFromCritereAction($dateDebut, $dateFin, $ligneProduit, $produit, $client) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GAF001] Vous n\'avez pas les droits nécessaires.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+	
+		if (!is_string($date) || !is_string($client) ) // Vérif des arguments
+			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
+	
+	
+		$requete_toutes_les_lignes_factures = 'SELECT id_facture, date_de_facture, nom_contact,
+						SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS montant
+				        FROM( SELECT * FROM ventes_contact';
+	
+	
+		if($date !== ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE f.date_facture > ' . $pdo->quote($date) . '';
+		}
+		if($client !== ''){
+			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE c.nom = ' . $pdo->quote($client) . '';
+		}
+	
+		//On ajoute a la requete la fin
+		$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
+	
+		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
+			$ligne = array('numero' => $row['id_facture'],
+					'client'=>$row['nom_contact'],
+					'date'=>$row['date_de_facture'],
+					'montant'=>$row['montant']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+	}
 
 	/**
 	 * Permet de retourner les details d'une seul facture
