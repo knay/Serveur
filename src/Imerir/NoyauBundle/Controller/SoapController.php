@@ -111,8 +111,19 @@ class SoapController extends ContainerAware
 
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$tabArticles = json_decode($articles);
-
-		$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact) VALUE (NOW(), true, '.(int)$tabArticles->idClient.')';
+		
+		if (isset($tabArticles->idClient) && $tabArticles->idClient > 0) { // Si un client est associé à la facture
+			if (!isset ($tabArticles->moyenPaiement) || $tabArticles->moyenPaiement < 1) // Si le moyen de paiement n'est pas renseigné
+				$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact) VALUE (NOW(), true, '.(int)$tabArticles->idClient.')';
+			else 
+				$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact, ref_moyen_paiement) VALUE (NOW(), true, '.(int)$tabArticles->idClient.', '.(int)$tabArticles->moyenPaiement.')';
+		}
+		else { // Si aucun client n'est associé
+			if (!isset ($tabArticles->moyenPaiement) || $tabArticles->moyenPaiement < 1) // Si aucun moyen de paiement n'est associé
+				$sql = 'INSERT INTO facture (date_facture, est_visible) VALUE (NOW(), true)';
+			else
+				$sql = 'INSERT INTO facture (date_facture, est_visible, ref_moyen_paiement) VALUE (NOW(), true, '.(int)$tabArticles->moyenPaiement.')';
+		}
 		
 		$resultat = $pdo->query($sql);
 		$ref_facture = $pdo->lastInsertId();
