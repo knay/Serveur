@@ -1378,7 +1378,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
-						END) AS montant,adresse_numero,adresse_rue,adresse_code_postal,adresse_ville,adresse_pays
+						END) AS montant,adresse_numero,adresse_rue,adresse_code_postal,adresse_ville,adresse_pays,nom_moyen_paiement
 				        FROM(
 				        SELECT 
 							   lf.id as "ligne_facture_id",
@@ -1400,7 +1400,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               m.quantite_mouvement as "nb_article",
 				               r.type_reduction as "type_reduction",
 				               px.montant_client as "montant_client",
-							   pt.nom as "nom_produit"
+							   pt.nom as "nom_produit",
+							   mp.nom as "nom_moyen_paiement"
 				      
 				        FROM facture f
 						JOIN ligne_facture lf ON lf.ref_facture = f.id 
@@ -1412,6 +1413,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
 						RIGHT OUTER JOIN adresse ad ON c.id = ad.ref_contact
+						LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
 						
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
@@ -1432,6 +1434,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 					'nombre_article'=>$nombre_article,
 					'prix_article'=>$row['prix_id'],
 					'reduction_article'=>$row['reduction_article'],
+					'nom_moyen_paiement'=>$row['nom_moyen_paiement'],
 					'montant_facture'=>$row['montant']);
 			array_push($result, $ligne);
 		}
@@ -1460,23 +1463,6 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		if($date != ''){
 			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
 			WHERE date_naissance BETWEEN '.$pdo->quote($date).' AND curdate()';
-			
-// 			SELECT
-// 			civilite,
-// 			nom,
-// 			prenom,
-// 			email,
-// 			CASE
-// 			WHEN month(curdate()) > month('1999-01-03')
-// 			THEN ( SELECT date_naissance
-// 			FROM alba.contact
-// 			WHERE month(date_naissance) BETWEEN month(curdate()) AND month('1999-01-03'))
-// 			WHEN month(curdate()) < month('1999-01-03')
-// 			THEN ( SELECT date_naissance
-// 			FROM alba.contact
-// 			WHERE month(date_naissance) BETWEEN month('1999-01-03') AND month(curdate()))
-// 			END AS date_naissance
-// 			FROM alba.contact;
 			
 			foreach ($pdo->query($requete_date_anniversaire) as $row) {
 				$ligne = array(
