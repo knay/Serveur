@@ -111,8 +111,19 @@ class SoapController extends ContainerAware
 
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		$tabArticles = json_decode($articles);
-
-		$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact) VALUE (NOW(), true, '.(int)$tabArticles->idClient.')';
+		
+		if (isset($tabArticles->idClient) && $tabArticles->idClient > 0) { // Si un client est associé à la facture
+			if (!isset ($tabArticles->moyenPaiement) || $tabArticles->moyenPaiement < 1) // Si le moyen de paiement n'est pas renseigné
+				$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact) VALUE (NOW(), true, '.(int)$tabArticles->idClient.')';
+			else 
+				$sql = 'INSERT INTO facture (date_facture, est_visible, ref_contact, ref_moyen_paiement) VALUE (NOW(), true, '.(int)$tabArticles->idClient.', '.(int)$tabArticles->moyenPaiement.')';
+		}
+		else { // Si aucun client n'est associé
+			if (!isset ($tabArticles->moyenPaiement) || $tabArticles->moyenPaiement < 1) // Si aucun moyen de paiement n'est associé
+				$sql = 'INSERT INTO facture (date_facture, est_visible) VALUE (NOW(), true)';
+			else
+				$sql = 'INSERT INTO facture (date_facture, est_visible, ref_moyen_paiement) VALUE (NOW(), true, '.(int)$tabArticles->moyenPaiement.')';
+		}
 		
 		$resultat = $pdo->query($sql);
 		$ref_facture = $pdo->lastInsertId();
@@ -159,7 +170,66 @@ class SoapController extends ContainerAware
 	}
 
 	/**
-	 * TODO
+	 * @Soap\Method("rechercheArticle")
+	 * @Soap\Param("nomLigneProduit",phpType="string")
+	 * @Soap\Param("nomProduit",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function rechercheArticleAction($nomLigneProduit, $nomProduit) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[RA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_string($nomLigneProduit) || !is_string($nomProduit)) // Vérif des arguments
+			return new \SoapFault('Server', '[RA002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		$nomLigneProduit = '%'.$nomLigneProduit.'%';
+		$nomProduit = '%'.$nomProduit.'%';
+		
+		$sql = 'SELECT code_barre, produit.nom AS nomProduit, ligne_produit.nom AS nomLigne, 
+				       attribut.nom AS attribut, valeur_attribut.libelle AS valAttribut
+				FROM article 
+				JOIN produit ON article.ref_produit = produit.id
+				JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
+				LEFT OUTER JOIN article_a_pour_val_attribut ON article_a_pour_val_attribut.ref_article = article.id
+				LEFT OUTER JOIN valeur_attribut ON article_a_pour_val_attribut.ref_val_attribut = valeur_attribut.id
+				LEFT OUTER JOIN attribut ON valeur_attribut.ref_attribut = attribut.id
+				WHERE produit.nom LIKE '.$pdo->quote($nomProduit).' AND ligne_produit.nom LIKE '.$pdo->quote($nomLigneProduit).'
+				      AND produit.est_visible = true AND ligne_produit.est_visible = true
+				      AND attribut.est_visible = true AND article.est_visible = true
+				ORDER BY article.code_barre ASC';
+		
+		$resultat = $pdo->query($sql);
+		
+		$ligne = array();
+		$tabAttributs = array();
+		$dernierCodeBarre = '';
+		$dernierLigneProduit = '';
+		$dernierProduit = '';
+		$dernierAttribut = '';
+		foreach ($resultat as $row) {
+			if ($dernierCodeBarre !== $row['code_barre']) {
+				$ligne = array('codeBarre' => $dernierCodeBarre, 'ligneProduit' => $dernierLigneProduit, 
+						       'produit' => $dernierProduit, 'valAttribut' => $tabAttributs);
+				array_push($result, $ligne);
+				$tabAttributs = array();
+			}
+			$dernierLigneProduit = $row['nomLigne'];
+			$dernierProduit = $row['nomProduit'];
+			$dernierCodeBarre = $row['code_barre'];
+			$dernierAttribut = $row['attribut'];
+			array_push($tabAttributs, $row['valAttribut']);
+		}
+		
+		$ligne = array('codeBarre' => $dernierCodeBarre, 'ligneProduit' => $dernierLigneProduit, 
+					   'produit' => $dernierProduit, 'valAttribut' => $tabAttributs);
+		array_push($result, $ligne);
+		
+		return json_encode($result);
+	}
+	
+	/**
 	 * @Soap\Method("modifArticle")
 	 * @Soap\Param("article",phpType="string")
 	 * @Soap\Result(phpType = "string")
@@ -181,6 +251,10 @@ class SoapController extends ContainerAware
 		$attributs = $tabArticle->attributs;
 		$prixClient = $tabArticle->prixClient;
 		$prixFournisseur = $tabArticle->prixFournisseur;
+		$quantite = -1;
+		if(isset ($tabArticle->quantite) && is_int($tabArticle->quantite) && $tabArticle->quantite >= 0) {
+			$quantite = $tabArticle->quantite;
+		}
 
 		$sql = 'SELECT * FROM article WHERE code_barre=' . $pdo->quote($code_barre);
 		$resultat = $pdo->query($sql);
@@ -213,6 +287,12 @@ class SoapController extends ContainerAware
 
 		$sql = 'DELETE FROM article_a_pour_val_attribut WHERE ref_article=\'' . $idArticle . '\'';
 		$resultat = $pdo->query($sql); // On vide la table de correspondance pour cet article
+		
+		if($quantite >= 0) { // Si on a précisé une quantite on vient l'insérer
+			$sql = 'INSERT INTO mouvement_stock (ref_article, quantite_mouvement, date_mouvement, est_inventaire)
+					VALUES (\'' . $idArticle . '\', ' . $quantite . ', NOW(), TRUE)'; // Insertion du mouvement de stock
+			$resultat = $pdo->query($sql); // On valide l'inventaire de ce produit
+		}
 
 		// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
 		foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
@@ -267,6 +347,8 @@ class SoapController extends ContainerAware
 			return new \SoapFault("Server", "[ALP004] La ligne produit existe déjà");
 		}
 	}
+	
+	
 
 	/**
 	 * Permet de récupérer tous les code barres de tout les articles.
@@ -878,15 +960,17 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 			return new \SoapFault('Server', '[GPFCB002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo();
-		$sql = 'SELECT montant_client FROM prix JOIN article ON ref_article=article.id WHERE code_barre=' . $pdo->quote($codeBarre);
+		$sql = 'SELECT montant_client, montant_fournisseur FROM prix JOIN article ON ref_article=article.id WHERE code_barre=' . $pdo->quote($codeBarre);
 		$resultat = $pdo->query($sql);
+		$res = array();
 
 		$prix = 0;
 		foreach ($resultat as $row) {
-			$prix = $row["montant_client"];
+			$res['montant_client'] = $row["montant_client"];
+			$res['montant_fournisseur'] = $row['montant_fournisseur'];
 		}
 
-		return '' . $prix;
+		return json_encode($res);
 	}
 
 	/**
@@ -1083,7 +1167,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		if ($this->container->get('user_service')->isOk('ROLE_GERANT')) {
 			$tableau_menu = array(
 				array('menu' => 'caisse','sous_menu' => array()),
-				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques')),
+				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques','Anniversaires')),
 				array('menu' => 'evenement','sous_menu' => array()),
 				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
 				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
@@ -1162,16 +1246,16 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		// et on donnne la priorit� a l'article!
 
 		if (!empty($Article)) {
-			$requete_stock = $requete_stock . ' WHERE a.code_barre = ' . $pdo->quote($Article) . '';
+			$requete_stock = $requete_stock . ' WHERE a.code_barre = ' . $pdo->quote($Article) . ' AND a.est_visible=1';
 		} //Si le parametre ligne de produit n'est pas vide
 		else if (!empty($LigneProduit)) {
 			// On verifie si l'utilisateur a selectionner un produit
 			// Si oui on fait la recherche par rapport a ce produit et non a la ligne produit
 			if (!empty($Produit)) {
-				$requete_stock = $requete_stock . ' WHERE p.nom = ' . $pdo->quote($Produit) . '';
+				$requete_stock = $requete_stock . ' WHERE p.nom = ' . $pdo->quote($Produit) . ' AND p.est_visible=1 ';
 			} // sinon on recherche par la ligne produit
 			else {
-				$requete_stock = $requete_stock . ' WHERE l.nom = ' . $pdo->quote($LigneProduit) . '';
+				$requete_stock = $requete_stock . ' WHERE l.nom = ' . $pdo->quote($LigneProduit) . ' AND l.est_visible=1';
 			}
 		} else {
 			$requete_stock = $requete_stock;
@@ -1184,6 +1268,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 															WHERE ref_article = ' . $row_ligne['id_article'] . ' AND date_mouvement >= (SELECT date_mouvement FROM alba.mouvement_stock
 															WHERE ref_article = ' . $row_ligne['id_article'] . '
 															AND est_inventaire = 1
+															AND est_visible = 1
 															order by date_mouvement desc limit 1)';
 			// On parcourt les mouvements de stock de l'article
 			foreach ($pdo->query($sql_quantite_article) as $row_quantite) {
@@ -1211,7 +1296,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
-		$requete_tous_les_produits = 'SELECT nom as ligne_produit_nom FROM alba.ligne_produit ORDER BY nom ASC';
+		$requete_tous_les_produits = 'SELECT nom as ligne_produit_nom FROM alba.ligne_produit WHERE est_visible = 1 ORDER BY nom ASC';
 
 		foreach ($pdo->query($requete_tous_les_produits) as $row) {
 			$ligne = array('nom_ligne_produit' => $row['ligne_produit_nom']);
@@ -1293,7 +1378,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
-						END) AS montant,adresse_numero,adresse_rue,adresse_code_postal,adresse_ville,adresse_pays
+						END) AS montant,adresse_numero,adresse_rue,adresse_code_postal,adresse_ville,adresse_pays,nom_moyen_paiement
 				        FROM(
 				        SELECT 
 							   lf.id as "ligne_facture_id",
@@ -1315,7 +1400,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               m.quantite_mouvement as "nb_article",
 				               r.type_reduction as "type_reduction",
 				               px.montant_client as "montant_client",
-							   pt.nom as "nom_produit"
+							   pt.nom as "nom_produit",
+							   mp.nom as "nom_moyen_paiement"
 				      
 				        FROM facture f
 						JOIN ligne_facture lf ON lf.ref_facture = f.id 
@@ -1326,7 +1412,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				        JOIN produit pt ON a.ref_produit = pt.id
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
-						RIGHT OUTER JOIN adresse ad ON c.id = ad.ref_contact
+						LEFT OUTER JOIN adresse ad ON c.id = ad.ref_contact
+                        LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
 						
 						WHERE f.id = '.$pdo->quote($numero).'
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
@@ -1347,13 +1434,178 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 					'nombre_article'=>$nombre_article,
 					'prix_article'=>$row['prix_id'],
 					'reduction_article'=>$row['reduction_article'],
+					'nom_moyen_paiement'=>$row['nom_moyen_paiement'],
 					'montant_facture'=>$row['montant']);
 			array_push($result, $ligne);
 		}
 		return json_encode($result);
 	}
 	
+	/**
+	 * Permet de retourner tous les anniversaires du jour si il n'y a pas 
+	 * de date pass� en parametre, sinon les anniversaires depuis la date pass� en parametre
+	 * jusqu'a aujourd'hui
+	 *
+	 * @Soap\Method("getAnniversaire")
+	 * @Soap\Param("date",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAnniversaireAction($date){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		if (!is_string($date) ) // Vérif des arguments
+			return new SoapFault('Server', '[GA002] Paramètres invalides.');
+		
+		if($date != ''){
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
+			WHERE date_naissance BETWEEN '.$pdo->quote($date).' AND curdate()';
+			
+			foreach ($pdo->query($requete_date_anniversaire) as $row) {
+				$ligne = array(
+						'client_civilite' => $row['civilite'],
+						'client_nom' => $row['nom'],
+						'client_prenom' => $row['prenom'],
+						'client_date' => $row['date_naissance'],
+						'client_email' => $row['email'],
+						);
+				array_push($result, $ligne);
+			}
+		}
+		else if ($date == '') {
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email FROM alba.contact
+			WHERE month(date_naissance) = month(now())
+			AND day(date_naissance) = day(now())';
+				
+			foreach ($pdo->query($requete_date_anniversaire) as $row) {
+				$ligne = array(
+						'client_civilite' => $row['civilite'],
+						'client_nom' => $row['nom'],
+						'client_prenom' => $row['prenom'],
+						'client_date' => $row['date_naissance'],
+						'client_email' => $row['email'],
+				);
+				array_push($result, $ligne);
+			}
+		}
+		else {
+			return new SoapFault('Server', '[GA003] Paramètres invalides.');
+		}
+		return json_encode($result);
+		
+	}	
+
+	/**
+	 * Permet de retourner tous les moyen de paiement accepter par le magasin
+	 *
+	 * @Soap\Method("getAllModePaiement")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAllModePaiementAction(){
+		
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[GAMP001] Vous n\'avez pas les droits nécessaires.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		$requete_mode_paiement = 'SELECT id,nom FROM alba.moyen_paiement WHERE est_visible = 1 ORDER BY nom ASC';
+		
+		foreach ($pdo->query($requete_mode_paiement) as $row) {
+			$ligne = array(
+					'paiement_id' => $row['id'],
+					'paiement_nom' => $row['nom'],
+			);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+	}
 	
+	/**
+	 * Permet de retourner tous les moyen de paiement accepter par le magasin
+	 *
+	 * @Soap\Method("modifierModePaiement")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function modifierModePaiementAction($id,$nom){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[MMP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($id) || !is_string($nom) ) // Vérif des arguments
+			return new SoapFault('Server', '[MMP002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service	
+		
+		if($id != ''){
+			$requete_modifier_mode_paiement = 'UPDATE alba.moyen_paiement SET nom='.$pdo->quote($nom).' WHERE id='.$pdo->quote($id).' ';
+			$pdo->query($requete_modifier_mode_paiement);
+			return 'OK';
+		}
+		else{
+			return new SoapFault('Server', '[MMP003] Paramètres invalides.');
+		}
+	}
+	
+	/**
+	 * Permet de retourner tous les moyen de paiement accepter par le magasin
+	 *
+	 * @Soap\Method("supprimerModePaiement")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprimerModePaiementAction($id){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[SMP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($id) ) // Vérif des arguments
+			return new SoapFault('Server', '[SMP002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if($id != ''){
+			$requete_supprimer_mode_paiement = 'UPDATE alba.moyen_paiement SET est_visible = 0  WHERE id='.$pdo->quote($id).' ';
+			$pdo->query($requete_supprimer_mode_paiement);
+			return 'OK';
+		}
+		else{
+			return new SoapFault('Server', '[SMP003] Paramètres invalides.');
+		}
+	}
+	
+	/**
+	 * Permet d'inserer un nouveau mode de paiement
+	 *
+	 * @Soap\Method("insererModePaiement")
+	 * @Soap\Param("nom",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function insererModePaiementAction($nom){
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server','[IMP001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_string($nom) ) // Vérif des arguments
+			return new SoapFault('Server', '[IMP002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+		
+		if($nom != ''){
+			$requete_mode_paiement = 'INSERT INTO alba.moyen_paiement(nom) VALUES('.$pdo->quote($nom).')';
+			$pdo->query($requete_mode_paiement);
+			return 'OK';
+		}
+		else{
+			return new SoapFault('Server', '[IMP003] Paramètres invalides.');
+		}
+	}
 	
 	/** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
