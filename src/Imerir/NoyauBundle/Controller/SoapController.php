@@ -2540,13 +2540,10 @@ group by ville;';
 
 
 		// Formation de la requete SQL
-		$tab_fournisseur_id = array(json_decode($fournisseur_id));
-		$tab_article_code = array(json_decode($article_code));
-		$tab_quantite_souhaite = array(json_decode($quantite_souhaite));
-		$tab_date_commande = array(json_decode($date_commande));
-
-
-
+		$tab_fournisseur_id = json_decode($fournisseur_id);
+		$tab_article_code = json_decode($article_code);
+		$tab_quantite_souhaite = json_decode($quantite_souhaite);
+		$tab_date_commande = json_decode($date_commande);
 		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
 
 		foreach($tab_article_code as $article_code){
@@ -2557,6 +2554,22 @@ group by ville;';
 			if ($resultat->rowCount() == 0) {
 				return new \SoapFault('Server', '[ACF003] Article '.$article_code.' invalide.');
 			}
+		}
+		//verification de la date
+		$split = array();
+		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $tab_date_commande[0], $split))
+		{
+			if(checkdate($split[2],$split[3],$split[1]))
+			{
+			}
+			else
+			{
+				$tab_date_commande[0]='0000-00-00';
+			}
+		}
+		else
+		{
+			$tab_date_commande[0]='0000-00-00';
 		}
 		//insertion des données
 
@@ -2665,7 +2678,8 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 
 		}
 
-		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre';
+		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre HAVING (SUM(quantite_souhaite)<>SUM(quantite_mouvement)
+		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
