@@ -2693,6 +2693,7 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
+AND ligne_commande_fournisseur.est_visible=\'1\'
 JOIN article on article.id = ligne_commande_fournisseur.ref_article
 JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
 LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
@@ -2794,6 +2795,7 @@ SUM(quantite_mouvement) AS "quantite_recu"
 ligne_commande_fournisseur.id as "ligne_commande_id", SUM(quantite_souhaite) as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
+AND ligne_commande_fournisseur.est_visible=\'1\'
 JOIN article on article.id = ligne_commande_fournisseur.ref_article
 JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
 LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
@@ -2914,6 +2916,8 @@ SUM(quantite_mouvement) AS "quantite_recu"
 			$sql = 'UPDATE ligne_commande_fournisseur SET ref_article='.$pdo->quote($article_id).'
 		, quantite_souhaite='.$pdo->quote($tab_quantite_souhaite[$i]).', est_visible='.$pdo->quote($tab_est_visible[$i]).'
 		 WHERE id='.$pdo->quote($tab_ligne_commande_id[$i]).';';
+
+			//return new \SoapFault('Server', $sql);
 
 			$pdo->query($sql);
 
