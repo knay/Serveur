@@ -1515,7 +1515,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 		
-		$requete_mode_paiement = 'SELECT id,nom FROM alba.moyen_paiement ORDER BY nom ASC';
+		$requete_mode_paiement = 'SELECT id,nom FROM alba.moyen_paiement WHERE est_visible = 1 ORDER BY nom ASC';
 		
 		foreach ($pdo->query($requete_mode_paiement) as $row) {
 			$ligne = array(
@@ -1573,7 +1573,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 	
 		if($id != ''){
-			$requete_supprimer_mode_paiement = 'DELETE FROM alba.moyen_paiement WHERE id = '.$pdo->quote($id).'';
+			$requete_supprimer_mode_paiement = 'UPDATE alba.moyen_paiement SET est_visible = 0  WHERE id='.$pdo->quote($id).' ';
 			$pdo->query($requete_supprimer_mode_paiement);
 			return 'OK';
 		}
