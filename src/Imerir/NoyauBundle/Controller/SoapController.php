@@ -2634,14 +2634,14 @@ LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
-		if (!empty($fournisseur_id) || !empty($commande_id) || !empty($article_code)) {
+		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)) {
 
 			if (!empty($fournisseur_id))
 				array_push($arguments, array('commande_fournisseur.ref_fournisseur' => $fournisseur_id));
 			if (!empty($commande_id))
-				array_push($arguments, array('commande.id' => $commande_id));
+				array_push($arguments, array('commande_fournisseur.id' => $commande_id));
 			if (!empty($article_code))
-				array_push($arguments, array('ligne_commande.ref_article' => $article_code));
+				array_push($arguments, array('article.code_barre' => $article_code));
 			if (!empty($fournisseur_nom))
 				array_push($arguments, array('fournisseur.nom' => $fournisseur_nom));
 
@@ -2657,7 +2657,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 				$i++;
 			}
 			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
-			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND commande_fournisseur.est_visible=\'1\'';
 
 
 
@@ -2673,6 +2673,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			$sql .= ' ORDER BY fournisseur.nom ASC';
 		}
 
+		//return new \SoapFault('Server', $sql);
 		/*
 		 * select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu"
