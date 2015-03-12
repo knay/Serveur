@@ -1132,10 +1132,10 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	{
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[LP001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[MP001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($nom_lp) || !is_int($id_p) || !is_string($nom_p)) // Vérif des arguments
-			return new \SoapFault('Server', '[LP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[MP002] Paramètres invalides.');
 
 		//on récupere l'objet pdo connecté à la base du logiciel
 		$pdo = $this->container->get('bdd_service')->getPdo();
@@ -2005,7 +2005,7 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 
 
 			} else {
-				return new \SoapFault('Server', '[AA002] Paramètres invalides.');
+				return new \SoapFault('Server', '[AA003] Paramètres invalides.');
 			}
 
 			$i++;
@@ -2293,7 +2293,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 	public function getContactsAction($count, $offset, $nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail, $notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GC001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if (!is_string($nom) || !is_string($prenom) || !is_string($date_naissance)
@@ -2301,7 +2301,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			|| !is_string($ok_sms) || !is_string($ok_mail) || !is_string($notes)
 			|| !is_int($offset) || !is_int($count)
 		)// Vérif des arguments
-			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GC002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -2419,10 +2419,10 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 	public function modifContactAction($id, $nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail,$notes)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[MC001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($nom) || !is_int($id)) // Vérif des arguments
-			return new \SoapFault('Server', '[MF002] Paramètres invalides.');
+			return new \SoapFault('Server', '[MC002] Paramètres invalides.');
 
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -2684,13 +2684,13 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 	public function getCommandesFournisseursAction($count, $offset, $fournisseur_id, $fournisseur_nom, $commande_id, $article_code)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GCF001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if ((!is_int($fournisseur_id) && !is_string($fournisseur_id)) || (!is_int($commande_id) && !is_string($commande_id))
 			|| !is_int($offset) || !is_int($count) || (!is_int($article_code) && !is_string($article_code) || !is_string($fournisseur_nom))
 		)// Vérif des arguments
-			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GCF002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -2785,13 +2785,13 @@ SUM(quantite_mouvement) AS "quantite_recu"
 	public function getLignesCommandesFournisseursAction($count, $offset, $fournisseur_id, $fournisseur_nom, $commande_id, $article_code)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[GA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[GLCF001] Vous n\'avez pas les droits nécessaires.');
 
 
 		if ((!is_int($fournisseur_id) && !is_string($fournisseur_id)) || (!is_int($commande_id) && !is_string($commande_id))
 			|| !is_int($offset) || !is_int($count) || (!is_int($article_code) && !is_string($article_code) || !is_string($fournisseur_nom))
 		)// Vérif des arguments
-			return new \SoapFault('Server', '[GA002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GLCF002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -2890,11 +2890,11 @@ SUM(quantite_mouvement) AS "quantite_recu"
 												   $quantite_souhaite, $est_visible)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[MF001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[MCF001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($fournisseur_id) || !is_string($article_code) || !is_string($commande_id) || !is_string($quantite_souhaite)
 			|| !is_string($ligne_commande_id) || !is_string($est_visible)) // Vérif des arguments
-			return new \SoapFault('Server', '[MF002] Paramètres invalides.');
+			return new \SoapFault('Server', '[MCF002] Paramètres invalides.');
 
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
