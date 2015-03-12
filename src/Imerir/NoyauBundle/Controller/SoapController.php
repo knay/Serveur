@@ -1454,9 +1454,9 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			$sql .= ' WHERE 1=1 '; // Juste pour eviter de traiter tous les cas ou on commence le where par l'un ou par l'autre
 			
 			if($dateDebut !== '')
-				$sql = $sql .' AND f.date_facture >= ' . $pdo->quote($dateDebut) . ' ';
+				$sql = $sql .' AND date_de_facture >= ' . $pdo->quote($dateDebut) . ' ';
 			if($dateFin !== '')
-				$sql = $sql .' AND f.date_facture <= ' . $pdo->quote($dateFin) . ' ';
+				$sql = $sql .' AND date_de_facture <= ' . $pdo->quote($dateFin) . ' ';
 			if($ligneProduit !== '')
 				$sql = $sql .' AND lp.nom LIKE ' . $pdo->quote('%'.$ligneProduit.'%') . ' ';
 			if($produit !== '')
