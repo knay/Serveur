@@ -1232,7 +1232,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new \SoapFault('Server', '[GS001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($LigneProduit) || !is_string($Produit) || !is_string($Article)) // Vérif des arguments
-			return new SoapFault('Server', '[GS002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GS002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1257,8 +1257,6 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			else {
 				$requete_stock = $requete_stock . ' WHERE l.nom = ' . $pdo->quote($LigneProduit) . ' AND l.est_visible=1';
 			}
-		} else {
-			$requete_stock = $requete_stock;
 		}
 
 		$requete_stock = $requete_stock . ' ORDER BY ligne_produit_nom,produit_nom ASC';
