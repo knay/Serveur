@@ -2632,8 +2632,14 @@ group by ville;';
 		}
 		//insertion des données
 
-		$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
+		if($tab_date_commande[0]=='0000-00-00'){
+			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ', NOW())';
+		}
+		else{
+			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
 		'.$pdo->quote($tab_date_commande[0]).')';
+		}
+
 
 		//return new \SoapFault('Server', $sql);
 		$pdo->query($sql);
