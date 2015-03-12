@@ -554,8 +554,10 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 			$quantite = $article->quantite;
 			$attributs = $article->attributs;
 
-			if ($avecPrix)
-				$prixClient = $article->prix;
+			if ($avecPrix) {
+				$prixClient = $article->prixClient;
+				$prixFournisseur = $article->prixFournisseur;
+			}
 
 			if (empty($code_barre)) // Si pas de code barre on enregistre pas c'est pas normal
 				break;
@@ -587,7 +589,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 			if ($avecPrix) { // Si on enregistre le prix avec
 				$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
-							VALUE (\'' . $idArticle . '\', 0, \'' . (float)$prixClient . '\', NOW())';
+							VALUE (\'' . $idArticle . '\', \'' . (float)$prixFournisseur . '\', \'' . (float)$prixClient . '\', NOW())';
 				$resultat = $pdo->query($sql);
 			}
 
