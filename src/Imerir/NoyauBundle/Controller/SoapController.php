@@ -3136,7 +3136,10 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			}
 		}
 
-		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre ';
+		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre,
+		 ligne_commande_fournisseur.id HAVING (SUM(quantite_souhaite)=SUM(quantite_mouvement)
+		 AND quantite_recu IS NOT NULL)';
+
 		if ($offset != 0) {
 			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
