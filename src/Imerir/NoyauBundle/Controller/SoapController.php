@@ -2815,12 +2815,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre HAVING (SUM(quantite_souhaite)<>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= ' ORDER BY fournisseur.nom ASC';
+			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
@@ -2918,12 +2918,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		 ligne_commande_fournisseur.id HAVING (SUM(quantite_souhaite)<>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= 'ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= ' ORDER BY fournisseur.nom ASC';
+			$sql .= 'ORDER BY date_commande DESC, fournisseur.nom ASC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
@@ -3005,6 +3005,164 @@ SUM(quantite_mouvement) AS "quantite_recu"
 		return "OK";
 		//return new \SoapFault('Server', $sql);
 
+	}
+
+
+	/** @Soap\Method("getAllCommandesFournisseurs")
+	 * @Soap\Param("count",phpType="int")
+	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("fournisseur_id",phpType="string")
+	 * @Soap\Param("fournisseur_nom",phpType="string")
+	 * @Soap\Param("commande_id",phpType="string")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Param("date_deb",phpType="string")
+	 * @Soap\Param("date_fin",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAllCommandesFournisseursAction($count, $offset, $fournisseur_id, $fournisseur_nom,
+													  $commande_id, $article_code, $date_deb, $date_fin)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GACF001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if ((!is_int($fournisseur_id) && !is_string($fournisseur_id)) || (!is_int($commande_id) && !is_string($commande_id))
+			|| !is_int($offset) || !is_int($count) || (!is_int($article_code) && !is_string($article_code) || !is_string($fournisseur_nom))
+		)// Vérif des arguments
+			return new \SoapFault('Server', '[GACF002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+
+
+		// Formation de la requete SQL
+		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
+JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
+AND ligne_commande_fournisseur.est_visible=\'1\'
+JOIN article on article.id = ligne_commande_fournisseur.ref_article
+JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
+LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
+LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
+
+		$arguments = array();
+		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)
+		 || !empty($date_deb) || !empty($date_fin)) {
+
+			if (!empty($fournisseur_id))
+				array_push($arguments, array('commande_fournisseur.ref_fournisseur' => $fournisseur_id));
+			if (!empty($commande_id))
+				array_push($arguments, array('commande_fournisseur.id' => $commande_id));
+			if (!empty($article_code))
+				array_push($arguments, array('article.code_barre' => $article_code));
+			if (!empty($fournisseur_nom))
+				array_push($arguments, array('fournisseur.nom' => $fournisseur_nom));
+			if (!empty($date_deb)){
+				//verification de la date
+				$split = array();
+				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_deb, $split))
+				{
+					if(checkdate($split[2],$split[3],$split[1]))
+					{
+					}
+					else
+					{
+						return new \SoapFault('Server', '[GACF003] Date début période invalide.');
+					}
+				}
+				else
+				{
+					return new \SoapFault('Server', '[GACF003] Date début période invalide.');
+				}
+				array_push($arguments,array('date_debut'=>$date_deb));
+			}
+			if (!empty($date_fin)){
+				//verification de la date
+				$split = array();
+				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_fin, $split))
+				{
+					if(checkdate($split[2],$split[3],$split[1]))
+					{
+					}
+					else
+					{
+						return new \SoapFault('Server', '[GACF004] Date fin période invalide.');
+					}
+				}
+				else
+				{
+					return new \SoapFault('Server', '[GACF004] Date fin période invalide.');
+				}
+				array_push($arguments,array('date_fin'=>$date_fin));
+			}
+
+			$sql .= 'WHERE ';
+
+			$i = 0;
+			$taille_avant_fin = count($arguments) - 1;
+			while ($i < $taille_avant_fin) {
+				if(key($arguments[$i])=='commande_fournisseur.id' || key($arguments[$i])=='commande_fournisseur.ref_fournisseur'){
+					$val = $arguments[$i][key($arguments[$i])];
+					$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
+				}
+				elseif(key($arguments[$i]) == 'date_debut'){
+					$sql .=' date_commande >= '.$pdo->quote($date_deb).' AND';
+				}
+				elseif(key($arguments[$i]) == 'date_fin'){
+					$sql .=' date_commande < '.$pdo->quote($date_fin).' AND';
+				}
+				else{
+					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+					$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
+				}
+
+				$i++;
+			}
+			if(key($arguments[$i])=='commande_fournisseur.id' || key($arguments[$i])=='commande_fournisseur.ref_fournisseur'){
+				$val = $arguments[$i][key($arguments[$i])];
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND commande_fournisseur.est_visible=\'1\'';
+			}
+			elseif(key($arguments[$i]) == 'date_debut'){
+				$sql .=' date_commande >= '.$pdo->quote($date_deb).' AND commande_fournisseur.est_visible=\'1\'';
+			}
+			elseif(key($arguments[$i]) == 'date_fin'){
+				$sql .=' date_commande < '.$pdo->quote($date_fin).' AND commande_fournisseur.est_visible=\'1\'';
+			}
+			else{
+				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND commande_fournisseur.est_visible=\'1\'';
+			}
+		}
+
+		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre,
+		 ligne_commande_fournisseur.id HAVING (SUM(quantite_souhaite)=SUM(quantite_mouvement)
+		 AND quantite_recu IS NOT NULL)';
+
+		if ($offset != 0) {
+			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
+			if ($count != 0)
+				$sql .= ',' . (int)$count;
+		}
+		else {
+			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC ';
+		}
+
+		//return new \SoapFault('Server', $sql);
+		/*
+		 * select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+SUM(quantite_mouvement) AS "quantite_recu"
+		 */
+		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			$ligne = array('fournisseur_id'=>$row['fournisseur_id'],'fournisseur_nom' => $row['fournisseur_nom'], 'commande_id' => $row['commande_id'],
+				'date_commande' => $row['date_commande'], 'code_barre' => $row['code_barre'],
+				'quantite_souhaite'=>$row['quantite_souhaite'],'quantite_recu'=>$row['quantite_recu']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+		//return new \SoapFault('Server', $sql);
 	}
 
 
