@@ -2273,7 +2273,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			//return new \SoapFault('Server',$sql);
 		}
 
-		return new \SoapFault('Server', $sql);
+		return new \SoapFault('Server', '[AC003] Echec de l\'insertion.');
 
 	}
 
