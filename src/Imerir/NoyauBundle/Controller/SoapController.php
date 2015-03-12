@@ -348,7 +348,55 @@ class SoapController extends ContainerAware
 		}
 	}
 	
+	/**
+	 * Permet d'enregistrer un retour client.
+	 *
+	 * @Soap\Method("enregistrerRetour")
+	 * @Soap\Param("idFacture",phpType="int")
+	 * @Soap\Param("quantite",phpType="int")
+	 * @Soap\Param("code_barre",phpType="string")
+	 * @Soap\Param("promo",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function enregistrerRetourAction($idFacture, $quantite, $code_barre, $promo)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[ER001] Vous n\'avez pas les droits nécessaires.');
+		if (!is_string($code_barre) || !is_int($idFacture) || !is_int($quantite) || !is_int($promo)) // Vérif des arguments
+			return new \SoapFault('Server', '[ER002] Paramètres invalides lors de l\'enregistrement du retour.');
 	
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		
+		if ($quantite < 0)
+			$quantite = -1*$quantite;
+	
+		if ($code_barre === '')
+			return new \SoapFault('Server', '[ER003] Paramètres invalides lors de l\'enregistrement du retour.');
+
+		$sql = 'INSERT INTO mouvement_stock (ref_article, date_mouvement, quantite_mouvement, est_inventaire, est_visible)
+				VALUE ((SELECT id FROM article WHERE code_barre=' . $pdo->quote($code_barre) . '),
+						NOW(), \'' . (int)$quantite . '\', false, true)';
+
+		$resultat = $pdo->query($sql);
+		$ref_mvt_stock = $pdo->lastInsertId();
+
+		$ref_remise = 0;
+		if (0 !== $promo) { // S'il y a une promo on l'enregistre dans la table remise
+			$sql = 'INSERT INTO remise (reduction, type_reduction) VALUE (' . (int)$promo . ', \'taux\')';
+			$resultat = $pdo->query($sql);
+			$ref_remise = $pdo->lastInsertId();
+		}
+
+		if ($ref_remise !== 0)
+			$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock, ref_remise)
+			     	VALUE (' . (int)$idFacture . ', ' . (int)$ref_mvt_stock . ', ' . (int)$ref_remise . ')';
+		else
+			$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock)
+			     	VALUE (' . (int)$idFacture . ', ' . (int)$ref_mvt_stock . ')';
+		$resultat = $pdo->query($sql);
+	
+		return '';
+	}
 
 	/**
 	 * Permet de récupérer tous les code barres de tout les articles.
@@ -1364,6 +1412,11 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	
 	/**
 	 * Permet de retourner toutes les factures en filtrant avec certains critere.
+	 * @param $dateDebut Chercher les factures a partir de cette date.
+	 * @param $dateFin Chercher les factures jusqu'a cette date.
+	 * @param $ligneProduit Chercher les factures ayant au moins un produit de cette ligne produit.
+	 * @param $produit Chercher les factures ayant au moins un article de ce type de produit.
+	 * @param $client Chercher un article ayant pour client $client.
 	 *
 	 * @Soap\Method("getFactureFromCritere")
 	 * @Soap\Param("dateDebut",phpType="string")
@@ -1375,35 +1428,48 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	 */
 	public function getFactureFromCritereAction($dateDebut, $dateFin, $ligneProduit, $produit, $client) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[GAF001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GAFC001] Vous n\'avez pas les droits nécessaires.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 	
-		if (!is_string($date) || !is_string($client) ) // Vérif des arguments
-			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
+		if (!is_string($dateDebut) || !is_string($dateFin) || !is_string($ligneProduit) 
+			|| !is_string($produit) || !is_string($client)) // Vérif des arguments
+			return new \SoapFault('Server', '[GAFC002] Paramètres invalides.');
 	
 	
-		$requete_toutes_les_lignes_factures = 'SELECT id_facture, date_de_facture, nom_contact,
+		$sql = 'SELECT id_facture, date_de_facture, nom_contact,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
 						END) AS montant
-				        FROM( SELECT * FROM ventes_contact';
+				        FROM( SELECT id_facture, nom_contact, date_de_facture, type_reduction, 
+									 reduction_article,  nb_article, montant_client 
+				 			  FROM ventes_contact 
+							  JOIN produit p ON article_ref_produit = p.id
+							  JOIN ligne_produit lp ON p.ref_ligne_produit = lp.id ';
 	
-	
-		if($date !== ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE f.date_facture > ' . $pdo->quote($date) . '';
+		if ($dateDebut !== '' || $dateFin !== '' || $ligneProduit !== '' || $produit !== '' || $client !== '') {
+			$sql .= ' WHERE 1=1 '; // Juste pour eviter de traiter tous les cas ou on commence le where par l'un ou par l'autre
+			
+			if($dateDebut !== '')
+				$sql = $sql .' AND date_de_facture >= ' . $pdo->quote($dateDebut) . ' ';
+			if($dateFin !== '')
+				$sql = $sql .' AND date_de_facture <= ' . $pdo->quote($dateFin) . ' ';
+			if($ligneProduit !== '')
+				$sql = $sql .' AND lp.nom LIKE ' . $pdo->quote('%'.$ligneProduit.'%') . ' ';
+			if($produit !== '')
+				$sql = $sql .' AND p.nom LIKE ' . $pdo->quote('%'.$produit.'%') . ' ';
+			if($client !== '')
+				$sql = $sql .' AND nom_contact LIKE ' . $pdo->quote('%'.$client.'%') . ' ';
 		}
-		if($client !== ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE c.nom = ' . $pdo->quote($client) . '';
-		}
+		
 	
-		//On ajoute a la requete la fin
-		$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
-	
-		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
+		// On ajoute a la requete la fin
+		$sql = $sql . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
+			
+		foreach ($pdo->query($sql) as $row) {
 			$ligne = array('numero' => $row['id_facture'],
 					'client'=>$row['nom_contact'],
 					'date'=>$row['date_de_facture'],
@@ -1432,7 +1498,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
-		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, nom_contact, prenom_contact, nom_article ,article_id , nb_article, montant_client ,reduction_article,
+		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article, montant_client ,reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
@@ -1444,7 +1510,6 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               a.id as "article_id",
 							   a.code_barre as "nom_article",
 				               px.montant_client as "prix_id",
-				               lf.id as "id_ligne_facture" ,
 				               f.id as "id_facture" ,
 				               f.date_facture as "date_de_facture",
 				               c.nom as "nom_contact",
@@ -1478,11 +1543,11 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
 		foreach ($pdo->query($requete_detail_factures) as $row) {
-			$nombre_article = substr($row['nb_article'],1);
+			$nombre_article = (-1*$row['nb_article']);
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
 					'nom_produit'=>$row['nom_produit'],
-					'nom_client'=>$row['nom_contact'],
+					'nom_client'=>$row['nom_contact_maj'],
 					'prenom_client'=>$row['prenom_contact'],
 					'adresse_numero'=>$row['adresse_numero'],
 					'adresse_rue'=>$row['adresse_rue'],
@@ -1491,7 +1556,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 					'adresse_pays'=>$row['adresse_pays'],
 					'nom_article'=>$row['nom_article'],
 					'nombre_article'=>$nombre_article,
-					'prix_article'=>$row['prix_id'],
+					'prix_article'=>$row['montant_client'],
 					'reduction_article'=>$row['reduction_article'],
 					'nom_moyen_paiement'=>$row['nom_moyen_paiement'],
 					'montant_facture'=>$row['montant']);
@@ -1499,6 +1564,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		}
 		return json_encode($result);
 	}
+	
+	
 	
 	/**
 	 * Permet de retourner tous les anniversaires du jour si il n'y a pas 
@@ -2271,7 +2338,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			//return new \SoapFault('Server',$sql);
 		}
 
-		return new \SoapFault('Server', '[AC003] Echec de l\'insertion.');
+		return new \SoapFault('Server', $sql);
 
 	}
 
@@ -2632,14 +2699,8 @@ group by ville;';
 		}
 		//insertion des données
 
-		if($tab_date_commande[0]=='0000-00-00'){
-			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ', NOW())';
-		}
-		else{
-			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
+		$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
 		'.$pdo->quote($tab_date_commande[0]).')';
-		}
-
 
 		//return new \SoapFault('Server', $sql);
 		$pdo->query($sql);
