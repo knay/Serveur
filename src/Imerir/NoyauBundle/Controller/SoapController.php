@@ -2765,7 +2765,9 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 
 
 		// Formation de la requete SQL
-		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
+commande_fournisseur.id as "commande_id", date_commande, code_barre,
+quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
 AND ligne_commande_fournisseur.est_visible=\'1\'
@@ -2773,6 +2775,7 @@ JOIN article on article.id = ligne_commande_fournisseur.ref_article
 JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
 LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
 LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
@@ -2812,7 +2815,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 
 		}
 
-		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre HAVING (SUM(quantite_souhaite)<>SUM(quantite_mouvement)
+		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite<>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
@@ -2867,7 +2870,7 @@ SUM(quantite_mouvement) AS "quantite_recu"
 
 		// Formation de la requete SQL
 		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre,
-ligne_commande_fournisseur.id as "ligne_commande_id", SUM(quantite_souhaite) as "quantite_souhaite",
+ligne_commande_fournisseur.id as "ligne_commande_id", quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
 AND ligne_commande_fournisseur.est_visible=\'1\'
@@ -2875,6 +2878,7 @@ JOIN article on article.id = ligne_commande_fournisseur.ref_article
 JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
 LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
 LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
@@ -2914,8 +2918,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 
 		}
 
-		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre,
-		 ligne_commande_fournisseur.id HAVING (SUM(quantite_souhaite)<>SUM(quantite_mouvement)
+		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite<>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
 			$sql .= 'ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
@@ -3037,7 +3040,9 @@ SUM(quantite_mouvement) AS "quantite_recu"
 
 
 		// Formation de la requete SQL
-		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
+commande_fournisseur.id as "commande_id", date_commande, code_barre,
+quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
 AND ligne_commande_fournisseur.est_visible=\'1\'
@@ -3045,6 +3050,7 @@ JOIN article on article.id = ligne_commande_fournisseur.ref_article
 JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
 LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
 LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
@@ -3136,8 +3142,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			}
 		}
 
-		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre,
-		 ligne_commande_fournisseur.id HAVING (SUM(quantite_souhaite)=SUM(quantite_mouvement)
+		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite=SUM(quantite_mouvement)
 		 AND quantite_recu IS NOT NULL)';
 
 		if ($offset != 0) {
@@ -3163,6 +3168,160 @@ SUM(quantite_mouvement) AS "quantite_recu"
 		}
 		return json_encode($result);
 		//return new \SoapFault('Server', $sql);
+	}
+
+
+	/**
+	 * @Soap\Method("ajoutReceptionCommande")
+	 * @Soap\Param("commande_id",phpType="string")
+	 * @Soap\Param("ligne_commande_id",phpType="string")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Param("quantite",phpType="string")
+	 * @Soap\Param("date_reception",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutReceptionCommandeAction($commande_id,$ligne_commande_id, $article_code, $quantite, $date_reception)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[ACF001] Vous n\'avez pas les droits nécessaires.');
+
+
+
+		if (!is_string($ligne_commande_id) || !is_string($article_code)
+			|| !is_string($quantite) || !is_string($date_reception)) // Vérif des arguments
+			return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+
+		// Formation de la requete SQL
+		$tab_commande_id = json_decode($commande_id);
+		$tab_ligne_commande_id = json_decode($ligne_commande_id);
+		$tab_article_code = json_decode($article_code);
+		$tab_quantite = json_decode($quantite);
+		$tab_date_reception = json_decode($date_reception);
+		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
+
+		foreach($tab_article_code as $article_code){
+
+			$sql = 'SELECT * FROM article WHERE code_barre='.$pdo->quote($article_code).';';
+			$resultat = $pdo->query($sql);
+
+			if ($resultat->rowCount() == 0) {
+				return new \SoapFault('Server', '[ACF003] Article '.$article_code.' invalide.');
+			}
+		}
+		//verification de la date
+		$split = array();
+		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $tab_date_reception[0], $split))
+		{
+			if(checkdate($split[2],$split[3],$split[1]))
+			{
+			}
+			else
+			{
+				$tab_date_reception[0]='0000-00-00';
+			}
+		}
+		else
+		{
+			$tab_date_reception[0]='0000-00-00';
+		}
+
+		//insertion des données
+		if($tab_date_reception[0]=='0000-00-00'){
+			$sql = 'INSERT INTO reception(ref_commande_fournisseur, date_reception) VALUES(' . $pdo->quote($tab_commande_id[0]) . ',
+		NOW())';
+		}
+		else{
+			$sql = 'INSERT INTO reception(ref_commande_fournisseur, date_reception) VALUES(' . $pdo->quote($tab_commande_id[0]) . ',
+		'.$pdo->quote($tab_date_reception[0]).')';
+		}
+
+
+		//return new \SoapFault('Server', $sql);
+		$pdo->query($sql);
+
+		$i = 0;
+		foreach ($tab_ligne_commande_id as $ligne_commande_id) {
+			$article_code = $tab_article_code[$i];
+			$quantite = $tab_quantite[$i];
+
+			if(!empty($quantite)){
+
+				//on recupere l'id de la reception
+				$sql_f = 'SELECT MAX(id) as "max_id" FROM reception;';
+				//on recupere l'id de l'article
+				$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code).';';
+				//on recupere le future id du mvt stock
+				$sql_mvt = 'SELECT MAX(id) as "max_id_mvt" FROM mouvement_stock;';
+				//result reception
+
+				//return new \SoapFault('Server','[AA00011] '.$sql_mvt.'.');
+				//return new \SoapFault('Server','[AA00011] '.$sql_f.'.');
+				//return new \SoapFault('Server','[AA00011] '.$sql_a.'.');
+
+				$result_f = $pdo->query($sql_f);
+				$result_mvt = $pdo->query($sql_mvt);
+
+				foreach($pdo->query($sql_a) as $row){
+					$id_article = $row['max_id_article'];
+				}
+
+				//return new \SoapFault('Server','[AA00011] Apres l\'id article');
+				if($result_f->rowCount() == 0) {
+					$id_reception = 1;
+				}
+				else{
+					foreach($result_f as $row){
+						$id_reception = $row['max_id'];
+					}
+				}
+				//return new \SoapFault('Server','[AA00011] Apres l\'id reception : '.$id_reception.'');
+				if($result_mvt->rowCount() == 0)
+					$id_mvt = 1;
+				else{
+					foreach($result_mvt as $row){
+						$id_mvt = $row['max_id_mvt'];
+					}
+					$id_mvt++;
+				}
+				//return new \SoapFault('Server','[AA00011] Apres l\'id mvt stock : '.$id_mvt.'');
+				//insertion mouvement stock
+				$sql_mvt = ' INSERT INTO `alba`.`mouvement_stock`
+(`ref_article`,
+`quantite_mouvement`,
+`date_mouvement`)
+VALUES
+('.$pdo->quote($id_article).',
+'.$pdo->quote($quantite).',
+NOW());';
+
+				$pdo->query($sql_mvt);
+				//return new \SoapFault('Server','[AA00011] '.$sql_mvt.'.');
+
+				//insertion ligne reception
+				$sql_lrecep = 'INSERT INTO `alba`.`ligne_reception`
+(`ref_article`,
+`ref_mvt_stock`,
+`ref_reception`,
+`ref_ligne_commande`)
+VALUES
+('.$pdo->quote($id_article).',
+'.$pdo->quote($id_mvt).',
+'.$pdo->quote($id_reception).',
+'.$pdo->quote($ligne_commande_id).');';
+				//insertion des données
+				$pdo->query($sql_lrecep);
+				//return new \SoapFault('Server','[AA00011] '.$sql.'.');
+
+			}
+
+			$i++;
+		}
+
+		return "OK";
 	}
 
 
