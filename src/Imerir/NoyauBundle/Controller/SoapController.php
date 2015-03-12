@@ -1498,7 +1498,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
-		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, nom_contact, prenom_contact, nom_article ,article_id , nb_article, prix_id ,reduction_article,
+		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article, montant_client ,reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
@@ -1510,7 +1510,6 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				               a.id as "article_id",
 							   a.code_barre as "nom_article",
 				               px.montant_client as "prix_id",
-				               lf.id as "id_ligne_facture" ,
 				               f.id as "id_facture" ,
 				               f.date_facture as "date_de_facture",
 				               c.nom as "nom_contact",
@@ -1544,11 +1543,11 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
 		foreach ($pdo->query($requete_detail_factures) as $row) {
-			$nombre_article = substr($row['nb_article'],1);
+			$nombre_article = (-1*$row['nb_article']);
 			$ligne = array('numero_facture' => $row['id_facture'],
 					'date_facture'=>$row['date_de_facture'],
 					'nom_produit'=>$row['nom_produit'],
-					'nom_client'=>$row['nom_contact'],
+					'nom_client'=>$row['nom_contact_maj'],
 					'prenom_client'=>$row['prenom_contact'],
 					'adresse_numero'=>$row['adresse_numero'],
 					'adresse_rue'=>$row['adresse_rue'],
@@ -1557,7 +1556,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 					'adresse_pays'=>$row['adresse_pays'],
 					'nom_article'=>$row['nom_article'],
 					'nombre_article'=>$nombre_article,
-					'prix_article'=>$row['prix_id'],
+					'prix_article'=>$row['montant_client'],
 					'reduction_article'=>$row['reduction_article'],
 					'nom_moyen_paiement'=>$row['nom_moyen_paiement'],
 					'montant_facture'=>$row['montant']);
