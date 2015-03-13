@@ -2700,9 +2700,16 @@ group by ville;';
 			$tab_date_commande[0]='0000-00-00';
 		}
 		//insertion des données
-
-		$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
+		if($tab_date_commande[0]=='0000-00-00'){
+			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
+		NOW())';
+		}
+		else{
+			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
 		'.$pdo->quote($tab_date_commande[0]).')';
+		}
+
+
 
 		//return new \SoapFault('Server', $sql);
 		$pdo->query($sql);
@@ -2820,12 +2827,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite<>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC ';
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
@@ -2923,12 +2930,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite<>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
-			$sql .= 'ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= 'ORDER BY date_commande DESC, fournisseur.nom ASC ';
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
@@ -3148,12 +3155,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		 AND quantite_recu IS NOT NULL)';
 
 		if ($offset != 0) {
-			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= ' ORDER BY date_commande DESC, fournisseur.nom ASC ';
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
