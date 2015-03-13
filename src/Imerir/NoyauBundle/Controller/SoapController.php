@@ -1219,8 +1219,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				array('menu' => 'caisse','sous_menu' => array()),
 				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques','Anniversaires')),
 				array('menu' => 'evenement','sous_menu' => array()),
-				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique des commandes complètes')),
-				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
+				array('menu' => 'fournisseur','sous_menu' => array('Fournisseurs','Historique des commandes complètes','Commandes','Réception')),
+				array('menu' => 'produit','sous_menu' => array('Lignes produits','Attributs','Produits','Articles','Stock','Inventaire', 'Génération de codes barres')),
 				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour client')));
 			return json_encode($tableau_menu);
 		} // Si il est employe
