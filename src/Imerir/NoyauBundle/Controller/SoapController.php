@@ -348,7 +348,55 @@ class SoapController extends ContainerAware
 		}
 	}
 	
+	/**
+	 * Permet d'enregistrer un retour client.
+	 *
+	 * @Soap\Method("enregistrerRetour")
+	 * @Soap\Param("idFacture",phpType="int")
+	 * @Soap\Param("quantite",phpType="int")
+	 * @Soap\Param("code_barre",phpType="string")
+	 * @Soap\Param("promo",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function enregistrerRetourAction($idFacture, $quantite, $code_barre, $promo)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[ER001] Vous n\'avez pas les droits nécessaires.');
+		if (!is_string($code_barre) || !is_int($idFacture) || !is_int($quantite) || !is_int($promo)) // Vérif des arguments
+			return new \SoapFault('Server', '[ER002] Paramètres invalides lors de l\'enregistrement du retour.');
 	
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		
+		if ($quantite < 0)
+			$quantite = -1*$quantite;
+	
+		if ($code_barre === '')
+			return new \SoapFault('Server', '[ER003] Paramètres invalides lors de l\'enregistrement du retour.');
+
+		$sql = 'INSERT INTO mouvement_stock (ref_article, date_mouvement, quantite_mouvement, est_inventaire, est_visible)
+				VALUE ((SELECT id FROM article WHERE code_barre=' . $pdo->quote($code_barre) . '),
+						NOW(), \'' . (int)$quantite . '\', false, true)';
+
+		$resultat = $pdo->query($sql);
+		$ref_mvt_stock = $pdo->lastInsertId();
+
+		$ref_remise = 0;
+		if (0 !== $promo) { // S'il y a une promo on l'enregistre dans la table remise
+			$sql = 'INSERT INTO remise (reduction, type_reduction) VALUE (' . (int)$promo . ', \'taux\')';
+			$resultat = $pdo->query($sql);
+			$ref_remise = $pdo->lastInsertId();
+		}
+
+		if ($ref_remise !== 0)
+			$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock, ref_remise)
+			     	VALUE (' . (int)$idFacture . ', ' . (int)$ref_mvt_stock . ', ' . (int)$ref_remise . ')';
+		else
+			$sql = 'INSERT INTO ligne_facture (ref_facture, ref_mvt_stock)
+			     	VALUE (' . (int)$idFacture . ', ' . (int)$ref_mvt_stock . ')';
+		$resultat = $pdo->query($sql);
+	
+		return '';
+	}
 
 	/**
 	 * Permet de récupérer tous les code barres de tout les articles.
@@ -506,8 +554,10 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 			$quantite = $article->quantite;
 			$attributs = $article->attributs;
 
-			if ($avecPrix)
-				$prixClient = $article->prix;
+			if ($avecPrix) {
+				$prixClient = $article->prixClient;
+				$prixFournisseur = $article->prixFournisseur;
+			}
 
 			if (empty($code_barre)) // Si pas de code barre on enregistre pas c'est pas normal
 				break;
@@ -539,7 +589,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 			if ($avecPrix) { // Si on enregistre le prix avec
 				$sql = 'INSERT INTO prix(ref_article, montant_fournisseur, montant_client, date_modif)
-							VALUE (\'' . $idArticle . '\', 0, \'' . (float)$prixClient . '\', NOW())';
+							VALUE (\'' . $idArticle . '\', \'' . (float)$prixFournisseur . '\', \'' . (float)$prixClient . '\', NOW())';
 				$resultat = $pdo->query($sql);
 			}
 
@@ -1169,9 +1219,9 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				array('menu' => 'caisse','sous_menu' => array()),
 				array('menu' => 'client','sous_menu' => array('Informations client', 'Statistiques','Anniversaires')),
 				array('menu' => 'evenement','sous_menu' => array()),
-				array('menu' => 'fournisseur','sous_menu' => array('Commandes','Fournisseurs','Historique')),
-				array('menu' => 'produit','sous_menu' => array('Articles', 'Attributs','Lignes produits','Produits','Réception','Stock','Inventaire', 'Génération de codes barres')),
-				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour')));
+				array('menu' => 'fournisseur','sous_menu' => array('Fournisseurs','Historique des commandes complètes','Commandes','Réception')),
+				array('menu' => 'produit','sous_menu' => array('Lignes produits','Attributs','Produits','Articles','Stock','Inventaire', 'Génération de codes barres')),
+				array('menu' => 'vente','sous_menu' => array('Moyens de paiement','Statistiques','Factures','Retour client')));
 			return json_encode($tableau_menu);
 		} // Si il est employe
 		else if ($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) {
@@ -1364,6 +1414,11 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	
 	/**
 	 * Permet de retourner toutes les factures en filtrant avec certains critere.
+	 * @param $dateDebut Chercher les factures a partir de cette date.
+	 * @param $dateFin Chercher les factures jusqu'a cette date.
+	 * @param $ligneProduit Chercher les factures ayant au moins un produit de cette ligne produit.
+	 * @param $produit Chercher les factures ayant au moins un article de ce type de produit.
+	 * @param $client Chercher un article ayant pour client $client.
 	 *
 	 * @Soap\Method("getFactureFromCritere")
 	 * @Soap\Param("dateDebut",phpType="string")
@@ -1375,35 +1430,48 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	 */
 	public function getFactureFromCritereAction($dateDebut, $dateFin, $ligneProduit, $produit, $client) {
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[GAF001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GAFC001] Vous n\'avez pas les droits nécessaires.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 	
-		if (!is_string($date) || !is_string($client) ) // Vérif des arguments
-			return new SoapFault('Server', '[GAF002] Paramètres invalides.');
+		if (!is_string($dateDebut) || !is_string($dateFin) || !is_string($ligneProduit) 
+			|| !is_string($produit) || !is_string($client)) // Vérif des arguments
+			return new \SoapFault('Server', '[GAFC002] Paramètres invalides.');
 	
 	
-		$requete_toutes_les_lignes_factures = 'SELECT id_facture, date_de_facture, nom_contact,
+		$sql = 'SELECT id_facture, date_de_facture, nom_contact,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
 						END) AS montant
-				        FROM( SELECT * FROM ventes_contact';
+				        FROM( SELECT id_facture, nom_contact, date_de_facture, type_reduction, 
+									 reduction_article,  nb_article, montant_client 
+				 			  FROM ventes_contact 
+							  JOIN produit p ON article_ref_produit = p.id
+							  JOIN ligne_produit lp ON p.ref_ligne_produit = lp.id ';
 	
-	
-		if($date !== ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE f.date_facture > ' . $pdo->quote($date) . '';
+		if ($dateDebut !== '' || $dateFin !== '' || $ligneProduit !== '' || $produit !== '' || $client !== '') {
+			$sql .= ' WHERE 1=1 '; // Juste pour eviter de traiter tous les cas ou on commence le where par l'un ou par l'autre
+			
+			if($dateDebut !== '')
+				$sql = $sql .' AND date_de_facture >= ' . $pdo->quote($dateDebut) . ' ';
+			if($dateFin !== '')
+				$sql = $sql .' AND date_de_facture <= ' . $pdo->quote($dateFin) . ' ';
+			if($ligneProduit !== '')
+				$sql = $sql .' AND lp.nom LIKE ' . $pdo->quote('%'.$ligneProduit.'%') . ' ';
+			if($produit !== '')
+				$sql = $sql .' AND p.nom LIKE ' . $pdo->quote('%'.$produit.'%') . ' ';
+			if($client !== '')
+				$sql = $sql .' AND nom_contact LIKE ' . $pdo->quote('%'.$client.'%') . ' ';
 		}
-		if($client !== ''){
-			$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures .' WHERE c.nom = ' . $pdo->quote($client) . '';
-		}
+		
 	
-		//On ajoute a la requete la fin
-		$requete_toutes_les_lignes_factures = $requete_toutes_les_lignes_factures . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
-	
-		foreach ($pdo->query($requete_toutes_les_lignes_factures) as $row) {
+		// On ajoute a la requete la fin
+		$sql = $sql . ' ) t GROUP BY id_facture ORDER BY id_facture DESC';
+			
+		foreach ($pdo->query($sql) as $row) {
 			$ligne = array('numero' => $row['id_facture'],
 					'client'=>$row['nom_contact'],
 					'date'=>$row['date_de_facture'],
@@ -1498,6 +1566,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		}
 		return json_encode($result);
 	}
+	
+	
 	
 	/**
 	 * Permet de retourner tous les anniversaires du jour si il n'y a pas 
@@ -2702,9 +2772,16 @@ group by ville;';
 			$tab_date_commande[0]='0000-00-00';
 		}
 		//insertion des données
-
-		$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
+		if($tab_date_commande[0]=='0000-00-00'){
+			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
+		NOW())';
+		}
+		else{
+			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
 		'.$pdo->quote($tab_date_commande[0]).')';
+		}
+
+
 
 		//return new \SoapFault('Server', $sql);
 		$pdo->query($sql);
@@ -2769,7 +2846,9 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 
 
 		// Formation de la requete SQL
-		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
+commande_fournisseur.id as "commande_id", date_commande, code_barre,
+quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
 AND ligne_commande_fournisseur.est_visible=\'1\'
@@ -2777,6 +2856,7 @@ JOIN article on article.id = ligne_commande_fournisseur.ref_article
 JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
 LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
 LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
@@ -2816,15 +2896,15 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 
 		}
 
-		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre HAVING (SUM(quantite_souhaite)<>SUM(quantite_mouvement)
+		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= ' ORDER BY fournisseur.nom ASC';
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
@@ -2871,7 +2951,7 @@ SUM(quantite_mouvement) AS "quantite_recu"
 
 		// Formation de la requete SQL
 		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre,
-ligne_commande_fournisseur.id as "ligne_commande_id", SUM(quantite_souhaite) as "quantite_souhaite",
+ligne_commande_fournisseur.id as "ligne_commande_id", quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
 AND ligne_commande_fournisseur.est_visible=\'1\'
@@ -2879,6 +2959,7 @@ JOIN article on article.id = ligne_commande_fournisseur.ref_article
 JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
 LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
 LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
@@ -2918,16 +2999,15 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 
 		}
 
-		$sql .= 'GROUP BY fournisseur.nom, commande_fournisseur.id, date_commande, code_barre,
-		 ligne_commande_fournisseur.id HAVING (SUM(quantite_souhaite)<>SUM(quantite_mouvement)
+		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= ' ORDER BY fournisseur.nom ASC';
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
@@ -3009,6 +3089,320 @@ SUM(quantite_mouvement) AS "quantite_recu"
 		return "OK";
 		//return new \SoapFault('Server', $sql);
 
+	}
+
+
+	/** @Soap\Method("getAllCommandesFournisseurs")
+	 * @Soap\Param("count",phpType="int")
+	 * @Soap\Param("offset",phpType="int")
+	 * @Soap\Param("fournisseur_id",phpType="string")
+	 * @Soap\Param("fournisseur_nom",phpType="string")
+	 * @Soap\Param("commande_id",phpType="string")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Param("date_deb",phpType="string")
+	 * @Soap\Param("date_fin",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function getAllCommandesFournisseursAction($count, $offset, $fournisseur_id, $fournisseur_nom,
+													  $commande_id, $article_code, $date_deb, $date_fin)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[GACF001] Vous n\'avez pas les droits nécessaires.');
+
+
+		if ((!is_int($fournisseur_id) && !is_string($fournisseur_id)) || (!is_int($commande_id) && !is_string($commande_id))
+			|| !is_int($offset) || !is_int($count) || (!is_int($article_code) && !is_string($article_code) || !is_string($fournisseur_nom))
+		)// Vérif des arguments
+			return new \SoapFault('Server', '[GACF002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+
+
+		// Formation de la requete SQL
+		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
+commande_fournisseur.id as "commande_id", date_commande, code_barre,
+quantite_souhaite as "quantite_souhaite",
+SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
+JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
+AND ligne_commande_fournisseur.est_visible=\'1\'
+JOIN article on article.id = ligne_commande_fournisseur.ref_article
+JOIN fournisseur ON fournisseur.id = commande_fournisseur.ref_fournisseur
+LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fournisseur.id
+LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
+AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
+LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
+
+		$arguments = array();
+		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)
+		 || !empty($date_deb) || !empty($date_fin)) {
+
+			if (!empty($fournisseur_id))
+				array_push($arguments, array('commande_fournisseur.ref_fournisseur' => $fournisseur_id));
+			if (!empty($commande_id))
+				array_push($arguments, array('commande_fournisseur.id' => $commande_id));
+			if (!empty($article_code))
+				array_push($arguments, array('article.code_barre' => $article_code));
+			if (!empty($fournisseur_nom))
+				array_push($arguments, array('fournisseur.nom' => $fournisseur_nom));
+			if (!empty($date_deb)){
+				//verification de la date
+				$split = array();
+				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_deb, $split))
+				{
+					if(checkdate($split[2],$split[3],$split[1]))
+					{
+					}
+					else
+					{
+						return new \SoapFault('Server', '[GACF003] Date début période invalide.');
+					}
+				}
+				else
+				{
+					return new \SoapFault('Server', '[GACF003] Date début période invalide.');
+				}
+				array_push($arguments,array('date_debut'=>$date_deb));
+			}
+			if (!empty($date_fin)){
+				//verification de la date
+				$split = array();
+				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_fin, $split))
+				{
+					if(checkdate($split[2],$split[3],$split[1]))
+					{
+					}
+					else
+					{
+						return new \SoapFault('Server', '[GACF004] Date fin période invalide.');
+					}
+				}
+				else
+				{
+					return new \SoapFault('Server', '[GACF004] Date fin période invalide.');
+				}
+				array_push($arguments,array('date_fin'=>$date_fin));
+			}
+
+			$sql .= 'WHERE ';
+
+			$i = 0;
+			$taille_avant_fin = count($arguments) - 1;
+			while ($i < $taille_avant_fin) {
+				if(key($arguments[$i])=='commande_fournisseur.id' || key($arguments[$i])=='commande_fournisseur.ref_fournisseur'){
+					$val = $arguments[$i][key($arguments[$i])];
+					$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
+				}
+				elseif(key($arguments[$i]) == 'date_debut'){
+					$sql .=' date_commande >= '.$pdo->quote($date_deb).' AND';
+				}
+				elseif(key($arguments[$i]) == 'date_fin'){
+					$sql .=' date_commande < '.$pdo->quote($date_fin).' AND';
+				}
+				else{
+					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+					$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
+				}
+
+				$i++;
+			}
+			if(key($arguments[$i])=='commande_fournisseur.id' || key($arguments[$i])=='commande_fournisseur.ref_fournisseur'){
+				$val = $arguments[$i][key($arguments[$i])];
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND commande_fournisseur.est_visible=\'1\'';
+			}
+			elseif(key($arguments[$i]) == 'date_debut'){
+				$sql .=' date_commande >= '.$pdo->quote($date_deb).' AND commande_fournisseur.est_visible=\'1\'';
+			}
+			elseif(key($arguments[$i]) == 'date_fin'){
+				$sql .=' date_commande < '.$pdo->quote($date_fin).' AND commande_fournisseur.est_visible=\'1\'';
+			}
+			else{
+				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND commande_fournisseur.est_visible=\'1\'';
+			}
+		}
+
+		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite<=SUM(quantite_mouvement)
+		 AND quantite_recu IS NOT NULL)';
+
+		if ($offset != 0) {
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC LIMIT ' . (int)$offset;
+			if ($count != 0)
+				$sql .= ',' . (int)$count;
+		}
+		else {
+			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC ';
+		}
+
+		//return new \SoapFault('Server', $sql);
+		/*
+		 * select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
+SUM(quantite_mouvement) AS "quantite_recu"
+		 */
+		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
+		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
+			$ligne = array('fournisseur_id'=>$row['fournisseur_id'],'fournisseur_nom' => $row['fournisseur_nom'], 'commande_id' => $row['commande_id'],
+				'date_commande' => $row['date_commande'], 'code_barre' => $row['code_barre'],
+				'quantite_souhaite'=>$row['quantite_souhaite'],'quantite_recu'=>$row['quantite_recu']);
+			array_push($result, $ligne);
+		}
+		return json_encode($result);
+		//return new \SoapFault('Server', $sql);
+	}
+
+
+	/**
+	 * @Soap\Method("ajoutReceptionCommande")
+	 * @Soap\Param("commande_id",phpType="string")
+	 * @Soap\Param("ligne_commande_id",phpType="string")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Param("quantite",phpType="string")
+	 * @Soap\Param("date_reception",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutReceptionCommandeAction($commande_id,$ligne_commande_id, $article_code, $quantite, $date_reception)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[ACF001] Vous n\'avez pas les droits nécessaires.');
+
+
+
+		if (!is_string($ligne_commande_id) || !is_string($article_code)
+			|| !is_string($quantite) || !is_string($date_reception)) // Vérif des arguments
+			return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result = array();
+
+
+		// Formation de la requete SQL
+		$tab_commande_id = json_decode($commande_id);
+		$tab_ligne_commande_id = json_decode($ligne_commande_id);
+		$tab_article_code = json_decode($article_code);
+		$tab_quantite = json_decode($quantite);
+		$tab_date_reception = json_decode($date_reception);
+		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
+
+		foreach($tab_article_code as $article_code){
+
+			$sql = 'SELECT * FROM article WHERE code_barre='.$pdo->quote($article_code).';';
+			$resultat = $pdo->query($sql);
+
+			if ($resultat->rowCount() == 0) {
+				return new \SoapFault('Server', '[ACF003] Article '.$article_code.' invalide.');
+			}
+		}
+		//verification de la date
+		$split = array();
+		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $tab_date_reception[0], $split))
+		{
+			if(checkdate($split[2],$split[3],$split[1]))
+			{
+			}
+			else
+			{
+				$tab_date_reception[0]='0000-00-00';
+			}
+		}
+		else
+		{
+			$tab_date_reception[0]='0000-00-00';
+		}
+
+		//insertion des données
+		if($tab_date_reception[0]=='0000-00-00'){
+			$sql = 'INSERT INTO reception(ref_commande_fournisseur, date_reception) VALUES(' . $pdo->quote($tab_commande_id[0]) . ',
+		NOW())';
+		}
+		else{
+			$sql = 'INSERT INTO reception(ref_commande_fournisseur, date_reception) VALUES(' . $pdo->quote($tab_commande_id[0]) . ',
+		'.$pdo->quote($tab_date_reception[0]).')';
+		}
+
+
+		//return new \SoapFault('Server', $sql);
+		$pdo->query($sql);
+
+		$i = 0;
+		foreach ($tab_ligne_commande_id as $ligne_commande_id) {
+			$article_code = $tab_article_code[$i];
+			$quantite = $tab_quantite[$i];
+
+			if(!empty($quantite)){
+
+				//on recupere l'id de la reception
+				$sql_f = 'SELECT MAX(id) as "max_id" FROM reception;';
+				//on recupere l'id de l'article
+				$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code).';';
+				//on recupere le future id du mvt stock
+				$sql_mvt = 'SELECT MAX(id) as "max_id_mvt" FROM mouvement_stock;';
+				//result reception
+
+				//return new \SoapFault('Server','[AA00011] '.$sql_mvt.'.');
+				//return new \SoapFault('Server','[AA00011] '.$sql_f.'.');
+				//return new \SoapFault('Server','[AA00011] '.$sql_a.'.');
+
+				$result_f = $pdo->query($sql_f);
+				$result_mvt = $pdo->query($sql_mvt);
+
+				foreach($pdo->query($sql_a) as $row){
+					$id_article = $row['max_id_article'];
+				}
+
+				//return new \SoapFault('Server','[AA00011] Apres l\'id article');
+				if($result_f->rowCount() == 0) {
+					$id_reception = 1;
+				}
+				else{
+					foreach($result_f as $row){
+						$id_reception = $row['max_id'];
+					}
+				}
+				//return new \SoapFault('Server','[AA00011] Apres l\'id reception : '.$id_reception.'');
+				if($result_mvt->rowCount() == 0)
+					$id_mvt = 1;
+				else{
+					foreach($result_mvt as $row){
+						$id_mvt = $row['max_id_mvt'];
+					}
+					$id_mvt++;
+				}
+				//return new \SoapFault('Server','[AA00011] Apres l\'id mvt stock : '.$id_mvt.'');
+				//insertion mouvement stock
+				$sql_mvt = ' INSERT INTO `alba`.`mouvement_stock`
+(`ref_article`,
+`quantite_mouvement`,
+`date_mouvement`)
+VALUES
+('.$pdo->quote($id_article).',
+'.$pdo->quote($quantite).',
+NOW());';
+
+				$pdo->query($sql_mvt);
+				//return new \SoapFault('Server','[AA00011] '.$sql_mvt.'.');
+
+				//insertion ligne reception
+				$sql_lrecep = 'INSERT INTO `alba`.`ligne_reception`
+(`ref_article`,
+`ref_mvt_stock`,
+`ref_reception`,
+`ref_ligne_commande`)
+VALUES
+('.$pdo->quote($id_article).',
+'.$pdo->quote($id_mvt).',
+'.$pdo->quote($id_reception).',
+'.$pdo->quote($ligne_commande_id).');';
+				//insertion des données
+				$pdo->query($sql_lrecep);
+				//return new \SoapFault('Server','[AA00011] '.$sql.'.');
+
+			}
+
+			$i++;
+		}
+
+		return "OK";
 	}
 
 
