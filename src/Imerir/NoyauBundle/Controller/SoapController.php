@@ -2221,61 +2221,133 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 	/**
 	 * Permet d'avoir les statistiques des ventes par mois.
 	 *
-	 * @Soap\Method("statsVenteMoyenneParMois")
-	 * @Soap\Param("nbMois",phpType="int")
+	 * @Soap\Method("statsVenteMoyenneParMoisParDefaut")
+	 * @Soap\Param("mois",phpType="string")
+	 * @Soap\Param("annee",phpType="int")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function statsVenteMoyenneParMoisAction($nbMois)
+	public function statsVenteMoyenneParMoisParDefautAction($mois,$annee)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[SVMVPM001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[SVMVPMPD001] Vous n\'avez pas les droits nécessaires.');
 
-		if (!is_int($nbMois)) // Vérif des arguments
-			return new \SoapFault('Server', '[SVMVPM002] Paramètres invalides.');
+		if (!is_string($mois) || !is_int($annee)) // Vérif des arguments
+			return new \SoapFault('Server', '[SVMVPMPD002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result_n = array();
+		$result_n_moins_un = array();
 		$result = array();
 
-		$sql = 'SELECT SUM(
-						CASE 
-					        WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction/100)*(-1*quantite_mouvement)
-					        WHEN type_reduction = \'remise\' THEN (montant_client-reduction)*(-1*quantite_mouvement)
-					        ELSE montant_client*(-1*quantite_mouvement)
-					    END) AS montant, DATE_FORMAT(date_facture,\'%d/%m/%y\') AS DateJour
-					FROM (SELECT ligne_facture_id,
-								 article_id, 
-								 MAX(prix_id), 
-								 date_facture, 
-								 reduction, 
-								 type_reduction,
-								 quantite_mouvement, 
-								 montant_client
-					        FROM(
-								SELECT facture.date_facture, 
-									   ligne_facture.id as "ligne_facture_id", 
-					                   article.id as "article_id", 
-					                   prix.id as "prix_id",
-					                   reduction, 
-									   type_reduction,
-									   quantite_mouvement, 
-									   montant_client
-								FROM facture  
-								JOIN ligne_facture ON facture.id = ligne_facture.ref_facture
-								JOIN mouvement_stock ON ligne_facture.ref_mvt_stock=mouvement_stock.id
-								JOIN article ON mouvement_stock.ref_article=article.id
-								JOIN prix ON prix.ref_article=article.id
-					            LEFT OUTER JOIN remise ON ligne_facture.ref_remise=remise.id
-								WHERE MONTH(facture.date_facture) = MONTH(NOW()))ta
-								GROUP BY article_id, ligne_facture_id
-					        
-						) t GROUP BY DAY(date_facture)';
-
-		$resultat = $pdo->query($sql);
-		foreach ($resultat as $row) {
-			$jour = array('montant' => $row['montant'], 'jour' => $row['DateJour']);
-			array_push($result, $jour);
+		$sql_default = 'SELECT SUM(montant) as "montant_du_jour",date_du_jour as "date_bon_format" FROM (		
+					SELECT date_de_facture,SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS "montant",date_de_facture as "date_du_jour"
+                        FROM( 
+				        SELECT 
+							   lf.id as "ligne_facture_id",
+							   f.id as "id_facture",
+				               f.date_facture as "date_de_facture",
+				               r.reduction as "reduction_article",
+				               m.quantite_mouvement as "nb_article",
+				               r.type_reduction as "type_reduction",
+				               px.montant_client as "montant_client"
+				      
+				        FROM facture f
+						JOIN ligne_facture lf ON lf.ref_facture = f.id
+						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
+						JOIN article a ON m.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id AND px.id =
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
+				        JOIN produit pt ON a.ref_produit = pt.id
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id 
+						
+						WHERE month(f.date_facture) = month(curdate())
+						AND year(f.date_facture) = year(curdate())
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY DAY(date_du_jour)';
+		
+		$resultat_par_defaut_n = $pdo->query($sql_default);
+		
+		$jour_precedent = 1;
+		foreach ($resultat_par_defaut_n as $row) {
+			$jour_courant = date('d', strtotime($row['date_bon_format']));
+			if(($jour_courant - $jour_precedent) > 1){
+				$i = $jour_precedent;
+				if($i == 1){
+					$mois_n = array('montant_n' => 0, 'jour_n' => $i);
+					array_push($result_n, $mois_n);
+				}
+		
+				while ($i < $jour_courant-1){
+					$mois_n = array('montant_n' => 0, 'jour_n' => $i+1);
+					array_push($result_n, $mois_n);
+					$i++;
+				}
+			}
+			$mois_n = array('montant_n' => $row['montant_du_jour'], 'jour_n' => $jour_courant);
+			array_push($result_n, $mois_n);
+			$jour_precedent = $jour_courant;
 		}
-
+		
+		$sql_default_n_moins_un = 'SELECT SUM(montant) as "montant_du_jour",date_du_jour as "date_bon_format" FROM (
+					SELECT date_de_facture,SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS "montant",date_de_facture as "date_du_jour"
+                        FROM(
+				        SELECT
+							   lf.id as "ligne_facture_id",
+							   f.id as "id_facture",
+				               f.date_facture as "date_de_facture",
+				               r.reduction as "reduction_article",
+				               m.quantite_mouvement as "nb_article",
+				               r.type_reduction as "type_reduction",
+				               px.montant_client as "montant_client"
+						
+				        FROM facture f
+						JOIN ligne_facture lf ON lf.ref_facture = f.id
+						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
+						JOIN article a ON m.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id AND px.id =
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
+				        JOIN produit pt ON a.ref_produit = pt.id
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
+			
+						WHERE month(f.date_facture) = month(curdate())
+						AND year(f.date_facture) = year(curdate() - INTERVAL 1 YEAR)
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY DAY(date_du_jour)';
+				
+		$resultat_n_moins_un = $pdo->query($sql_default_n_moins_un);
+		
+		$jour_precedent = 1;
+		$i = $jour_precedent;
+		foreach ($resultat_n_moins_un as $row) {
+			$jour_courant = date('d', strtotime($row['date_bon_format']));
+			if(($jour_courant - $jour_precedent) > 1){
+				$i = $jour_precedent;
+				if($i == 1){
+					$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i);
+					array_push($result_n_moins_un, $mois_n);
+				}
+				
+				while ($i < $jour_courant-1){
+					$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i+1);
+					array_push($result_n_moins_un, $mois_n);
+					$i++;
+				}
+			}
+			$mois_n = array('montant_n_moins_un' => $row['montant_du_jour'], 'jour_n_moins_un' => $jour_courant);
+			array_push($result_n_moins_un, $mois_n);
+			$jour_precedent = $jour_courant;
+		}
+		
+		array_push($result, $result_n);
+		array_push($result, $result_n_moins_un);
 		return json_encode($result);
 	}
 
