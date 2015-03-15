@@ -881,8 +881,10 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		// Si on a pas de critère c'est qu'on veut tout les attributs et on ne va pas récupérer les valeurs ni les lignes produits
 		if ($idLigneProduit === 0 && $idAttribut === 0) {
 			if (true === $avecValeurAttribut) {
-				$sql = 'SELECT a.id AS aid, nom, v.libelle, a.est_visible FROM attribut a
-				        JOIN valeur_attribut v ON v.ref_attribut=a.id 
+				$sql = 'SELECT a.id AS aid, a.nom, v.libelle, a.est_visible, GROUP_CONCAT(lp.nom SEPARATOR ", ") AS ligne_produit FROM attribut a
+				        JOIN valeur_attribut v ON v.ref_attribut=a.id
+						JOIN ligne_produit_a_pour_attribut lpapva ON lpapva.ref_attribut = a.id
+						JOIN ligne_produit lp ON lpapva.ref_ligne_produit = lp.id
 						WHERE a.est_visible = TRUE AND v.est_visible = TRUE ';
 
 				if (!empty($nom)) {
@@ -891,24 +893,27 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 				}
 
 				$sql .= ' GROUP BY libelle ORDER BY nom ASC';
-
+				
 				$tabAttributs = array();
 				$dernierNom = '';
 				$dernierId = 0;
+				$dernierLigne = '';
 				foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 					if ($dernierNom !== $row['nom']) {
-						$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs);
+						$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs, 'ligne_produit' => $dernierLigne);
 						array_push($result, $ligne);
 						$tabAttributs = array();
 					}
 					$dernierLibelle = $row['libelle'];
 					$dernierNom = $row['nom'];
 					$dernierId = $row['aid'];
+					$dernierLigne = $row['ligne_produit'];
 					array_push($tabAttributs, $row['libelle']);
 				}
-				$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs);
+				$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs, 'ligne_produit' => $dernierLigne);
 				array_push($result, $ligne);
-			} else {
+			} 
+			else {
 				$sql = 'SELECT id, nom FROM attribut a ';
 
 				if (!empty($nom)) {
@@ -1446,7 +1451,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
 						END) AS montant
-				        FROM( SELECT id_facture, nom_contact, date_de_facture, type_reduction, 
+				        FROM( SELECT id_facture, nom_contact, DATE_FORMAT(date_de_facture, "%d/%m/%Y à %H:%i") AS date_de_facture, type_reduction, 
 									 reduction_article,  nb_article, montant_client 
 				 			  FROM ventes_contact 
 							  JOIN produit p ON article_ref_produit = p.id
@@ -1580,16 +1585,16 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	 */
 	public function getAnniversaireAction($mois){
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GAN001] Vous n\'avez pas les droits nécessaires.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 		
 		if (!is_string($mois) ) // Vérif des arguments
-			return new SoapFault('Server', '[GA002] Paramètres invalides.');
+			return new SoapFault('Server', '[GAN002] Paramètres invalides.');
 		
-		if($mois != ''){
-			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
+		if($mois !== ''){
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,DATE_FORMAT(date_naissance,"%d/%m/%Y") as date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
 			WHERE month(date_naissance) = '.$pdo->quote($mois).'';
 			
 			foreach ($pdo->query($requete_date_anniversaire) as $row) {
@@ -1604,8 +1609,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				array_push($result, $ligne);
 			}
 		}
-		else if ($mois == '') {
-			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
+		else if ($mois === '') {
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,DATE_FORMAT(date_naissance,"%d/%m/%Y") as date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
 			WHERE month(date_naissance) = month(now())
 			AND day(date_naissance) = day(now())';
 				
@@ -1622,7 +1627,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			}
 		}
 		else {
-			return new SoapFault('Server', '[GA003] Paramètres invalides.');
+			return new SoapFault('Server', '[GAN003] Paramètres invalides.');
 		}
 		return json_encode($result);
 		
