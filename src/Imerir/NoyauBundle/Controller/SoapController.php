@@ -2579,7 +2579,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail, notes 
+		$sql = 'SELECT id, nom, prenom, DATE_FORMAT(date_naissance, "%d/%m/%Y") AS date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail, notes 
 				FROM contact ';
 
 		$arguments = array();
@@ -2977,7 +2977,7 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 
 		// Formation de la requete SQL
 		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
-commande_fournisseur.id as "commande_id", date_commande, code_barre,
+commande_fournisseur.id as "commande_id", DATE_FORMAT(date_commande, "%d/%m/%Y") AS date_commande, code_barre,
 quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
@@ -3252,7 +3252,7 @@ SUM(quantite_mouvement) AS "quantite_recu"
 
 		// Formation de la requete SQL
 		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
-commande_fournisseur.id as "commande_id", date_commande, code_barre,
+commande_fournisseur.id as "commande_id",  DATE_FORMAT(date_commande, "%d/%m/%Y") AS date_commande, code_barre,
 quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
