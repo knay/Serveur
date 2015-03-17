@@ -978,8 +978,10 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		$reponse = array();
 		
 		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact
-				WHERE CONCAT (nom, prenom, date_naissance, email, telephone_portable) 
-				REGEXP replace('.$pdo->quote($critere).', \' \', \'|\')';
+				WHERE CONCAT_WS ("|", IFNULL(nom, ""), IFNULL(prenom, ""), IFNULL(date_naissance, ""),
+								IFNULL(email, ""), IFNULL(telephone_portable, "") )
+								REGEXP '.$pdo->quote($critere);
+		
 		$resultat = $pdo->query($sql);
 		
 		foreach ($resultat as $row) {
