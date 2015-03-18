@@ -2643,7 +2643,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			$taille_avant_fin = count($arguments) - 1;
 			while ($i < $taille_avant_fin) {
 
-				if($key($arguments[$i])=='civilite')
+				if(key($arguments[$i])=='civilite')
 					$val = $arguments[$i][key($arguments[$i])];
 				else
 					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
@@ -2651,7 +2651,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 
 				$i++;
 			}
-			if($key($arguments[$i])=='civilite')
+			if(key($arguments[$i])=='civilite')
 					$val = $arguments[$i][key($arguments[$i])];
 				else
 					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
