@@ -2543,7 +2543,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			//return new \SoapFault('Server',$sql);
 		}
 
-		return new \SoapFault('Server', $sql);
+		return new \SoapFault('Server', '[AC003] Ce contact existe déjà');
 
 	}
 
@@ -2643,12 +2643,18 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			$taille_avant_fin = count($arguments) - 1;
 			while ($i < $taille_avant_fin) {
 
-				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+				if($key($arguments[$i])=='civilite')
+					$val = $arguments[$i][key($arguments[$i])];
+				else
+					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
 				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 				$i++;
 			}
-			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+			if($key($arguments[$i])=='civilite')
+					$val = $arguments[$i][key($arguments[$i])];
+				else
+					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
 			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 
 
