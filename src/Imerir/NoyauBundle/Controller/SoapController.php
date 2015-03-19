@@ -2297,7 +2297,9 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
-		$sql = 'SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article,montant_client, montant_fournisseur, reduction_article,
+		$sql = 'SELECT nom_produit, SUM(marge) as "marge" FROM(
+SELECT nom_produit,article_id, SUM(marge) as "marge" FROM (
+SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article,montant_client, montant_fournisseur, reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
@@ -2342,8 +2344,10 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
 						LEFT OUTER JOIN adresse ad ON c.id = ad.ref_contact AND ad.ref_type_adresse = 1
                         LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
-						GROUP BY a.id
-						 ) t GROUP BY ligne_facture_id ORDER BY marge DESC LIMIT 3';
+						
+						 ) t GROUP BY ligne_facture_id ORDER BY marge DESC
+						 ) ta GROUP BY nom_produit, article_id
+						 ) tab GROUP BY nom_produit';
 
 		$resultat = $pdo->query($sql);
 		foreach ($resultat as $row) {
