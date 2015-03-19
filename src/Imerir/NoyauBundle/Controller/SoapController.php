@@ -2682,6 +2682,26 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 	}
 
 	/**
+	 * @Soap\Method("supprContact")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprContactAction($id){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SC001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SCC002] Paramètres invalides.');
+		
+		$sql = 'UPDATE contact SET est_visible=0 WHERE id='.$pdo->quote($id).';';
+		
+		$result = $pdo->query($sql);
+		
+		return new \SoapFault('Server', $sql);
+		//return "OK";
+	}
+	
+	/**
 	 * @Soap\Method("modifContact")
 	 * @Soap\Param("id",phpType="int")
 	 * @Soap\Param("nom",phpType="string")
