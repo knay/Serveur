@@ -3262,7 +3262,35 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 		return "OK";
 	}
 
-
+	/**
+	 * @Soap\Method("supprCommandeFournisseur")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprCommandeFournisseurAction($id){
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SCF001] Vous n\'avez pas les droits nécessaires.');
+	
+	
+	
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SCFC002] Paramètres invalides.');
+	
+	
+	
+		$sql = 'UPDATE commande_fournisseur SET est_visible=0 WHERE id='.$pdo->quote($id).';';
+	
+		//return new \SoapFault('Server', 'coucou');
+	
+		$result = $pdo->query($sql);
+	
+		//return new \SoapFault('Server', $sql);
+		return "OK";
+	}
+	
 	/** @Soap\Method("getCommandesFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
@@ -3303,6 +3331,7 @@ AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
+		$sql .= 'WHERE ';
 		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)) {
 
 			if (!empty($fournisseur_id))
@@ -3314,7 +3343,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			if (!empty($fournisseur_nom))
 				array_push($arguments, array('fournisseur.nom' => $fournisseur_nom));
 
-			$sql .= 'WHERE ';
+			//$sql .= 'WHERE ';
 
 			$i = 0;
 			$taille_avant_fin = count($arguments) - 1;
@@ -3333,12 +3362,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			else
 				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
 
-			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND commande_fournisseur.est_visible=\'1\'';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 
 
 		}
-
+		$sql.= ' commande_fournisseur.est_visible=\'1\' ';
 		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
