@@ -1158,6 +1158,28 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 			return new \SoapFault("Server", "[ALP003] La ligne produit existe déjà");
 		}
 	}
+	
+	/**
+	 * @Soap\Method("supprProduit")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprProduitAction($id){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SP001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SP002] Paramètres invalides.');
+		
+		//on récupere l'objet pdo connecté à la base du logiciel
+		$pdo = $this->container->get('bdd_service')->getPdo();
+		
+		$sql ='UPDATE produit SET est_visible=0 WHERE id='.(int)$id.';';
+		
+		$pdo->query($sql);
+		
+		return "OK";
+	}
 
 	/**
 	 * Permet d'ajouter ou modifier un produit
@@ -1199,38 +1221,41 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			$nom = '%'.$nom.'%';
 			$ligneproduit= '%'.$ligneproduit.'%';
 			$attribut = '%'.$attribut.'%';
-			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
+			$sql .= 'WHERE ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\' AND produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
 			 AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
 		}
 
 		elseif (empty($nom) && !empty($ligneproduit) && empty($attribut)){
 			$ligneproduit= '%'.$ligneproduit.'%';
-			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
+			$sql .= 'WHERE ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\' AND ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '';
 		}
 		elseif (!empty($nom) && empty($ligneproduit) && empty($attribut)){
 			$nom = '%'.$nom.'%';
-			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '';
+			$sql .= 'WHERE ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\' AND produit.nom LIKE ' . $pdo->quote($nom) . '';
 		}
 		elseif (empty($nom) && empty($ligneproduit) && !empty($attribut)){
 			$attribut = '%'.$attribut.'%';
-			$sql .= 'WHERE (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+			$sql .= 'WHERE ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\' AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
 		}
 		elseif (!empty($nom) && !empty($ligneproduit) && empty($attribut)){
 			$ligneproduit= '%'.$ligneproduit.'%';
 			$nom = '%'.$nom.'%';
 			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
-			AND produit.nom LIKE '.$pdo->quote($nom).'';
+			AND ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\' AND produit.nom LIKE '.$pdo->quote($nom).'';
 		}
 		elseif (empty($nom) && !empty($ligneproduit) && !empty($attribut)){
 			$ligneproduit = '%'.$ligneproduit.'%';
 			$attribut = '%'.$attribut.'%';
 			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($ligneproduit) . '
-			AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+			AND ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\' AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
 		}
 		elseif (!empty($nom) && empty($ligneproduit) && !empty($attribut)){
 			$nom = '%'.$nom.'%';
 			$sql .= 'WHERE produit.nom LIKE ' . $pdo->quote($nom) . '
-			AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+			AND ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\' AND (attribut.nom LIKE '.$pdo->quote($attribut).' OR valeur_attribut.libelle LIKE '.$pdo->quote($attribut).')';
+		}
+		else{
+			$sql .= 'WHERE ligne_produit.est_visible=\'1\' AND produit.est_visible=\'1\'';
 		}
 		$sql.= 'group by ligne_produit.nom, produit.id, produit.nom;';
 		if ($offset != 0) {
