@@ -1825,7 +1825,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, email, telephone_portable, reference_client, notes FROM fournisseur ';
-
+		
+		$sql .= 'WHERE ';
 		$arguments = array();
 		if (!empty($nom) || !empty($email) || !empty($telephone_portable) || !empty($reference_client) || !empty($notes)) {
 
@@ -1840,7 +1841,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			if (!empty($notes))
 				array_push($arguments, array('notes' => $notes));
 
-			$sql .= 'WHERE ';
+			//$sql .= 'WHERE ';
 
 			$i = 0;
 			$taille_avant_fin = count($arguments) - 1;
@@ -1852,12 +1853,13 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				$i++;
 			}
 			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
-			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 
 
 		}
 
+		$sql .= ' est_visible=\'1\'';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -2824,6 +2826,9 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				FROM contact ';
 
 		$arguments = array();
+		
+		$sql .= 'WHERE ';
+		
 		if (!empty($nom) || !empty($prenom) || !empty($date_naissance) || !empty($civilite) || !empty($email) || !empty($telephone_portable) ||
 			!empty($ok_sms)
 			|| !empty($ok_mail) || !empty($notes)
@@ -2876,7 +2881,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			if (!empty($notes))
 				array_push($arguments, array('notes' => $notes));
 
-			$sql .= 'WHERE ';
+			//$sql .= 'WHERE ';
 
 			$i = 0;
 			$taille_avant_fin = count($arguments) - 1;
@@ -2894,12 +2899,15 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 					$val = $arguments[$i][key($arguments[$i])];
 				else
 					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
-			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+			//$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 
 
 		}
 
+		//new
+		$sql .= ' est_visible=\'1\'';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -2926,18 +2934,27 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function supprContactAction($id){
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[SC001] Vous n\'avez pas les droits nécessaires.');
+		
+		
 		
 		if (!is_int($id)) // Vérif des arguments
 			return new \SoapFault('Server', '[SCC002] Paramètres invalides.');
 		
+		
+		
 		$sql = 'UPDATE contact SET est_visible=0 WHERE id='.$pdo->quote($id).';';
+		
+		//return new \SoapFault('Server', 'coucou');
 		
 		$result = $pdo->query($sql);
 		
-		return new \SoapFault('Server', $sql);
-		//return "OK";
+		//return new \SoapFault('Server', $sql);
+		return "OK";
 	}
 	
 	/**
