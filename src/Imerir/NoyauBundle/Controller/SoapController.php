@@ -1549,6 +1549,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
                         LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
 						
 						WHERE f.id = '.(int)$numero.'
+						AND ref_type_adresse = 1
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC';
 	
 		foreach ($pdo->query($requete_detail_factures) as $row) {
