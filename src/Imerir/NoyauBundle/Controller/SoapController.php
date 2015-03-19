@@ -881,8 +881,10 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		// Si on a pas de critère c'est qu'on veut tout les attributs et on ne va pas récupérer les valeurs ni les lignes produits
 		if ($idLigneProduit === 0 && $idAttribut === 0) {
 			if (true === $avecValeurAttribut) {
-				$sql = 'SELECT a.id AS aid, nom, v.libelle, a.est_visible FROM attribut a
-				        JOIN valeur_attribut v ON v.ref_attribut=a.id 
+				$sql = 'SELECT a.id AS aid, a.nom, v.libelle, a.est_visible, GROUP_CONCAT(lp.nom SEPARATOR ", ") AS ligne_produit FROM attribut a
+				        JOIN valeur_attribut v ON v.ref_attribut=a.id
+						JOIN ligne_produit_a_pour_attribut lpapva ON lpapva.ref_attribut = a.id
+						JOIN ligne_produit lp ON lpapva.ref_ligne_produit = lp.id
 						WHERE a.est_visible = TRUE AND v.est_visible = TRUE ';
 
 				if (!empty($nom)) {
@@ -891,24 +893,27 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 				}
 
 				$sql .= ' GROUP BY libelle ORDER BY nom ASC';
-
+				
 				$tabAttributs = array();
 				$dernierNom = '';
 				$dernierId = 0;
+				$dernierLigne = '';
 				foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 					if ($dernierNom !== $row['nom']) {
-						$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs);
+						$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs, 'ligne_produit' => $dernierLigne);
 						array_push($result, $ligne);
 						$tabAttributs = array();
 					}
 					$dernierLibelle = $row['libelle'];
 					$dernierNom = $row['nom'];
 					$dernierId = $row['aid'];
+					$dernierLigne = $row['ligne_produit'];
 					array_push($tabAttributs, $row['libelle']);
 				}
-				$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs);
+				$ligne = array('id' => $dernierId, 'nom' => $dernierNom, 'attributs' => $tabAttributs, 'ligne_produit' => $dernierLigne);
 				array_push($result, $ligne);
-			} else {
+			} 
+			else {
 				$sql = 'SELECT id, nom FROM attribut a ';
 
 				if (!empty($nom)) {
@@ -973,8 +978,10 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		$reponse = array();
 		
 		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact
-				WHERE CONCAT (nom, prenom, date_naissance, email, telephone_portable) 
-				REGEXP replace('.$pdo->quote($critere).', \' \', \'|\')';
+				WHERE CONCAT_WS ("|", IFNULL(nom, ""), IFNULL(prenom, ""), IFNULL(date_naissance, ""),
+								IFNULL(email, ""), IFNULL(telephone_portable, "") )
+								REGEXP '.$pdo->quote($critere);
+		
 		$resultat = $pdo->query($sql);
 		
 		foreach ($resultat as $row) {
@@ -1446,7 +1453,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
 						END) AS montant
-				        FROM( SELECT id_facture, nom_contact, date_de_facture, type_reduction, 
+				        FROM( SELECT id_facture, nom_contact, DATE_FORMAT(date_de_facture, "%d/%m/%Y à %H:%i") AS date_de_facture, type_reduction, 
 									 reduction_article,  nb_article, montant_client 
 				 			  FROM ventes_contact 
 							  JOIN produit p ON article_ref_produit = p.id
@@ -1580,16 +1587,16 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	 */
 	public function getAnniversaireAction($mois){
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server','[GA001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server','[GAN001] Vous n\'avez pas les droits nécessaires.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 		
 		if (!is_string($mois) ) // Vérif des arguments
-			return new SoapFault('Server', '[GA002] Paramètres invalides.');
+			return new SoapFault('Server', '[GAN002] Paramètres invalides.');
 		
-		if($mois != ''){
-			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
+		if($mois !== ''){
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,DATE_FORMAT(date_naissance,"%d/%m/%Y") as date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
 			WHERE month(date_naissance) = '.$pdo->quote($mois).'';
 			
 			foreach ($pdo->query($requete_date_anniversaire) as $row) {
@@ -1604,8 +1611,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				array_push($result, $ligne);
 			}
 		}
-		else if ($mois == '') {
-			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
+		else if ($mois === '') {
+			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,DATE_FORMAT(date_naissance,"%d/%m/%Y") as date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
 			WHERE month(date_naissance) = month(now())
 			AND day(date_naissance) = day(now())';
 				
@@ -1622,7 +1629,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			}
 		}
 		else {
-			return new SoapFault('Server', '[GA003] Paramètres invalides.');
+			return new SoapFault('Server', '[GAN003] Paramètres invalides.');
 		}
 		return json_encode($result);
 		
@@ -1928,7 +1935,8 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 		$result = array();
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse ';
+		$sql = 'SELECT adresse.id, type_adresse.nom as "type_adresse_nom", pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse 
+				LEFT OUTER JOIN type_adresse ON type_adresse.id = adresse.ref_type_adresse ';
 
 		$arguments = array();
 		if (!empty($pays) || !empty($ville) || !empty($voie) || !empty($num_voie) || !empty($code_postal) || !empty($num_appartement)
@@ -1988,7 +1996,8 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
-			$ligne = array('id' => $row['id'], 'pays' => $row['pays'], 'ville' => $row['ville'], 'voie' => $row['voie'],
+			$ligne = array('id' => $row['id'], 'type_adresse_nom'=>$row['type_adresse_nom']
+					, 'pays' => $row['pays'], 'ville' => $row['ville'], 'voie' => $row['voie'],
 				'num_voie' => $row['num_voie'], 'code_postal' => $row['code_postal'], 'num_appartement' => $row['num_appartement'],
 				'telephone_fixe' => $row['telephone_fixe']);
 			array_push($result, $ligne);
@@ -2008,9 +2017,11 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 	 * @Soap\Param("code_postal",phpType="string")
 	 * @Soap\Param("num_appartement",phpType="string")
 	 * @Soap\Param("telephone_fixe",phpType="string")
+	 * @Soap\Param("type_adresse",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function ajoutAdresseAction($est_fournisseur, $ref_id, $pays, $ville, $voie, $num_voie, $code_postal, $num_appartement, $telephone_fixe)
+	public function ajoutAdresseAction($est_fournisseur, $ref_id, $pays, $ville, $voie, $num_voie, $code_postal,
+			 $num_appartement, $telephone_fixe, $type_adresse)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AA001] Vous n\'avez pas les droits nécessaires.');
@@ -2018,7 +2029,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 
 		if (!is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
 			|| !is_string($num_appartement) || !is_string($telephone_fixe)
-			|| !is_bool($est_fournisseur) || (!is_string($ref_id) && !is_int($ref_id))
+			|| !is_bool($est_fournisseur) || (!is_string($ref_id) && !is_int($ref_id) || !is_string($type_adresse))
 		) // Vérif des arguments
 			return new \SoapFault('Server', '[AA002] Paramètres invalides.');
 
@@ -2033,6 +2044,27 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 		$tab_code_postal = json_decode($code_postal);
 		$tab_num_appartement = json_decode($num_appartement);
 		$tab_telephone_fixe = json_decode($telephone_fixe);
+		$tab_type_adresse = json_decode($type_adresse);
+		
+		//on teste si il existe une adresse de facturation
+		$flag_ad_fact = 'Non';
+		if ($est_fournisseur){
+		}
+		
+		else{
+			$sql_test =' SELECT * FROM contact JOIN adresse ON adresse.ref_contact = contact.id 
+					JOIN type_adresse ON type_adresse.id = adresse.ref_type_adresse 
+					WHERE type_adresse.nom =\'Facturation\'';
+			$result_test = $pdo->query($sql_test);
+			if($result_test->rowCount()==0){
+				$flag_ad_fact = 'Non';
+			}
+			else{
+				$flag_ad_fact = 'Oui';
+			}
+			
+			
+		}
 
 		$i = 0;
 		foreach ($tab_pays as $pays) {
@@ -2043,34 +2075,87 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 			$code_postal = $tab_code_postal[$i];
 			$num_appartement = $tab_num_appartement[$i];
 			$telephone_fixe = $tab_telephone_fixe[$i];
+			$type_adresse = $tab_type_adresse[$i];
 
 
 			$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse
 WHERE pays=' . $pdo->quote($pays) . ' AND ville=' . $pdo->quote($ville) . ' AND voie=' . $pdo->quote($voie) . '
 AND num_voie=' . $pdo->quote($num_voie) . ' ';
 
-			if ($est_fournisseur)
+			if ($est_fournisseur){
 				$sql .= 'AND ref_fournisseur=' . $pdo->quote($ref_id) . '';
-			else
+			}
+				
+			else{
+				//on teste si le contact a deja une adresse de facturation
 				$sql .= 'AND ref_contact=' . $pdo->quote($ref_id) . '';
+			}
 
 			//on teste si l'adresse existe déjà
 			$resultat = $pdo->query($sql);
 
+			$id_typad = 1;
+			
 			if ($resultat->rowCount() == 0) {
 				//insertion des données
 				if ($est_fournisseur) {
 					$sql = 'INSERT INTO adresse(ref_fournisseur,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
 ' . $pdo->quote($ref_id) . ',' . $pdo->quote($pays) . ',' . $pdo->quote($ville) . ',' . $pdo->quote($voie) . ',' . $pdo->quote($num_voie) . ',
 ' . $pdo->quote($code_postal) . ',' . $pdo->quote($num_appartement) . ',' . $pdo->quote($telephone_fixe) . ')';
-				} else {
-					$sql = 'INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,telephone_fixe) VALUES(
+				} 
+				elseif (!$est_fournisseur && $flag_ad_fact=='Non') {
+					$sql_typad = 'SELECT MAX(id) as "max_id_typad",(SELECT MAX(id) FROM type_adresse)
+							 as "max_id" FROM type_adresse WHERE nom = '.$pdo->quote($type_adresse).'';
+					$result_typad = $pdo->query($sql_typad);
+					
+					foreach($result_typad as $row){
+						if(empty($row['max_id_typad'])){
+							//on insert le type adresse
+							$sql='INSERT INTO type_adresse(nom) VALUES('.$pdo->quote($type_adresse).');';
+							$pdo->query($sql);
+							//on save la ref
+							$id_typad = $row['max_id'] + 1;
+						}
+						else 
+							$id_typad = $row['max_id_typad'];
+					}
+							
+					$sql = 'INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,
+							telephone_fixe,ref_type_adresse) VALUES(
 ' . $pdo->quote($ref_id) . ',' . $pdo->quote($pays) . ',' . $pdo->quote($ville) . ',' . $pdo->quote($voie) . ',' . $pdo->quote($num_voie) . ',
-' . $pdo->quote($code_postal) . ',' . $pdo->quote($num_appartement) . ',' . $pdo->quote($telephone_fixe) . ')';
+' . $pdo->quote($code_postal) . ',' . $pdo->quote($num_appartement) . ',' . $pdo->quote($telephone_fixe) . ',
+		'.$pdo->quote($id_typad).')';
+				}
+				else{
+					$sql_typad = 'SELECT MAX(id) as "max_id_typad",(SELECT MAX(id) FROM type_adresse)
+							 as "max_id" FROM type_adresse WHERE nom = \'Autre\'';
+					$result_typad = $pdo->query($sql_typad);
+						
+					foreach($result_typad as $row){
+						if(empty($row['max_id_typad'])){
+							//on insert le type adresse
+							$sql='INSERT INTO type_adresse(nom) VALUES(\'Autre\');';
+							$pdo->query($sql);
+							//on save la ref
+							$id_typad = $row['max_id'] + 1;
+						}
+						else
+							$id_typad = $row['max_id_typad'];
+					}
+					
+					$sql = 'INSERT INTO adresse(ref_contact,pays,ville,voie,num_voie,code_postal,num_appartement,
+							telephone_fixe, ref_type_adresse) VALUES(
+' . $pdo->quote($ref_id) . ',' . $pdo->quote($pays) . ',' . $pdo->quote($ville) . ',' . $pdo->quote($voie) . ',' . $pdo->quote($num_voie) . ',
+' . $pdo->quote($code_postal) . ',' . $pdo->quote($num_appartement) . ',' . $pdo->quote($telephone_fixe) . ',
+		'.$pdo->quote($id_typad).')';
 				}
 				$pdo->query($sql);
 
 				//return new \SoapFault('Server','[AA00011] '.$sql.'.');
+				
+				//TODO
+				//rajouter le fait de pouvoir inserer un type adresse
+				//dans modif penser a mettre a jour l'ancienne adresse ayant facturation en autre pour avoir qu'une
 
 
 			} else {
@@ -2470,9 +2555,11 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 	 * @Soap\Param("code_postal",phpType="string")
 	 * @Soap\Param("num_appartement",phpType="string")
 	 * @Soap\Param("telephone_fixe",phpType="string")
+	 * @Soap\Param("type_adresse",phpType="string")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function modifAdresseAction($est_visible, $id_ad, $pays, $ville, $voie, $num_voie, $code_postal, $num_appartement, $telephone_fixe)
+	public function modifAdresseAction($est_visible, $id_ad, $pays, $ville, $voie, $num_voie,
+			 $code_postal, $num_appartement, $telephone_fixe,$type_adresse)
 	{
 
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
@@ -2480,7 +2567,7 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 
 
 		if (!is_string($est_visible) || !is_string($pays) || !is_string($ville) || !is_string($voie) || !is_string($num_voie) || !is_string($code_postal)
-			|| !is_string($num_appartement) || !is_string($telephone_fixe) || !is_string($id_ad)
+			|| !is_string($num_appartement) || !is_string($telephone_fixe) || !is_string($id_ad) || !is_string($type_adresse)
 		) // Vérif des arguments
 			return new \SoapFault('Server', '[MA002] Paramètres invalides.');
 
@@ -2497,6 +2584,7 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 		$tab_code_postal = json_decode($code_postal);
 		$tab_num_appartement = json_decode($num_appartement);
 		$tab_telephone_fixe = json_decode($telephone_fixe);
+		$tab_type_adresse = json_decode($type_adresse);
 
 		$i = 0;
 		foreach ($tab_id as $id_ad) {
@@ -2508,11 +2596,54 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 			$code_postal = $tab_code_postal[$i];
 			$num_appartement = $tab_num_appartement[$i];
 			$telephone_fixe = $tab_telephone_fixe[$i];
+			$type_adresse = $tab_type_adresse[$i];
+			
+			$sql_test = 'SELECT MAX(id) as "max_id_ad",
+					(SELECT MAX(id) FROM type_adresse WHERE nom=\'Autre\') as "max_id_autre",
+					(SELECT MAX(id) FROM type_adresse) as "max_id"
+							 FROM type_adresse WHERE nom=\'Facturation\';';
+			
+			$result_test = $pdo->query($sql_test);
+			
+			
+			
+			foreach($result_test as $row){
+				$id_typad= $row['max_id_ad'];
+				$id_autre= $row['max_id_autre'];
 
-			$sql = 'UPDATE adresse SET est_visible=' . $pdo->quote($est_visible) . ',pays=' . $pdo->quote($pays) . ', ville=' . $pdo->quote($ville) . ', voie=' . $pdo->quote($voie) . ',
+			}
+			if($type_adresse=='Facturation'){
+				
+				
+				$sql_u = 'select MAX(contact.id) as "max_id_contact" from contact join adresse on adresse.ref_contact = contact.id 
+						where adresse.id = '.$pdo->quote($id_ad).';';
+				foreach($pdo->query($sql_u) as $ligne){
+					$id_contact = $ligne['max_id_contact'];
+				}
+				
+				if(!empty($id_contact)){
+					
+					$sql_u ='UPDATE adresse SET ref_type_adresse='.$pdo->quote($id_autre).'
+						WHERE ref_type_adresse='.$pdo->quote($id_typad).' AND ref_contact='.$pdo->quote($id_contact).'';
+					$pdo->query($sql_u);
+					
+					
+					$sql = 'UPDATE adresse SET est_visible=' . $pdo->quote($est_visible) . ',pays=' . $pdo->quote($pays) . ', ville=' . $pdo->quote($ville) . ', voie=' . $pdo->quote($voie) . ',
 		num_voie=' . $pdo->quote($num_voie) . ',code_postal=' . $pdo->quote($code_postal) . ',num_appartement=' . $pdo->quote($num_appartement) . ',
-		telephone_fixe=' . $pdo->quote($telephone_fixe) . ' WHERE id=' . $pdo->quote($id_ad) . '';
-
+		telephone_fixe=' . $pdo->quote($telephone_fixe) . ', ref_type_adresse='.$pdo->quote($id_typad).'
+				WHERE id=' . $pdo->quote($id_ad) . '';
+					
+					
+				}
+				
+				
+			}
+			else{
+				$sql = 'UPDATE adresse SET est_visible=' . $pdo->quote($est_visible) . ',pays=' . $pdo->quote($pays) . ', ville=' . $pdo->quote($ville) . ', voie=' . $pdo->quote($voie) . ',
+		num_voie=' . $pdo->quote($num_voie) . ',code_postal=' . $pdo->quote($code_postal) . ',num_appartement=' . $pdo->quote($num_appartement) . ',
+		telephone_fixe=' . $pdo->quote($telephone_fixe) . ', ref_type_adresse='.$pdo->quote($id_autre).' WHERE id=' . $pdo->quote($id_ad) . '';
+			}
+			
 			//return new \SoapFault('Server', $sql);
 			$pdo->query($sql);
 
@@ -2598,7 +2729,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			//return new \SoapFault('Server',$sql);
 		}
 
-		return new \SoapFault('Server', $sql);
+		return new \SoapFault('Server', '[AC003] Ce contact existe déjà');
 
 	}
 
@@ -2636,7 +2767,8 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 
 
 		// Formation de la requete SQL
-		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail, notes FROM contact ';
+		$sql = 'SELECT id, nom, prenom, DATE_FORMAT(date_naissance, "%d/%m/%Y") AS date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail, notes 
+				FROM contact ';
 
 		$arguments = array();
 		if (!empty($nom) || !empty($prenom) || !empty($date_naissance) || !empty($civilite) || !empty($email) || !empty($telephone_portable) ||
@@ -2697,12 +2829,18 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			$taille_avant_fin = count($arguments) - 1;
 			while ($i < $taille_avant_fin) {
 
-				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+				if(key($arguments[$i])=='civilite')
+					$val = $arguments[$i][key($arguments[$i])];
+				else
+					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
 				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 				$i++;
 			}
-			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
+			if(key($arguments[$i])=='civilite')
+					$val = $arguments[$i][key($arguments[$i])];
+				else
+					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
 			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
 
 
@@ -2883,9 +3021,9 @@ where year(date_naissance)<>0 and (year(now())-year(date_naissance))>=60) as "pl
 
 		$pdo = $this->container->get('bdd_service')->getPdo();
 		//definition de la requête sql
-		$sql='select ville, count(contact.id) as "nb_personne" from contact
+		$sql='select * from(select ville, count(contact.id) as "nb_personne" from contact
 join adresse on adresse.ref_contact=contact.id where ville<>\'\'
-group by ville;';
+group by ville)t order by nb_personne DESC LIMIT 7;';
 
 		$result = array();
 		try{
@@ -3033,7 +3171,7 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 
 		// Formation de la requete SQL
 		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
-commande_fournisseur.id as "commande_id", date_commande, code_barre,
+commande_fournisseur.id as "commande_id", DATE_FORMAT(date_commande, "%d/%m/%Y") AS date_commande, code_barre,
 quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
@@ -3308,7 +3446,7 @@ SUM(quantite_mouvement) AS "quantite_recu"
 
 		// Formation de la requete SQL
 		$sql = 'select fournisseur.id as "fournisseur_id", fournisseur.nom as "fournisseur_nom",
-commande_fournisseur.id as "commande_id", date_commande, code_barre,
+commande_fournisseur.id as "commande_id",  DATE_FORMAT(date_commande, "%d/%m/%Y") AS date_commande, code_barre,
 quantite_souhaite as "quantite_souhaite",
 SUM(quantite_mouvement) AS "quantite_recu" from commande_fournisseur
 JOIN ligne_commande_fournisseur ON ligne_commande_fournisseur.ref_commande_fournisseur = commande_fournisseur.id
