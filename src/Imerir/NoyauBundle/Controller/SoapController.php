@@ -2297,12 +2297,16 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
-		$sql = 'SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article,montant_client, montant_fournisseur, montant_client - montant_fournisseur as "marge",reduction_article,
+		$sql = 'SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article,montant_client, montant_fournisseur, reduction_article,
 						SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
 							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
 							ELSE montant_client*(-1*nb_article)
-						END) AS montant
+						END) AS montant,(SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) + (montant_fournisseur * nb_article)) as "marge"
 				        FROM(
 				        SELECT 
 							   lf.id as "ligne_facture_id",
