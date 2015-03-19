@@ -230,6 +230,31 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * @Soap\Method("supprimerArticle")
+	 * @Soap\Param("codeBarre",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprimerArticleAction($codeBarre) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SUA001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_string($codeBarre)) // Vérif des arguments
+			return new \SoapFault('Server', '[SUA002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		
+		if ($codeBarre !== '') {
+			$sql = 'UPDATE article SET est_visible=false WHERE code_barre='.$pdo->quote($codeBarre);
+			$resultat = $pdo->query($sql);
+		}
+		else {
+			return new \SoapFault('Server', '[SUA003] Paramètres invalides.');
+		}
+		
+		return '';
+	}
+	
+	/**
 	 * @Soap\Method("modifArticle")
 	 * @Soap\Param("article",phpType="string")
 	 * @Soap\Result(phpType = "string")
@@ -721,6 +746,34 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		return json_encode($result);
 	}
 
+
+	/**
+	 * @Soap\Method("supprimerAttribut")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprimerAttributAction($id) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SUATTR001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SUATTR002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if ($id !== 0) {
+			$sql = 'UPDATE attribut SET est_visible=false WHERE id='.$pdo->quote($id);
+			$resultat = $pdo->query($sql);
+			$sql = 'UPDATE valeur_attribut SET est_visible=false WHERE ref_attribut='.$pdo->quote($id);
+			$resultat = $pdo->query($sql);
+		}
+		else {
+			return new \SoapFault('Server', '[SUATTR003] Paramètres invalides.');
+		}
+	
+		return '';
+	}
+	
 	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
 	 * @param $nom Le nom de l'attribut
@@ -2228,18 +2281,18 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 	/**
 	 * Permet d'avoir les statistiques des ventes par mois.
 	 *
-	 * @Soap\Method("statsVenteMoyenneParMoisParDefaut")
+	 * @Soap\Method("statsVenteMoyenneParMois")
 	 * @Soap\Param("mois",phpType="string")
 	 * @Soap\Param("annee",phpType="int")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function statsVenteMoyenneParMoisParDefautAction($mois,$annee)
+	public function statsVenteMoyenneParMoisAction($mois,$annee)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
-			return new \SoapFault('Server', '[SVMVPMPD001] Vous n\'avez pas les droits nécessaires.');
+			return new \SoapFault('Server', '[SVMVPM001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($mois) || !is_int($annee)) // Vérif des arguments
-			return new \SoapFault('Server', '[SVMVPMPD002] Paramètres invalides.');
+			return new \SoapFault('Server', '[SVMVPM002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result_n = array();
@@ -2269,23 +2322,32 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 				        JOIN prix px ON px.ref_article = a.id AND px.id =
                         (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
 				        JOIN produit pt ON a.ref_produit = pt.id
-				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id 
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id ';
 						
-						WHERE month(f.date_facture) = month(curdate())
+		if($mois != '' && $annee != ''){
+			$sql_default = $sql_default . 'WHERE month(f.date_facture) = '.$pdo->quote($mois).'
+						AND year(f.date_facture) = '.$pdo->quote($annee).'
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY DAY(date_du_jour)';
+		}
+		else{
+			$sql_default = $sql_default . 'WHERE month(f.date_facture) = month(curdate())
 						AND year(f.date_facture) = year(curdate())
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
 				)f GROUP BY DAY(date_du_jour)';
+		}
 		
 		$resultat_par_defaut_n = $pdo->query($sql_default);
 		
+		//On complete les jours manquant entre les dates de factures.
 		$jour_precedent = 1;
 		foreach ($resultat_par_defaut_n as $row) {
 			$jour_courant = date('d', strtotime($row['date_bon_format']));
 			if(($jour_courant - $jour_precedent) > 1){
 				$i = $jour_precedent;
 				if($i == 1){
-					$mois_n = array('montant_n' => 0, 'jour_n' => $i);
-					array_push($result_n, $mois_n);
+						$mois_n = array('montant_n' => 0, 'jour_n' => $i);
+						array_push($result_n, $mois_n);
 				}
 		
 				while ($i < $jour_courant-1){
@@ -2299,6 +2361,7 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 			$jour_precedent = $jour_courant;
 		}
 		
+		//requete pour le mois demander ou courant mais de l'ann�e n-1
 		$sql_default_n_moins_un = 'SELECT SUM(montant) as "montant_du_jour",date_du_jour as "date_bon_format" FROM (
 					SELECT date_de_facture,SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
@@ -2322,42 +2385,218 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 				        JOIN prix px ON px.ref_article = a.id AND px.id =
                         (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
 				        JOIN produit pt ON a.ref_produit = pt.id
-				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
-			
-						WHERE month(f.date_facture) = month(curdate())
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id';
+		
+		if($mois != '' && $annee != ''){
+			$sql_default_n_moins_un = $sql_default_n_moins_un.' WHERE month(f.date_facture) = '.$pdo->quote($mois).'
+						AND year(f.date_facture) = '.$pdo->quote($annee-1).'
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY DAY(date_du_jour)';
+		}
+		else{
+			$sql_default_n_moins_un = $sql_default_n_moins_un . ' WHERE month(f.date_facture) = month(curdate())
 						AND year(f.date_facture) = year(curdate() - INTERVAL 1 YEAR)
 						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
 				)f GROUP BY DAY(date_du_jour)';
+		}
 				
 		$resultat_n_moins_un = $pdo->query($sql_default_n_moins_un);
 		
-		$jour_precedent = 1;
+		//On complete les jours manquant entre les dates de factures.
+		$jour_precedent = 0;
 		$i = $jour_precedent;
 		foreach ($resultat_n_moins_un as $row) {
 			$jour_courant = date('d', strtotime($row['date_bon_format']));
-			if(($jour_courant - $jour_precedent) > 1){
-				$i = $jour_precedent;
-				if($i == 1){
-					$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i);
-					array_push($result_n_moins_un, $mois_n);
+				if(($jour_courant - $jour_precedent) > 1){
+					$i = $jour_precedent;
+					if($i == 1){
+						$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i);
+						array_push($result_n_moins_un, $mois_n);
+					}
+					
+					while ($i < $jour_courant-1){
+						$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i+1);
+						array_push($result_n_moins_un, $mois_n);
+						$i++;
+					}
 				}
-				
-				while ($i < $jour_courant-1){
-					$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i+1);
-					array_push($result_n_moins_un, $mois_n);
-					$i++;
-				}
-			}
 			$mois_n = array('montant_n_moins_un' => $row['montant_du_jour'], 'jour_n_moins_un' => $jour_courant);
 			array_push($result_n_moins_un, $mois_n);
 			$jour_precedent = $jour_courant;
 		}
+		
+		//On rajoute les jours manquant du mois apres la date de facture pour avoir le mois complet.
+		// Ce mois qui sert de reference pour la courbe des stats donc mois en entier obligatoire.
+		$nombre_de_jour_du_mois = date('t',time(0, 0, 0, $mois, 1, $annee-1));
+		$jour_c = $jour_precedent;
+		while ($jour_c < $nombre_de_jour_du_mois){
+			$jour_c++;
+			$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $jour_c);
+			array_push($result_n_moins_un, $mois_n);
+		}
+		
 		
 		array_push($result, $result_n);
 		array_push($result, $result_n_moins_un);
 		return json_encode($result);
 	}
 
+	/**
+	 * @Soap\Method("statsVenteMoyenneParAnnee")
+	 * @Soap\Param("annee",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function statsVenteMoyenneParAnneeAction($annee)
+	{
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SVMVPA001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($annee)) // Vérif des arguments
+			return new \SoapFault('Server', '[SVMVPA002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		$result_n = array();
+		$result_n_moins_un = array();
+		$result = array();
+	
+		$sql_default = 'SELECT SUM(montant) as "montant_du_mois",date_du_jour as "date_bon_format" FROM (
+					SELECT date_de_facture,SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS "montant",date_de_facture as "date_du_jour"
+                        FROM(
+				        SELECT
+							   lf.id as "ligne_facture_id",
+							   f.id as "id_facture",
+				               f.date_facture as "date_de_facture",
+				               r.reduction as "reduction_article",
+				               m.quantite_mouvement as "nb_article",
+				               r.type_reduction as "type_reduction",
+				               px.montant_client as "montant_client"
+	
+				        FROM facture f
+						JOIN ligne_facture lf ON lf.ref_facture = f.id
+						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
+						JOIN article a ON m.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id AND px.id =
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
+				        JOIN produit pt ON a.ref_produit = pt.id
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id ';
+	
+		if($annee != ''){
+			$sql_default = $sql_default . 'WHERE year(f.date_facture) = '.$pdo->quote($annee).'
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY MONTH(date_du_jour)';
+		}
+		else{
+			$sql_default = $sql_default . 'WHERE year(f.date_facture) = year(curdate())
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY MONTH(date_du_jour)';
+		}
+	
+		$resultat_par_defaut_n = $pdo->query($sql_default);
+	
+		//On complete les jours manquant entre les dates de factures.
+		$mois_precedent = 1;
+		foreach ($resultat_par_defaut_n as $row) {
+			$mois_courant = date('m', strtotime($row['date_bon_format']));
+			if(($mois_courant - $mois_precedent) > 1){
+				$i = $mois_precedent;
+				if($i == 1){
+					$mois_n = array('montant_n' => 0, 'jour_n' => $i);
+					array_push($result_n, $mois_n);
+				}
+	
+				while ($i < $mois_courant-1){
+					$mois_n = array('montant_n' => 0, 'jour_n' => $i+1);
+					array_push($result_n, $mois_n);
+					$i++;
+				}
+			}
+			$mois_n = array('montant_n' => $row['montant_du_mois'], 'jour_n' => $mois_courant);
+			array_push($result_n, $mois_n);
+			$mois_precedent = $mois_courant;
+		}
+	
+		//requete pour le mois demander ou courant mais de l'ann�e n-1
+		$sql_default_n_moins_un = 'SELECT SUM(montant) as "montant_du_jour",date_du_jour as "date_bon_format" FROM (
+					SELECT date_de_facture,SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS "montant",date_de_facture as "date_du_jour"
+                        FROM(
+				        SELECT
+							   lf.id as "ligne_facture_id",
+							   f.id as "id_facture",
+				               f.date_facture as "date_de_facture",
+				               r.reduction as "reduction_article",
+				               m.quantite_mouvement as "nb_article",
+				               r.type_reduction as "type_reduction",
+				               px.montant_client as "montant_client"
+	
+				        FROM facture f
+						JOIN ligne_facture lf ON lf.ref_facture = f.id
+						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
+						JOIN article a ON m.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id AND px.id =
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
+				        JOIN produit pt ON a.ref_produit = pt.id
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id';
+	
+		if($annee != ''){
+			$annee = $annee - 1;
+			$sql_default_n_moins_un = $sql_default_n_moins_un.' WHERE year(f.date_facture) = '.$pdo->quote($annee).'
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY MONTH(date_du_jour)';
+		}
+		else{
+			$sql_default_n_moins_un = $sql_default_n_moins_un . ' WHERE year(f.date_facture) = year(curdate() - INTERVAL 1 YEAR)
+						 ) t GROUP BY ligne_facture_id ORDER BY id_facture ASC
+				)f GROUP BY MONTH(date_du_jour)';
+		}
+	
+		$resultat_n_moins_un = $pdo->query($sql_default_n_moins_un);
+	
+		//On complete les mois manquant entre les dates de factures.
+		$mois_precedent = 1;
+		$dernier_mois = 0;
+		foreach ($resultat_n_moins_un as $row) {
+			$dernier_mois = date('m', strtotime($row['date_bon_format']));
+			if(($dernier_mois - $mois_precedent) > 1){
+				$i = $mois_precedent;
+				if($i == 1){
+					$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i);
+					array_push($result_n_moins_un, $mois_n);
+				}
+	
+				while ($i < $dernier_mois-1){
+					$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $i+1);
+					array_push($result_n_moins_un, $mois_n);
+					$i++;
+				}
+			}
+			$mois_n = array('montant_n_moins_un' => $row['montant_du_jour'], 'jour_n_moins_un' => $dernier_mois);
+			array_push($result_n_moins_un, $mois_n);
+			$mois_precedent = $dernier_mois;
+		}
+	
+		//On rajoute les jours manquant du mois apres la date de facture pour avoir le mois complet.
+		// Ce mois qui sert de reference pour la courbe des stats donc mois en entier obligatoire.
+		$nombre_de_mois_dans_annee = 12;
+		$mois_c = $dernier_mois;
+		while ($mois_c < $nombre_de_mois_dans_annee){
+			$mois_c++;
+			$mois_n = array('montant_n_moins_un' => 0, 'jour_n_moins_un' => $mois_c);
+			array_push($result_n_moins_un, $mois_n);
+		}
+	
+		array_push($result, $result_n);
+		array_push($result, $result_n_moins_un);
+		return json_encode($result);
+	}
+	
 	/**
 	 * @Soap\Method("modifAdresse")
 	 * @Soap\Param("est_visible",phpType="string")
