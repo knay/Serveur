@@ -2322,38 +2322,57 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
-		$sql = 'SELECT nom, SUM(
-					CASE 
-				        WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction/100)*(-1*quantite_mouvement)
-				        WHEN type_reduction = \'remise\' THEN (montant_client-reduction)*(-1*quantite_mouvement)
-				        ELSE montant_client*(-1*quantite_mouvement)
-				    END) AS montant
-				FROM (
-				SELECT ligne_facture_id,article_id, MAX(prix_id), nom, montant_client, type_reduction, reduction, quantite_mouvement
+		$sql = 'SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article,montant_client, montant_fournisseur, reduction_article,
+						SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) AS montant,(SUM(CASE
+							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
+							WHEN type_reduction = \'remise\' THEN (montant_client-reduction_article)*(-1*nb_article)
+							ELSE montant_client*(-1*nb_article)
+						END) + (montant_fournisseur * nb_article)) as "marge"
 				        FROM(
-				        SELECT facture.date_facture,ligne_facture.id as "ligne_facture_id", 
-				               article.id as "article_id", 
-				               prix.id as "prix_id", 
-				               prix.montant_client,
-				               produit.nom, 
-				               reduction, 
-							   type_reduction,
-				               quantite_mouvement
-				        FROM facture  
-						JOIN ligne_facture ON facture.id = ligne_facture.ref_facture
-						JOIN mouvement_stock ON ligne_facture.ref_mvt_stock=mouvement_stock.id
-						JOIN article ON mouvement_stock.ref_article=article.id
-				        JOIN prix ON prix.ref_article=article.id
-				        JOIN produit ON article.ref_produit=produit.id
-				        LEFT OUTER JOIN remise ON ligne_facture.ref_remise=remise.id
-				        WHERE MONTH(facture.date_facture) = MONTH(NOW()))t
-				        GROUP BY article_id,ligne_facture_id) t 
-					GROUP BY nom
-				    LIMIT ' . (int)$nbTop;
+				        SELECT 
+							   lf.id as "ligne_facture_id",
+				               a.id as "article_id",
+							   a.code_barre as "nom_article",
+				               px.montant_client as "prix_id",
+				               f.id as "id_facture" ,
+				               f.date_facture as "date_de_facture",
+				               c.nom as "nom_contact",
+							   c.prenom as "prenom_contact",
+							   c.id as "id_contact",
+							   ad.num_voie as "adresse_numero",
+							   ad.voie as "adresse_rue",
+							   ad.code_postal as "adresse_code_postal",
+							   ad.ville as "adresse_ville",
+							   ad.pays as "adresse_pays",
+				               r.reduction as "reduction_article",
+				               m.quantite_mouvement as "nb_article",
+				               r.type_reduction as "type_reduction",
+				               px.montant_client as "montant_client",
+                               px.montant_fournisseur as "montant_fournisseur",
+							   pt.nom as "nom_produit",
+							   mp.nom as "nom_moyen_paiement"
+				      
+				        FROM facture f
+						JOIN ligne_facture lf ON lf.ref_facture = f.id 
+						JOIN mouvement_stock m ON lf.ref_mvt_stock = m.id
+						JOIN article a ON m.ref_article = a.id
+				        JOIN prix px ON px.ref_article = a.id AND px.id = 
+                        (SELECT MAX(prix.id) FROM prix WHERE prix.date_modif<f.date_facture AND prix.ref_article=a.id)
+				        JOIN produit pt ON a.ref_produit = pt.id
+				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
+				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
+						LEFT OUTER JOIN adresse ad ON c.id = ad.ref_contact AND ad.ref_type_adresse = 1
+                        LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
+						GROUP BY a.id
+						 ) t GROUP BY ligne_facture_id ORDER BY marge DESC LIMIT 3';
 
 		$resultat = $pdo->query($sql);
 		foreach ($resultat as $row) {
-			$jour = array('produit' => $row['nom'], 'montant' => $row['montant']);
+			$jour = array('produit' => $row['nom_produit'], 'montant' => $row['marge']);
 			array_push($result, $jour);
 		}
 
