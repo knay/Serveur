@@ -230,6 +230,31 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * @Soap\Method("supprimerArticle")
+	 * @Soap\Param("codeBarre",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprimerArticleAction($codeBarre) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SUA001] Vous n\'avez pas les droits nécessaires.');
+		
+		if (!is_string($codeBarre)) // Vérif des arguments
+			return new \SoapFault('Server', '[SUA002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		
+		if ($codeBarre !== '') {
+			$sql = 'UPDATE article SET est_visible=false WHERE code_barre='.$pdo->quote($codeBarre);
+			$resultat = $pdo->query($sql);
+		}
+		else {
+			return new \SoapFault('Server', '[SUA003] Paramètres invalides.');
+		}
+		
+		return '';
+	}
+	
+	/**
 	 * @Soap\Method("modifArticle")
 	 * @Soap\Param("article",phpType="string")
 	 * @Soap\Result(phpType = "string")
@@ -721,6 +746,34 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		return json_encode($result);
 	}
 
+
+	/**
+	 * @Soap\Method("supprimerAttribut")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprimerAttributAction($id) {
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SUATTR001] Vous n\'avez pas les droits nécessaires.');
+	
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SUATTR002] Paramètres invalides.');
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if ($id !== 0) {
+			$sql = 'UPDATE attribut SET est_visible=false WHERE id='.$pdo->quote($id);
+			$resultat = $pdo->query($sql);
+			$sql = 'UPDATE valeur_attribut SET est_visible=false WHERE ref_attribut='.$pdo->quote($id);
+			$resultat = $pdo->query($sql);
+		}
+		else {
+			return new \SoapFault('Server', '[SUATTR003] Paramètres invalides.');
+		}
+	
+		return '';
+	}
+	
 	/**
 	 * Permet d'enregistrer un nouveau attribut, ou de modifier un attribut ainsi que ces valeurs d'attributs.
 	 * @param $nom Le nom de l'attribut
@@ -2308,7 +2361,7 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 			$jour_precedent = $jour_courant;
 		}
 		
-		//requete pour le mois demander ou courant mais de l'ann�e n-1
+		//requete pour le mois demander ou courant mais de l'ann�e n-1
 		$sql_default_n_moins_un = 'SELECT SUM(montant) as "montant_du_jour",date_du_jour as "date_bon_format" FROM (
 					SELECT date_de_facture,SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
@@ -2466,7 +2519,7 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 			$mois_precedent = $mois_courant;
 		}
 	
-		//requete pour le mois demander ou courant mais de l'ann�e n-1
+		//requete pour le mois demander ou courant mais de l'ann�e n-1
 		$sql_default_n_moins_un = 'SELECT SUM(montant) as "montant_du_jour",date_du_jour as "date_bon_format" FROM (
 					SELECT date_de_facture,SUM(CASE
 							WHEN type_reduction = \'taux\' THEN (montant_client-montant_client*reduction_article/100)*(-1*nb_article)
