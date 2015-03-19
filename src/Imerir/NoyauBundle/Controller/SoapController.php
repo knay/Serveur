@@ -447,6 +447,28 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * @Soap\Method("supprLigneProduit")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprLigneProduit($id){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SLP001] Vous n\'avez pas les droits nécessaires.');
+
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SP002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service 
+		
+		$sql = 'UPDATE ligne_produit SET est_visible=0 WHERE id='.$pdo->quote($id).'';
+		
+		$pdo->query($sql);
+		
+		return "OK";
+		
+	}
+	
+	/**
 	 * Permet de récupérer une ligne de produit.
 	 * @param $count Le nombre d'enregistrement voulu, 0 pour tout avoir
 	 * @param $offset Le décalage par rapport au début des enregistrements
@@ -482,17 +504,21 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		if (!empty($nom) && !empty($attribut_nom)){
 			$attribut_nom = '%'.$attribut_nom.'%';
 			$nom = '%'.$nom.'%';
-			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND attribut.nom LIKE '.$pdo->quote($attribut_nom).'';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND attribut.nom LIKE '.$pdo->quote($attribut_nom).'
+					 AND ligne_produit.est_visible=\'1\'';
 		}
 
 		if (!empty($nom) && empty($attribut_nom)){
 			$nom = '%'.$nom.'%';
-			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' ';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.est_visible=\'1\'';
 		}
 
 		if (empty($nom) && !empty($attribut_nom)){
 			$attribut_nom = '%'.$attribut_nom.'%';
-			$sql .= 'WHERE attribut.nom LIKE ' . $pdo->quote($attribut_nom) . ' ';
+			$sql .= 'WHERE attribut.nom LIKE ' . $pdo->quote($attribut_nom) . ' AND ligne_produit.est_visible=\'1\'';
+		}
+		else{
+			$sql .= 'WHERE ligne_produit.est_visible=\'1\'';
 		}
 		$sql.= 'group by ligne_produit.id,ligne_produit.nom';
 		if ($offset != 0) {
@@ -1797,6 +1823,35 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		}
 	}
 	
+	/**
+	 * @Soap\Method("supprFournisseur")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprFournisseurAction($id){
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SF001] Vous n\'avez pas les droits nécessaires.');
+	
+	
+	
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SFC002] Paramètres invalides.');
+	
+	
+	
+		$sql = 'UPDATE fournisseur SET est_visible=0 WHERE id='.$pdo->quote($id).';';
+	
+		//return new \SoapFault('Server', 'coucou');
+	
+		$result = $pdo->query($sql);
+	
+		//return new \SoapFault('Server', $sql);
+		return "OK";
+	}
+	
 	/** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
@@ -1825,7 +1880,8 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, email, telephone_portable, reference_client, notes FROM fournisseur ';
-
+		
+		$sql .= 'WHERE ';
 		$arguments = array();
 		if (!empty($nom) || !empty($email) || !empty($telephone_portable) || !empty($reference_client) || !empty($notes)) {
 
@@ -1840,7 +1896,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			if (!empty($notes))
 				array_push($arguments, array('notes' => $notes));
 
-			$sql .= 'WHERE ';
+			//$sql .= 'WHERE ';
 
 			$i = 0;
 			$taille_avant_fin = count($arguments) - 1;
@@ -1852,12 +1908,13 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 				$i++;
 			}
 			$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
-			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 
 
 		}
 
+		$sql .= ' est_visible=\'1\'';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -2839,6 +2896,9 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				FROM contact ';
 
 		$arguments = array();
+		
+		$sql .= 'WHERE ';
+		
 		if (!empty($nom) || !empty($prenom) || !empty($date_naissance) || !empty($civilite) || !empty($email) || !empty($telephone_portable) ||
 			!empty($ok_sms)
 			|| !empty($ok_mail) || !empty($notes)
@@ -2891,7 +2951,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 			if (!empty($notes))
 				array_push($arguments, array('notes' => $notes));
 
-			$sql .= 'WHERE ';
+			//$sql .= 'WHERE ';
 
 			$i = 0;
 			$taille_avant_fin = count($arguments) - 1;
@@ -2909,12 +2969,15 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 					$val = $arguments[$i][key($arguments[$i])];
 				else
 					$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
-			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+			//$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND est_visible=\'1\'';
+				$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 
 
 		}
 
+		//new
+		$sql .= ' est_visible=\'1\'';
 		if ($offset != 0) {
 			$sql .= ' ORDER BY nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
@@ -2941,18 +3004,27 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 	 * @Soap\Result(phpType = "string")
 	 */
 	public function supprContactAction($id){
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[SC001] Vous n\'avez pas les droits nécessaires.');
+		
+		
 		
 		if (!is_int($id)) // Vérif des arguments
 			return new \SoapFault('Server', '[SCC002] Paramètres invalides.');
 		
+		
+		
 		$sql = 'UPDATE contact SET est_visible=0 WHERE id='.$pdo->quote($id).';';
+		
+		//return new \SoapFault('Server', 'coucou');
 		
 		$result = $pdo->query($sql);
 		
-		return new \SoapFault('Server', $sql);
-		//return "OK";
+		//return new \SoapFault('Server', $sql);
+		return "OK";
 	}
 	
 	/**
@@ -3231,7 +3303,35 @@ VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote(
 		return "OK";
 	}
 
-
+	/**
+	 * @Soap\Method("supprCommandeFournisseur")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprCommandeFournisseurAction($id){
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SCF001] Vous n\'avez pas les droits nécessaires.');
+	
+	
+	
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SCFC002] Paramètres invalides.');
+	
+	
+	
+		$sql = 'UPDATE commande_fournisseur SET est_visible=0 WHERE id='.$pdo->quote($id).';';
+	
+		//return new \SoapFault('Server', 'coucou');
+	
+		$result = $pdo->query($sql);
+	
+		//return new \SoapFault('Server', $sql);
+		return "OK";
+	}
+	
 	/** @Soap\Method("getCommandesFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
@@ -3272,6 +3372,7 @@ AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
 		$arguments = array();
+		$sql .= 'WHERE ';
 		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)) {
 
 			if (!empty($fournisseur_id))
@@ -3283,7 +3384,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			if (!empty($fournisseur_nom))
 				array_push($arguments, array('fournisseur.nom' => $fournisseur_nom));
 
-			$sql .= 'WHERE ';
+			//$sql .= 'WHERE ';
 
 			$i = 0;
 			$taille_avant_fin = count($arguments) - 1;
@@ -3302,12 +3403,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			else
 				$val = '%' . $arguments[$i][key($arguments[$i])] . '%';
 
-			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND commande_fournisseur.est_visible=\'1\'';
+			$sql .= ' ' . key($arguments[$i]) . ' LIKE ' . $pdo->quote($val) . ' AND';
 
 
 
 		}
-
+		$sql.= ' commande_fournisseur.est_visible=\'1\' ';
 		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
