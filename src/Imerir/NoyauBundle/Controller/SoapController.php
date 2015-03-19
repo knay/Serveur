@@ -447,6 +447,28 @@ class SoapController extends ContainerAware
 	}
 	
 	/**
+	 * @Soap\Method("supprLigneProduit")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprLigneProduit($id){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SLP001] Vous n\'avez pas les droits nécessaires.');
+
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SP002] Paramètres invalides.');
+
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service 
+		
+		$sql = 'UPDATE ligne_produit SET est_visible=0 WHERE id='.$pdo->quote($id).'';
+		
+		$pdo->query($sql);
+		
+		return "OK";
+		
+	}
+	
+	/**
 	 * Permet de récupérer une ligne de produit.
 	 * @param $count Le nombre d'enregistrement voulu, 0 pour tout avoir
 	 * @param $offset Le décalage par rapport au début des enregistrements
@@ -482,17 +504,21 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		if (!empty($nom) && !empty($attribut_nom)){
 			$attribut_nom = '%'.$attribut_nom.'%';
 			$nom = '%'.$nom.'%';
-			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND attribut.nom LIKE '.$pdo->quote($attribut_nom).'';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND attribut.nom LIKE '.$pdo->quote($attribut_nom).'
+					 AND ligne_produit.est_visible=\'1\'';
 		}
 
 		if (!empty($nom) && empty($attribut_nom)){
 			$nom = '%'.$nom.'%';
-			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' ';
+			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.est_visible=\'1\'';
 		}
 
 		if (empty($nom) && !empty($attribut_nom)){
 			$attribut_nom = '%'.$attribut_nom.'%';
-			$sql .= 'WHERE attribut.nom LIKE ' . $pdo->quote($attribut_nom) . ' ';
+			$sql .= 'WHERE attribut.nom LIKE ' . $pdo->quote($attribut_nom) . ' AND ligne_produit.est_visible=\'1\'';
+		}
+		else{
+			$sql .= 'WHERE ligne_produit.est_visible=\'1\'';
 		}
 		$sql.= 'group by ligne_produit.id,ligne_produit.nom';
 		if ($offset != 0) {
