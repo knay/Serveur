@@ -2372,7 +2372,7 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 						
 						 ) t GROUP BY ligne_facture_id ORDER BY marge DESC
 						 ) ta GROUP BY nom_produit, article_id
-						 ) tab GROUP BY nom_produit';
+						 ) tab GROUP BY nom_produit LIMIT 3' ;
 
 		$resultat = $pdo->query($sql);
 		foreach ($resultat as $row) {
