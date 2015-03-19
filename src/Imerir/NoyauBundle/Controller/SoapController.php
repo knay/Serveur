@@ -1797,6 +1797,35 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		}
 	}
 	
+	/**
+	 * @Soap\Method("supprFournisseur")
+	 * @Soap\Param("id",phpType="int")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function supprFournisseurAction($id){
+	
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+	
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[SF001] Vous n\'avez pas les droits nécessaires.');
+	
+	
+	
+		if (!is_int($id)) // Vérif des arguments
+			return new \SoapFault('Server', '[SFC002] Paramètres invalides.');
+	
+	
+	
+		$sql = 'UPDATE fournisseur SET est_visible=0 WHERE id='.$pdo->quote($id).';';
+	
+		//return new \SoapFault('Server', 'coucou');
+	
+		$result = $pdo->query($sql);
+	
+		//return new \SoapFault('Server', $sql);
+		return "OK";
+	}
+	
 	/** @Soap\Method("getFournisseurs")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
