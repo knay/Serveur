@@ -2308,15 +2308,15 @@ AND num_voie=' . $pdo->quote($num_voie) . ' ';
 	 * Permet d'avoir les statistiques des ventes par mois.
 	 *
 	 * @Soap\Method("statsVenteTopVente")
-	 * @Soap\Param("nbTop",phpType="int")
+	 * @Soap\Param("nbMois",phpType="int")
 	 * @Soap\Result(phpType = "string")
 	 */
-	public function statsVenteTopVenteAction($nbTop)
+	public function statsVenteTopVenteAction($nbMois)
 	{
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[SVTVM001] Vous n\'avez pas les droits nécessaires.');
 
-		if (!is_int($nbTop)) // Vérif des arguments
+		if (!is_int($nbMois)) // Vérif des arguments
 			return new \SoapFault('Server', '[SVTV002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -2368,9 +2368,19 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 				        LEFT OUTER JOIN remise r ON lf.ref_remise = r.id
 				        LEFT OUTER JOIN contact c ON f.ref_contact = c.id
 						LEFT OUTER JOIN adresse ad ON c.id = ad.ref_contact AND ad.ref_type_adresse = 1
-                        LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id 
-						
-						 ) t GROUP BY ligne_facture_id ORDER BY marge DESC
+                        LEFT OUTER JOIN moyen_paiement mp ON f.ref_moyen_paiement = mp.id';
+				
+	  	if($nbMois == 3){
+			$sql = $sql . ' WHERE f.date_facture BETWEEN (curdate() - INTERVAL 3 MONTH) AND curdate() ';
+	  	}
+	  	else if($nbMois == 6){
+	  		$sql = $sql . ' WHERE f.date_facture BETWEEN (curdate() - INTERVAL 6 MONTH) AND curdate() ';
+	  	}
+	  	else{
+	  		$sql = $sql . ' WHERE month(f.date_facture) = month(curdate())';
+	  	}
+				
+		$sql = $sql . ' ) t GROUP BY ligne_facture_id ORDER BY marge DESC
 						 ) ta GROUP BY nom_produit, article_id
 						 ) tab GROUP BY nom_produit LIMIT 3' ;
 
