@@ -350,7 +350,7 @@ class SoapController extends ContainerAware
 		//on teste si l'utilisateur a les droits pour accéder à cette fonction
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[ALP001] Vous n\'avez pas les droits nécessaires.');
-		if (!is_string($nom)) // Vérif des arguments
+		if (!is_string($nom) || $nom=='') // Vérif des arguments
 			return new \SoapFault('Server', '[ALP002] Paramètres invalides.');
 		try {
 			$pdo = $this->container->get('bdd_service')->getPdo();
@@ -1124,7 +1124,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		//on teste si l'utilisateur a les droits pour accéder à cette fonction
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[ALP001] Vous n\'avez pas les droits nécessaires.');
-		if (!is_string($nom) || !is_string($ligneProduit)) // Vérif des arguments
+		if (!is_string($nom) || !is_string($ligneProduit) || $nom=='') // Vérif des arguments
 			return new \SoapFault('Server', '[ALP002] Paramètres invalides.');
 
 		try {
@@ -3294,8 +3294,23 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 
 		// Formation de la requete SQL
 		$tab_fournisseur_id = json_decode($fournisseur_id);
+		foreach($tab_fournisseur_id as $fournisseur_id){
+			if($fournisseur_id == ''){
+				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
+			}
+		}
 		$tab_article_code = json_decode($article_code);
+		foreach($tab_article_code as $article_code){
+			if($article_code == ''){
+				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
+			}
+		}
 		$tab_quantite_souhaite = json_decode($quantite_souhaite);
+		foreach($tab_quantite_souhaite as $quantite_souhaite){
+			if($quantite_souhaite < 1){
+				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
+			}
+		}
 		$tab_date_commande = json_decode($date_commande);
 		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
 
@@ -3872,6 +3887,11 @@ SUM(quantite_mouvement) AS "quantite_recu"
 		$tab_ligne_commande_id = json_decode($ligne_commande_id);
 		$tab_article_code = json_decode($article_code);
 		$tab_quantite = json_decode($quantite);
+		foreach($tab_quantite as $quantite){
+			if($quantite < 1){
+				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
+			}
+		}
 		$tab_date_reception = json_decode($date_reception);
 		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
 
