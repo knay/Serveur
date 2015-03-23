@@ -1975,7 +1975,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AF001] Vous n\'avez pas les droits nécessaires.');
 
-		if (!is_string($nom)) // Vérif des arguments
+		if (!is_string($nom) || $nom == '') // Vérif des arguments
 			return new \SoapFault('Server', '[AF002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
@@ -2790,11 +2790,23 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 				}
 				
 				if(!empty($id_contact)){
+					//on receupere le nombre d'adresse de facturation de ce contact
+					//si ce contact a plusieurs adresses on
+					$sql_fact = 'select min(adresse.id) as "min_ad_fact" from adresse 
+join type_adresse on adresse.ref_type_adresse = type_adresse.id
+where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_contact).';';
 					
-					$sql_u ='UPDATE adresse SET ref_type_adresse='.$pdo->quote($id_autre).'
+					$ad_fact = 0;
+					foreach($pdo->query($sql_fact) as $row){
+						$ad_fact= $row['min_ad_fact'];
+					
+					}
+					
+					if($id_ad != $ad_fact){
+						$sql_u ='UPDATE adresse SET ref_type_adresse='.$pdo->quote($id_autre).'
 						WHERE ref_type_adresse='.$pdo->quote($id_typad).' AND ref_contact='.$pdo->quote($id_contact).'';
-					$pdo->query($sql_u);
-					
+						$pdo->query($sql_u);
+					}
 					
 					$sql = 'UPDATE adresse SET est_visible=' . $pdo->quote($est_visible) . ',pays=' . $pdo->quote($pays) . ', ville=' . $pdo->quote($ville) . ', voie=' . $pdo->quote($voie) . ',
 		num_voie=' . $pdo->quote($num_voie) . ',code_postal=' . $pdo->quote($code_postal) . ',num_appartement=' . $pdo->quote($num_appartement) . ',
@@ -2837,21 +2849,28 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 	 */
 	public function ajoutContactAction($nom, $prenom, $date_naissance, $civilite, $email, $telephone_portable, $ok_sms, $ok_mail, $notes)
 	{
+		
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AC001] Vous n\'avez pas les droits nécessaires.');
 
-		if (!is_string($nom)) // Vérif des arguments
+		if ((!is_string($nom) || !is_string($prenom) || !is_string($date_naissance) || !is_string($civilite)
+				 || !is_string($email) || !is_string($telephone_portable) || 
+				!is_string($ok_mail) || !is_string($ok_sms) || !is_string($notes)) || $nom == '') // Vérif des arguments
 			return new \SoapFault('Server', '[AC002] Paramètres invalides.');
+		
+		//return new \SoapFault('Server',$date_naissance);
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		//$result = array();
 
 		//test de la date de naissance
 		$split = array();
-		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_naissance, $split))
+		if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $date_naissance, $split))
 		{
-			if(checkdate($split[2],$split[3],$split[1]))
+			if(checkdate($split[2],$split[1],$split[3]))
 			{
+				$date_naissance = $split[3].'-'.$split[2].'-'.$split[1];
+				//return new \SoapFault('Server','ici');
 			}
 			else
 			{
@@ -2862,6 +2881,8 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 		{
 			$date_naissance='0000-00-00';
 		}
+		
+		//return new \SoapFault('Server',$date_naissance);
 
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact WHERE nom=' . $pdo->quote($nom) . '
@@ -2898,6 +2919,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		}
 
 		return new \SoapFault('Server', '[AC003] Ce contact existe déjà');
+		
 
 	}
 
@@ -2969,10 +2991,12 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 				array_push($arguments, array('prenom' => $prenom));
 			if (!empty($date_naissance)){
 				$split = array();
-				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_naissance, $split))
+				if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $date_naissance, $split))
 				{
-					if(checkdate($split[2],$split[3],$split[1]))
+					if(checkdate($split[2],$split[1],$split[3]))
 					{
+						$date_naissance = $split[3].'-'.$split[2].'-'.$split[1];
+						//return new \SoapFault('Server','ici');
 					}
 					else
 					{
@@ -3109,10 +3133,12 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		}
 
 		$split = array();
-		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_naissance, $split))
+		if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $date_naissance, $split))
 		{
-			if(checkdate($split[2],$split[3],$split[1]))
+			if(checkdate($split[2],$split[1],$split[3]))
 			{
+				$date_naissance = $split[3].'-'.$split[2].'-'.$split[1];
+				//return new \SoapFault('Server','ici');
 			}
 			else
 			{
@@ -3284,10 +3310,12 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 		}
 		//verification de la date
 		$split = array();
-		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $tab_date_commande[0], $split))
+		if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $tab_date_commande[0], $split))
 		{
-			if(checkdate($split[2],$split[3],$split[1]))
+			if(checkdate($split[2],$split[1],$split[3]))
 			{
+				$tab_date_commande[0] = $split[3].'-'.$split[2].'-'.$split[1];
+				//return new \SoapFault('Server','ici');
 			}
 			else
 			{
@@ -3705,10 +3733,13 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 			if (!empty($date_deb)){
 				//verification de la date
 				$split = array();
-				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_deb, $split))
+				
+				if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $date_deb, $split))
 				{
-					if(checkdate($split[2],$split[3],$split[1]))
+					if(checkdate($split[2],$split[1],$split[3]))
 					{
+						$date_deb = $split[3].'-'.$split[2].'-'.$split[1];
+						//return new \SoapFault('Server','ici');
 					}
 					else
 					{
@@ -3719,15 +3750,19 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 				{
 					return new \SoapFault('Server', '[GACF003] Date début période invalide.');
 				}
+				
+			
 				array_push($arguments,array('date_debut'=>$date_deb));
 			}
 			if (!empty($date_fin)){
 				//verification de la date
 				$split = array();
-				if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $date_fin, $split))
+				if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $date_fin, $split))
 				{
-					if(checkdate($split[2],$split[3],$split[1]))
+					if(checkdate($split[2],$split[1],$split[3]))
 					{
+						$date_fin = $split[3].'-'.$split[2].'-'.$split[1];
+						//return new \SoapFault('Server','ici');
 					}
 					else
 					{
@@ -3851,10 +3886,12 @@ SUM(quantite_mouvement) AS "quantite_recu"
 		}
 		//verification de la date
 		$split = array();
-		if (preg_match ("/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/", $tab_date_reception[0], $split))
+		if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $tab_date_reception[0], $split))
 		{
-			if(checkdate($split[2],$split[3],$split[1]))
+			if(checkdate($split[2],$split[1],$split[3]))
 			{
+				$tab_date_reception[0] = $split[3].'-'.$split[2].'-'.$split[1];
+				//return new \SoapFault('Server','ici');
 			}
 			else
 			{
