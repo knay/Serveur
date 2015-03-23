@@ -487,6 +487,8 @@ class SoapController extends ContainerAware
 	{
 
 
+		//return new \SoapFault('Server',$nom);
+		
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[GLP001] Vous n\'avez pas les droits nécessaires.');
 
@@ -511,16 +513,18 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		if (!empty($nom) && empty($attribut_nom)){
 			$nom = '%'.$nom.'%';
 			$sql .= 'WHERE ligne_produit.nom LIKE ' . $pdo->quote($nom) . ' AND ligne_produit.est_visible=\'1\'';
+			//return new \SoapFault('Server',$sql);
 		}
 
 		if (empty($nom) && !empty($attribut_nom)){
 			$attribut_nom = '%'.$attribut_nom.'%';
 			$sql .= 'WHERE attribut.nom LIKE ' . $pdo->quote($attribut_nom) . ' AND ligne_produit.est_visible=\'1\'';
 		}
-		else{
+		if(empty($nom) && empty($attribut_nom)){
 			$sql .= 'WHERE ligne_produit.est_visible=\'1\'';
 		}
 		$sql.= 'group by ligne_produit.id,ligne_produit.nom';
+		//return new \SoapFault('Server',$sql);
 		if ($offset != 0) {
 			$sql .= ' ORDER BY ligne_produit.nom ASC LIMIT ' . (int)$offset;
 			if ($count != 0)
