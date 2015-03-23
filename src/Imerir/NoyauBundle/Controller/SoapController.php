@@ -2857,9 +2857,8 @@ where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_conta
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[AC001] Vous n\'avez pas les droits nécessaires.');
 
-		if ((!is_string($nom) || !is_string($prenom) || !is_string($date_naissance) || !is_string($civilite)
-				 || !is_string($email) || !is_string($telephone_portable) || 
-				!is_string($ok_mail) || !is_string($ok_sms) || !is_string($notes)) || $nom == '') // Vérif des arguments
+		if ((!is_string($nom) || !is_string($prenom) || !is_string($date_naissance) || !is_string($civilite))
+				 || $nom == '') // Vérif des arguments
 			return new \SoapFault('Server', '[AC002] Paramètres invalides.');
 		
 		//return new \SoapFault('Server',$date_naissance);
