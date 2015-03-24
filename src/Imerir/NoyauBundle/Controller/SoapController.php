@@ -3297,23 +3297,8 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 
 		// Formation de la requete SQL
 		$tab_fournisseur_id = json_decode($fournisseur_id);
-		foreach($tab_fournisseur_id as $fournisseur_id){
-			if($fournisseur_id == ''){
-				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
-			}
-		}
 		$tab_article_code = json_decode($article_code);
-		foreach($tab_article_code as $article_code){
-			if($article_code == ''){
-				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
-			}
-		}
 		$tab_quantite_souhaite = json_decode($quantite_souhaite);
-		foreach($tab_quantite_souhaite as $quantite_souhaite){
-			if($quantite_souhaite < 1){
-				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
-			}
-		}
 		$tab_date_commande = json_decode($date_commande);
 		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
 
@@ -3361,6 +3346,10 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 
 		$i = 0;
 		foreach ($tab_article_code as $article_code) {
+			
+			if($tab_fournisseur_id[$i] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == ''){
+				break;
+			}
 
 			$quantite_souhaite = $tab_quantite_souhaite[$i];
 			$sql_f = 'SELECT MAX(id) as "max_id" FROM commande_fournisseur;';
