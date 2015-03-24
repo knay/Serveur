@@ -3294,8 +3294,6 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
 			return new \SoapFault('Server', '[ACF001] Vous n\'avez pas les droits nécessaires.');
 
-
-
 		if ((!is_string($fournisseur_id) && !is_int($fournisseur_id)) || (!is_string($article_code) && !is_int($article_code))
 			|| (!is_string($quantite_souhaite) && !is_int($quantite_souhaite))) // Vérif des arguments
 			return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
@@ -3303,36 +3301,20 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
 
-
 		// Formation de la requete SQL
 		$tab_fournisseur_id = json_decode($fournisseur_id);
 		$tab_article_code = json_decode($article_code);
 		$tab_quantite_souhaite = json_decode($quantite_souhaite);
 		$tab_date_commande = json_decode($date_commande);
-		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
 
-		foreach($tab_article_code as $article_code){
-
-			$sql = 'SELECT * FROM article WHERE code_barre='.$pdo->quote($article_code).';';
-			$resultat = $pdo->query($sql);
-
-			if ($resultat->rowCount() == 0) {
-				return new \SoapFault('Server', '[ACF003] Article '.$article_code.' invalide.');
-			}
-		}
 		//verification de la date
 		$split = array();
 		if (preg_match ("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $tab_date_commande[0], $split))
 		{
 			if(checkdate($split[2],$split[1],$split[3]))
-			{
 				$tab_date_commande[0] = $split[3].'-'.$split[2].'-'.$split[1];
-				//return new \SoapFault('Server','ici');
-			}
 			else
-			{
 				$tab_date_commande[0]='0000-00-00';
-			}
 		}
 		else
 		{
@@ -3341,49 +3323,34 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 		//insertion des données
 		if($tab_date_commande[0]=='0000-00-00'){
 			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
-		NOW())';
+					NOW())';
 		}
 		else{
 			$sql = 'INSERT INTO commande_fournisseur(ref_fournisseur, date_commande) VALUES(' . $pdo->quote($tab_fournisseur_id[0]) . ',
-		'.$pdo->quote($tab_date_commande[0]).')';
+				   '.$pdo->quote($tab_date_commande[0]).')';
 		}
-
-
-
-		//return new \SoapFault('Server', $sql);
 		$pdo->query($sql);
+		$id_commande = $pdo->lastInsertId();
 
 		$i = 0;
 		foreach ($tab_article_code as $article_code) {
-			
-			if($tab_fournisseur_id[$i] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == ''){
+			if($tab_fournisseur_id[0] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == '')
 				break;
-			}
 
 			$quantite_souhaite = $tab_quantite_souhaite[$i];
-			$sql_f = 'SELECT MAX(id) as "max_id" FROM commande_fournisseur;';
-			$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code).';';
-			$result_f = $pdo->query($sql_f);
-
-			foreach($pdo->query($sql_a) as $row){
+			$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code);
+			$result_a = $pdo->query($sql_a);
+			if($result_a->rowCount() == 0)
+				break;
+			foreach($result_a as $row){
 				$id_article = $row['max_id_article'];
 			}
 
-			if($result_f->rowCount() == 0)
-				$id_commande = 1;
-			else{
-				foreach($result_f as $row){
-					$id_commande = $row['max_id'];
-				}
-			}
 			//insertion des données
-				$sql = 'INSERT INTO ligne_commande_fournisseur(ref_commande_fournisseur,ref_article,quantite_souhaite)
-VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote($quantite_souhaite).')';
+			$sql = 'INSERT INTO ligne_commande_fournisseur(ref_commande_fournisseur,ref_article,quantite_souhaite)
+					VALUES('.$pdo->quote($id_commande).','.$pdo->quote($id_article).','.$pdo->quote($quantite_souhaite).')';
 
 			$pdo->query($sql);
-			//return new \SoapFault('Server','[AA00011] '.$sql.'.');
-
-
 			$i++;
 		}
 
@@ -3499,12 +3466,12 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		$sql .= 'group by commande_id, ligne_commande_fournisseur.id HAVING (quantite_souhaite>SUM(quantite_mouvement)
 		 OR quantite_recu IS NULL)';
 		if ($offset != 0) {
-			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC LIMIT ' . (int)$offset;
+			$sql .= ' ORDER BY commande_fournisseur.id DESC LIMIT ' . (int)$offset;
 			if ($count != 0)
 				$sql .= ',' . (int)$count;
 		}
 		else {
-			$sql .= ' ORDER BY date_commande DESC, commande_fournisseur.id ASC, fournisseur.nom ASC ';
+			$sql .= ' ORDER BY commande_fournisseur.id DESC ';
 		}
 
 		//return new \SoapFault('Server', $sql);
