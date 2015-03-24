@@ -197,7 +197,7 @@ class SoapController extends ContainerAware
 				LEFT OUTER JOIN attribut ON valeur_attribut.ref_attribut = attribut.id
 				WHERE produit.nom LIKE '.$pdo->quote($nomProduit).' AND ligne_produit.nom LIKE '.$pdo->quote($nomLigneProduit).'
 				      AND produit.est_visible = true AND ligne_produit.est_visible = true
-				      AND attribut.est_visible = true AND article.est_visible = true
+				      AND article.est_visible = true AND (attribut.est_visible = true OR article_a_pour_val_attribut.ref_article IS null)
 				ORDER BY article.code_barre ASC';
 		
 		$resultat = $pdo->query($sql);
@@ -604,6 +604,9 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		$tabArticles = json_decode($articles);
 
 		foreach ($tabArticles as $article) {
+			if ('' === $article->codeBarre)
+				break;
+			
 			$code_barre = $article->codeBarre;
 			$nom_produit = $article->produit;
 			$quantite = $article->quantite;
@@ -657,6 +660,9 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 			// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
 			foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
+				if ($nomAttribut !== '' && $libelleValeurAttribut !== '')
+					break;
+				
 				$sql = 'SELECT valeur_attribut.id AS vaid, attribut.id AS aid FROM valeur_attribut
 				        JOIN attribut ON ref_attribut = attribut.id
 				        WHERE attribut.nom=' . $pdo->quote($nomAttribut) . ' AND valeur_attribut.libelle=' . $pdo->quote($libelleValeurAttribut);
@@ -703,18 +709,21 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$reponse = array();
 
-		$sql = 'SELECT produit.nom AS nomProduit, attribut.nom AS nomAttribut, valeur_attribut.libelle AS nomValAttribut
+		$sql = 'SELECT produit.nom AS nomProduit, attribut.nom AS nomAttribut, valeur_attribut.libelle AS nomValAttribut, 
+				ligne_produit.nom AS nomLigneProduit
 				FROM article
 				JOIN produit ON article.ref_produit = produit.id
-				JOIN article_a_pour_val_attribut ON article_a_pour_val_attribut.ref_article = article.id
-				JOIN valeur_attribut ON article_a_pour_val_attribut.ref_val_attribut = valeur_attribut.id
-				JOIN attribut ON valeur_attribut.ref_attribut = attribut.id
+				JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
+				LEFT OUTER JOIN article_a_pour_val_attribut ON article_a_pour_val_attribut.ref_article = article.id
+				LEFT OUTER JOIN valeur_attribut ON article_a_pour_val_attribut.ref_val_attribut = valeur_attribut.id
+				LEFT OUTER JOIN attribut ON valeur_attribut.ref_attribut = attribut.id
 				WHERE article.code_barre = ' . $pdo->quote($codeBarre);
 		$resultat = $pdo->query($sql);
 
 		$reponse['attributs'] = array();
 		foreach ($resultat as $row) {
 			$reponse['nomProduit'] = $row['nomProduit'];
+			$reponse['nomLigneProduit'] = $row['nomLigneProduit'];
 			$reponse['attributs'][$row['nomAttribut']] = $row['nomValAttribut'];
 		}
 
