@@ -3282,6 +3282,54 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 
 
 	/**
+	 * @Soap\Method("ajoutLigneCommandeFournisseur")
+	 * @Soap\Param("commande_id",phpType="string")
+	 * @Soap\Param("article_code",phpType="string")
+	 * @Soap\Param("quantite_souhaite",phpType="string")
+	 * @Soap\Result(phpType = "string")
+	 */
+	public function ajoutLigneCommandeFournisseurAction($commande_id, $article_code, $quantite_souhaite){
+		if (!($this->container->get('user_service')->isOk('ROLE_GERANT'))) // On check les droits
+			return new \SoapFault('Server', '[ALCF001] Vous n\'avez pas les droits nécessaires.');
+		
+		if ((!is_string($commande_id) && !is_int($commande_id)) || (!is_string($article_code) && !is_int($article_code))
+				|| (!is_string($quantite_souhaite) && !is_int($quantite_souhaite))) // Vérif des arguments
+			return new \SoapFault('Server', '[ALCF002] Paramètres invalides.');
+		
+		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
+		
+		// Formation de la requete SQL
+		$tab_commande_id = json_decode($commande_id);
+		$tab_article_code = json_decode($article_code);
+		$tab_quantite_souhaite = json_decode($quantite_souhaite);
+		
+		$i=0;
+		
+		foreach ($tab_article_code as $article_code) {
+			if($tab_commande_id[$i] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == '')
+				break;
+
+			$quantite_souhaite = $tab_quantite_souhaite[$i];
+			$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code);
+			$result_a = $pdo->query($sql_a);
+			if($result_a->rowCount() == 0)
+				break;
+			foreach($result_a as $row){
+				$id_article = $row['max_id_article'];
+			}
+
+			//insertion des données
+			$sql = 'INSERT INTO ligne_commande_fournisseur(ref_commande_fournisseur,ref_article,quantite_souhaite)
+					VALUES('.$pdo->quote($tab_commande_id[$i]).','.$pdo->quote($id_article).','.$pdo->quote($quantite_souhaite).')';
+
+			$pdo->query($sql);
+			$i++;
+		}
+
+		return "OK";
+	}
+	
+	/**
 	 * @Soap\Method("ajoutCommandeFournisseur")
 	 * @Soap\Param("fournisseur_id",phpType="string")
 	 * @Soap\Param("article_code",phpType="string")
