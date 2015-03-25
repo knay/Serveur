@@ -660,8 +660,8 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 			// On parcourt toutes les valeur d'attributs de cette article pour les enregistrer
 			foreach ($attributs as $nomAttribut => $libelleValeurAttribut) {
-				if ($nomAttribut !== '' && $libelleValeurAttribut !== '')
-					break;
+				/*if ($nomAttribut !== '' && $libelleValeurAttribut !== '')
+					break;*/
 				
 				$sql = 'SELECT valeur_attribut.id AS vaid, attribut.id AS aid FROM valeur_attribut
 				        JOIN attribut ON ref_attribut = attribut.id
