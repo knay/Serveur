@@ -3320,7 +3320,7 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 
 			//insertion des données
 			$sql = 'INSERT INTO ligne_commande_fournisseur(ref_commande_fournisseur,ref_article,quantite_souhaite)
-					VALUES('.$pdo->quote($tab_commande_id[$i]).','.$pdo->quote($id_article).','.$pdo->quote($quantite_souhaite).')';
+					VALUES('.$pdo->quote($tab_commande_id[0]).','.$pdo->quote($id_article).','.$pdo->quote($quantite_souhaite).')';
 
 			$pdo->query($sql);
 			$i++;
