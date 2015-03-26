@@ -355,7 +355,7 @@ class SoapController extends ContainerAware
 		try {
 			$pdo = $this->container->get('bdd_service')->getPdo();
 			//on verifie si il y a deja la ligne produit
-			$sql = 'SELECT * FROM ligne_produit WHERE nom=' . $pdo->quote($nom) . '';
+			$sql = 'SELECT * FROM ligne_produit WHERE nom=' . $pdo->quote($nom) . ' AND est_visible=true ';
 
 			$resultat = $pdo->query($sql);
 			//si la ligne produit n'existe pas
@@ -1146,7 +1146,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 
 			//on verifie si il y a deja le produit
 			$sql = 'SELECT * FROM produit JOIN ligne_produit ON produit.ref_ligne_produit = ligne_produit.id
-			WHERE produit.nom=' . $pdo->quote($nom) . ' AND ligne_produit.nom=' . $pdo->quote($ligneProduit) . '';
+			WHERE produit.nom=' . $pdo->quote($nom) . ' AND ligne_produit.nom=' . $pdo->quote($ligneProduit) . ' AND produit.est_visible=true ';
 
 			//requête qui permet de récupérer l'identifiant de la ligne produit
 			$sql_lp = 'SELECT * FROM ligne_produit WHERE nom=' . $pdo->quote($ligneProduit) . '';
@@ -1997,7 +1997,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, email, telephone_portable, reference_client FROM fournisseur WHERE
 nom=' . $pdo->quote($nom) . ' AND email='.$pdo->quote($email).' AND telephone_portable='.$pdo->quote($telephone_portable).'
- AND reference_client='.$pdo->quote($reference_client).'';
+ AND reference_client='.$pdo->quote($reference_client).' AND est_visible=true ';
 		//return new \SoapFault('Server', $sql);
 		$resultat = $pdo->query($sql);
 		if ($resultat->rowCount($sql) == 0) {
@@ -2202,7 +2202,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 		else{
 			$sql_test =' SELECT * FROM contact JOIN adresse ON adresse.ref_contact = contact.id 
 					JOIN type_adresse ON type_adresse.id = adresse.ref_type_adresse 
-					WHERE type_adresse.nom =\'Facturation\' AND contact.id = '.$pdo->quote($ref_id).'';
+					WHERE type_adresse.nom =\'Facturation\' AND contact.id = '.$pdo->quote($ref_id).' AND adresse.est_visible=true ';
 			$result_test = $pdo->query($sql_test);
 			if($result_test->rowCount()==0){
 				$flag_ad_fact = 'Non';
@@ -2228,7 +2228,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 
 			$sql = 'SELECT id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe FROM adresse
 WHERE pays=' . $pdo->quote($pays) . ' AND ville=' . $pdo->quote($ville) . ' AND voie=' . $pdo->quote($voie) . '
-AND num_voie=' . $pdo->quote($num_voie) . ' ';
+AND num_voie=' . $pdo->quote($num_voie) . ' AND adresse.est_visible=true ';
 
 			if ($est_fournisseur){
 				$sql .= 'AND ref_fournisseur=' . $pdo->quote($ref_id) . '';
@@ -2899,7 +2899,7 @@ where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_conta
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, prenom, date_naissance, civilite, email, telephone_portable FROM contact WHERE nom=' . $pdo->quote($nom) . '
 		 AND prenom=' . $pdo->quote($prenom) . ' AND date_naissance=' . $pdo->quote($date_naissance) . ' AND civilite=' . $pdo->quote($civilite) . '
-		 AND email=' . $pdo->quote($email) . ' AND telephone_portable=' . $pdo->quote($telephone_portable) . ' ';
+		 AND email=' . $pdo->quote($email) . ' AND telephone_portable=' . $pdo->quote($telephone_portable) . ' AND est_visible=true ';
 
 		if ($ok_sms == 'on') {
 			$int_ok_sms = 1;
