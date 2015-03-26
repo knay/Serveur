@@ -2202,7 +2202,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 		else{
 			$sql_test =' SELECT * FROM contact JOIN adresse ON adresse.ref_contact = contact.id 
 					JOIN type_adresse ON type_adresse.id = adresse.ref_type_adresse 
-					WHERE type_adresse.nom =\'Facturation\'';
+					WHERE type_adresse.nom =\'Facturation\' AND contact.id = '.$pdo->quote($ref_id).'';
 			$result_test = $pdo->query($sql_test);
 			if($result_test->rowCount()==0){
 				$flag_ad_fact = 'Non';
