@@ -474,8 +474,6 @@ class SoapController extends ContainerAware
 	 * @param $offset Le décalage par rapport au début des enregistrements
 	 * @param $nom Si vous voulez une ligne de produit spécifique (interet ?).
 	 *
-	 * TODO ajouter ASC ou DESC
-	 *
 	 * @Soap\Method("getLigneProduit")
 	 * @Soap\Param("count",phpType="int")
 	 * @Soap\Param("offset",phpType="int")
@@ -802,9 +800,9 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 	
 		if ($id !== 0) {
 			$sql = 'UPDATE attribut SET est_visible=false WHERE id='.$pdo->quote($id);
-			$resultat = $pdo->query($sql);
+			$pdo->query($sql);
 			$sql = 'UPDATE valeur_attribut SET est_visible=false WHERE ref_attribut='.$pdo->quote($id);
-			$resultat = $pdo->query($sql);
+			$pdo->query($sql);
 		}
 		else {
 			return new \SoapFault('Server', '[SUATTR003] Paramètres invalides.');
@@ -996,7 +994,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 						array_push($result, $ligne);
 						$tabAttributs = array();
 					}
-					$dernierLibelle = $row['libelle'];
+					//$dernierLibelle = $row['libelle'];
 					$dernierNom = $row['nom'];
 					$dernierId = $row['aid'];
 					$dernierLigne = $row['ligne_produit'];
@@ -1045,7 +1043,6 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 				}
 			}
 		}
-		// TODO faire la recherche par ligne produit
 		return json_encode($result);
 	}
 
@@ -1113,7 +1110,7 @@ left outer join attribut on ligne_produit_a_pour_attribut.ref_attribut = attribu
 		$resultat = $pdo->query($sql);
 		$res = array();
 
-		$prix = 0;
+		//$prix = 0;
 		foreach ($resultat as $row) {
 			$res['montant_client'] = $row["montant_client"];
 			$res['montant_fournisseur'] = $row['montant_fournisseur'];
@@ -1349,7 +1346,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return json_encode($tableau_menu);
 		} // Si il est employe
 		else if ($this->container->get('user_service')->isOk('ROLE_EMPLOYE')) {
-			//TODO
+			
 		} else { // Si l'utilisateur n'est pas connecté
 			return new \SoapFault('Server', '[GM001] Vous n\'avez pas les droits nécessaires.');
 		}
@@ -1368,7 +1365,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new \SoapFault('Server', '[GPFLP001] Vous n\'avez pas les droits nécessaires.');
 
 		if (!is_string($LigneProduit)) // Vérif des arguments
-			return new SoapFault('Server', '[GPFLP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GPFLP002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		$result = array();
@@ -1621,7 +1618,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$result = array();
 	
 		if (!is_int($numero) || $numero < 0) // Vérif des arguments
-			return new SoapFault('Server', '[GDFOF002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GDFOF002] Paramètres invalides.');
 	
 	
 		$requete_detail_factures = 'SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_contact_maj, prenom_contact, nom_article ,article_id , nb_article, montant_client ,reduction_article,
@@ -1710,7 +1707,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 		$result = array();
 		
 		if (!is_string($mois) ) // Vérif des arguments
-			return new SoapFault('Server', '[GAN002] Paramètres invalides.');
+			return new \SoapFault('Server', '[GAN002] Paramètres invalides.');
 		
 		if($mois !== ''){
 			$requete_date_anniversaire = 'SELECT civilite,nom,prenom,DATE_FORMAT(date_naissance,"%d/%m/%Y") as date_naissance,email,abs(timestampdiff(YEAR,curdate(),date_naissance)) as age FROM alba.contact
@@ -1746,7 +1743,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			}
 		}
 		else {
-			return new SoapFault('Server', '[GAN003] Paramètres invalides.');
+			return new \SoapFault('Server', '[GAN003] Paramètres invalides.');
 		}
 		return json_encode($result);
 		
@@ -1792,7 +1789,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new \SoapFault('Server','[MMP001] Vous n\'avez pas les droits nécessaires.');
 	
 		if (!is_int($id) || !is_string($nom) ) // Vérif des arguments
-			return new SoapFault('Server', '[MMP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[MMP002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service	
 		
@@ -1802,7 +1799,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return 'OK';
 		}
 		else{
-			return new SoapFault('Server', '[MMP003] Paramètres invalides.');
+			return new \SoapFault('Server', '[MMP003] Paramètres invalides.');
 		}
 	}
 	
@@ -1819,7 +1816,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new \SoapFault('Server','[SMP001] Vous n\'avez pas les droits nécessaires.');
 	
 		if (!is_int($id) ) // Vérif des arguments
-			return new SoapFault('Server', '[SMP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[SMP002] Paramètres invalides.');
 	
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 	
@@ -1829,7 +1826,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return 'OK';
 		}
 		else{
-			return new SoapFault('Server', '[SMP003] Paramètres invalides.');
+			return new \SoapFault('Server', '[SMP003] Paramètres invalides.');
 		}
 	}
 	
@@ -1846,10 +1843,9 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return new \SoapFault('Server','[IMP001] Vous n\'avez pas les droits nécessaires.');
 	
 		if (!is_string($nom) ) // Vérif des arguments
-			return new SoapFault('Server', '[IMP002] Paramètres invalides.');
+			return new \SoapFault('Server', '[IMP002] Paramètres invalides.');
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 		
 		if($nom != ''){
 			$requete_mode_paiement = 'INSERT INTO alba.moyen_paiement(nom) VALUES('.$pdo->quote($nom).')';
@@ -1857,7 +1853,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 			return 'OK';
 		}
 		else{
-			return new SoapFault('Server', '[IMP003] Paramètres invalides.');
+			return new \SoapFault('Server', '[IMP003] Paramètres invalides.');
 		}
 	}
 	
@@ -1884,7 +1880,7 @@ left outer join valeur_attribut on valeur_attribut.id = article_a_pour_val_attri
 	
 		//return new \SoapFault('Server', 'coucou');
 	
-		$result = $pdo->query($sql);
+		$pdo->query($sql);
 	
 		//return new \SoapFault('Server', $sql);
 		return "OK";
@@ -2036,14 +2032,13 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 
 		// Formation de la requete SQL
 		$sql = 'UPDATE fournisseur SET nom=' . $pdo->quote($nom) . ',email=' . $pdo->quote($email) . '
 		,telephone_portable=' . $pdo->quote($telephone_portable) . ',reference_client='.$pdo->quote($reference_client).'
 		,notes='.$pdo->quote($notes).' WHERE id=' . $pdo->quote($id) . '';
 
-		$resultat = $pdo->query($sql);
+		
 		$pdo->query($sql);
 
 		return "OK";
@@ -2182,7 +2177,6 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($email) . ',
 			return new \SoapFault('Server', '[AA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 
 		// Formation de la requete SQL
 		$tab_pays = json_decode($pays);
@@ -2301,9 +2295,6 @@ AND num_voie=' . $pdo->quote($num_voie) . ' AND adresse.est_visible=true ';
 
 				//return new \SoapFault('Server','[AA00011] '.$sql.'.');
 				
-				//TODO
-				//rajouter le fait de pouvoir inserer un type adresse
-				//dans modif penser a mettre a jour l'ancienne adresse ayant facturation en autre pour avoir qu'une
 
 
 			} else {
@@ -2753,9 +2744,9 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 			return new \SoapFault('Server', '[MA002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 
 		//Formation de la requête SQL
+		//on recupere les parametres de la requête sous forme de tableau
 		$tab_est_visible = json_decode($est_visible);
 		$tab_id = json_decode($id_ad);
 		$tab_pays = json_decode($pays);
@@ -2767,6 +2758,7 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 		$tab_telephone_fixe = json_decode($telephone_fixe);
 		$tab_type_adresse = json_decode($type_adresse);
 
+		//variable d'incrementation
 		$i = 0;
 		foreach ($tab_id as $id_ad) {
 			$est_visible = $tab_est_visible[$i];
@@ -2779,6 +2771,7 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 			$telephone_fixe = $tab_telephone_fixe[$i];
 			$type_adresse = $tab_type_adresse[$i];
 			
+			//on recupere l'id des types d'adresse pour voir si ils ont bien ete inseres
 			$sql_test = 'SELECT MAX(id) as "max_id_ad",
 					(SELECT MAX(id) FROM type_adresse WHERE nom=\'Autre\') as "max_id_autre",
 					(SELECT MAX(id) FROM type_adresse) as "max_id"
@@ -2793,6 +2786,8 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 				$id_autre= $row['max_id_autre'];
 
 			}
+			//si le type d'adresse est facturation alors on procede a la verif qu'il y est uniquement
+			//une et une seule adresse de facturation par contact
 			if($type_adresse=='Facturation'){
 				
 				
@@ -2803,11 +2798,11 @@ SELECT id_facture ,nom_produit , date_de_facture, UPPER(nom_contact) as nom_cont
 				}
 				
 				if(!empty($id_contact)){
-					//on receupere le nombre d'adresse de facturation de ce contact
-					//si ce contact a plusieurs adresses on
+					//on recupere l'id de la premiere adresse de facturation d'un contact
+					//si cette adresse est la premiere on la conserve sinon on la modifie
 					$sql_fact = 'select min(adresse.id) as "min_ad_fact" from adresse 
 join type_adresse on adresse.ref_type_adresse = type_adresse.id
-where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_contact).';';
+where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_contact).' and adresse.est_visible=true;';
 					
 					$ad_fact = 0;
 					foreach($pdo->query($sql_fact) as $row){
@@ -2815,12 +2810,13 @@ where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_conta
 					
 					}
 					
+					//l'adresse n'est pas la premiere du contact on la met a jour
 					if($id_ad != $ad_fact){
 						$sql_u ='UPDATE adresse SET ref_type_adresse='.$pdo->quote($id_autre).'
 						WHERE ref_type_adresse='.$pdo->quote($id_typad).' AND ref_contact='.$pdo->quote($id_contact).'';
 						$pdo->query($sql_u);
 					}
-					
+					//maj globale
 					$sql = 'UPDATE adresse SET est_visible=' . $pdo->quote($est_visible) . ',pays=' . $pdo->quote($pays) . ', ville=' . $pdo->quote($ville) . ', voie=' . $pdo->quote($voie) . ',
 		num_voie=' . $pdo->quote($num_voie) . ',code_postal=' . $pdo->quote($code_postal) . ',num_appartement=' . $pdo->quote($num_appartement) . ',
 		telephone_fixe=' . $pdo->quote($telephone_fixe) . ', ref_type_adresse='.$pdo->quote($id_typad).'
@@ -2831,6 +2827,7 @@ where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_conta
 				
 				
 			}
+			//autrement il s'agit d'une adresse fournisseur don pas de probleme de facturation
 			else{
 				$sql = 'UPDATE adresse SET est_visible=' . $pdo->quote($est_visible) . ',pays=' . $pdo->quote($pays) . ', ville=' . $pdo->quote($ville) . ', voie=' . $pdo->quote($voie) . ',
 		num_voie=' . $pdo->quote($num_voie) . ',code_postal=' . $pdo->quote($code_postal) . ',num_appartement=' . $pdo->quote($num_appartement) . ',
@@ -2901,6 +2898,9 @@ where type_adresse.nom=\'Facturation\' and ref_contact = '.$pdo->quote($id_conta
 		 AND prenom=' . $pdo->quote($prenom) . ' AND date_naissance=' . $pdo->quote($date_naissance) . ' AND civilite=' . $pdo->quote($civilite) . '
 		 AND email=' . $pdo->quote($email) . ' AND telephone_portable=' . $pdo->quote($telephone_portable) . ' AND est_visible=true ';
 
+		
+		//on controle que les variables ok sms et mail par rapport a la checkbox ce qui renvoie on en cas de vrai
+		//on ne peut pas passer 1 et 0 car 0 est vide
 		if ($ok_sms == 'on') {
 			$int_ok_sms = 1;
 		} else {
@@ -2971,7 +2971,13 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		// Formation de la requete SQL
 		$sql = 'SELECT id, nom, prenom, DATE_FORMAT(date_naissance, "%d/%m/%Y") AS date_naissance, civilite, email, telephone_portable, ok_sms, ok_mail, notes 
 				FROM contact ';
-
+		
+		
+		/*
+		 * arguments permet de rassembler sous la forme de clef valeurs tous les parametres renseignés du where
+		 * ainsi on peut utiliser cette clé dans la requête sql et la valeur comme valeur du where
+		 * exemple clef = code_barre , valeur = 1234 on a WHERE code_barre = '1234'
+		 */
 		$arguments = array();
 		
 		$sql .= 'WHERE ';
@@ -2982,7 +2988,8 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		) {
 
 			//return new \SoapFault('Server', $ok_mail);
-
+			//pour gerer les ok_sms avec des checkbox j'ai du traduire en chaine de caractere pour ensuite
+			//assigner une valeur bool car false, 0 et '' sont considérés comme vides
 			if (!empty($ok_sms) && ($ok_sms == 'on' || $ok_sms=='1' || $ok_sms==1 || $ok_sms=='Oui')) {
 				array_push($arguments,array('ok_sms'=>1));
 			} elseif(!empty($ok_sms) && ($ok_sms == 'off' || $ok_sms=='Non' || $ok_sms=='0')) {
@@ -3100,7 +3107,7 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 		
 		//return new \SoapFault('Server', 'coucou');
 		
-		$result = $pdo->query($sql);
+		$pdo->query($sql);
 		
 		//return new \SoapFault('Server', $sql);
 		return "OK";
@@ -3130,7 +3137,6 @@ VALUES(' . $pdo->quote($nom) . ',' . $pdo->quote($prenom) . ',' . $pdo->quote($d
 
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 
 		if ($ok_sms == 'on') {
 			$int_ok_sms = 1;
@@ -3169,7 +3175,6 @@ SET nom=' . $pdo->quote($nom) . ',prenom='.$pdo->quote($prenom).',date_naissance
 ,ok_sms='.$pdo->quote($int_ok_sms).',ok_mail='.$pdo->quote($int_ok_mail).',notes='.$pdo->quote($notes).'
 		WHERE id=' . $pdo->quote($id) . '';
 
-		$resultat = $pdo->query($sql);
 		$pdo->query($sql);
 
 		return "OK";
@@ -3298,22 +3303,29 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 		
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
 		
-		// Formation de la requete SQL
+		//On recupere un tableau des lignes à ajouter
 		$tab_commande_id = json_decode($commande_id);
 		$tab_article_code = json_decode($article_code);
 		$tab_quantite_souhaite = json_decode($quantite_souhaite);
 		
+		//cette variable est utile pour le foreach
+		//ne pas oublier de l'incrementer en fin de boucle
 		$i=0;
 		
 		foreach ($tab_article_code as $article_code) {
-			if($tab_commande_id[$i] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == '')
+			//controle, si positif on passe à l'incrementation suivante
+			if($tab_commande_id[$i] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == ''){
+				$i++;
 				break;
-
+			}
 			$quantite_souhaite = $tab_quantite_souhaite[$i];
+			//on recupere l'id de l'article pour la ligne commande et ainsi utiliser la reference de ce dernier
 			$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code);
 			$result_a = $pdo->query($sql_a);
-			if($result_a->rowCount() == 0)
+			if($result_a->rowCount() == 0){
+				$i++;
 				break;
+			}
 			foreach($result_a as $row){
 				$id_article = $row['max_id_article'];
 			}
@@ -3347,9 +3359,9 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 			return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 
 		// Formation de la requete SQL
+		//on recupere les parametres dans un tableau
 		$tab_fournisseur_id = json_decode($fournisseur_id);
 		$tab_article_code = json_decode($article_code);
 		$tab_quantite_souhaite = json_decode($quantite_souhaite);
@@ -3378,21 +3390,30 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 				   '.$pdo->quote($tab_date_commande[0]).')';
 		}
 		$pdo->query($sql);
+		//lastinsert permet de recuperer le max id de commande
 		$id_commande = $pdo->lastInsertId();
 
 		$i = 0;
 		foreach ($tab_article_code as $article_code) {
-			if($tab_fournisseur_id[0] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == '')
+			//controle si positif passe a l'iteration suivante
+			if($tab_fournisseur_id[0] == '' || $tab_quantite_souhaite[$i] < 1 || $article_code == ''){
+				$i++;
 				break;
-
+			}	
 			$quantite_souhaite = $tab_quantite_souhaite[$i];
+			
+			//on recupere l'id de l'article pour l'utiliser apres en reference FK
 			$sql_a = 'SELECT MAX(id) as "max_id_article" FROM article WHERE code_barre='.$pdo->quote($article_code);
 			$result_a = $pdo->query($sql_a);
-			if($result_a->rowCount() == 0)
+			
+			if($result_a->rowCount() == 0){
+				$i++;
 				break;
+			}	
 			foreach($result_a as $row){
 				$id_article = $row['max_id_article'];
 			}
+			//////////////////////
 
 			//insertion des données
 			$sql = 'INSERT INTO ligne_commande_fournisseur(ref_commande_fournisseur,ref_article,quantite_souhaite)
@@ -3423,12 +3444,13 @@ group by ville)t order by nb_personne DESC LIMIT 7;';
 			return new \SoapFault('Server', '[SCFC002] Paramètres invalides.');
 	
 	
-	
+		//on "supprime" en rendant invisible la ligne dans la db
 		$sql = 'UPDATE commande_fournisseur SET est_visible=0 WHERE id='.$pdo->quote($id).';';
 	
 		//return new \SoapFault('Server', 'coucou');
-	
-		$result = $pdo->query($sql);
+		
+		//execution de la requete
+		$pdo->query($sql);
 	
 		//return new \SoapFault('Server', $sql);
 		return "OK";
@@ -3473,6 +3495,11 @@ LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
 AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
 
+		/*
+		 * arguments permet de rassembler sous la forme de clef valeurs tous les parametres renseignés du where
+		 * ainsi on peut utiliser cette clé dans la requête sql et la valeur comme valeur du where 
+		 * exemple clef = code_barre , valeur = 1234 on a WHERE code_barre = '1234'
+		 */
 		$arguments = array();
 		$sql .= 'WHERE ';
 		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)) {
@@ -3523,10 +3550,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		}
 
 		//return new \SoapFault('Server', $sql);
-		/*
-		 * select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
-SUM(quantite_mouvement) AS "quantite_recu"
-		 */
+		
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 			$ligne = array('fournisseur_id'=>$row['fournisseur_id'],'fournisseur_nom' => $row['fournisseur_nom'], 'commande_id' => $row['commande_id'],
@@ -3576,7 +3600,12 @@ LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fourn
 LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
 AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
-
+		
+		/*
+		 * arguments permet de rassembler sous la forme de clef valeurs tous les parametres renseignés du where
+		 * ainsi on peut utiliser cette clé dans la requête sql et la valeur comme valeur du where
+		 * exemple clef = code_barre , valeur = 1234 on a WHERE code_barre = '1234'
+		 */
 		$arguments = array();
 		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)) {
 
@@ -3626,10 +3655,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		}
 
 		//return new \SoapFault('Server', $sql);
-		/*
-		 * select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
-SUM(quantite_mouvement) AS "quantite_recu"
-		 */
+		
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 			$ligne = array('fournisseur_id'=>$row['fournisseur_id'],'fournisseur_nom' => $row['fournisseur_nom'], 'commande_id' => $row['commande_id'],
@@ -3664,8 +3690,8 @@ SUM(quantite_mouvement) AS "quantite_recu"
 
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
 
+		//on recupere tous les parametres sous forme de tableau
 		$tab_fournisseur_id = json_decode($fournisseur_id);
 		$tab_commande_id = json_decode($commande_id);
 		$tab_ligne_commande_id = json_decode($ligne_commande_id);
@@ -3674,19 +3700,24 @@ SUM(quantite_mouvement) AS "quantite_recu"
 		$tab_date_commande = json_decode($date_commande);
 		$tab_est_visible = json_decode($est_visible);
 
+		//premiere etape on met a jour la commande
 		$sql_c = 'UPDATE commande_fournisseur SET date_commande='.$pdo->quote($tab_date_commande[0]).',
 		ref_fournisseur='.$pdo->quote($tab_fournisseur_id[0]).' WHERE
 		id='.$pdo->quote($tab_commande_id[0]).';';
 
 		$pdo->query($sql_c);
 
+		//i = variable d'incrementation
 		$i = 0;
 		foreach($tab_article_code as $article_code){
+			//on recupere le max id de l'article pour s'en servir comme reference
 			$sql_a = 'select MAX(id) as "max_id" from article where code_barre='.$pdo->quote($article_code).';';
+			
 			foreach($pdo->query($sql_a) as $ligne){
 				$article_id = $ligne['max_id'];
 			}
 
+			//on met a jour les lignes commandes fournisseurs
 			$sql = 'UPDATE ligne_commande_fournisseur SET ref_article='.$pdo->quote($article_id).'
 		, quantite_souhaite='.$pdo->quote($tab_quantite_souhaite[$i]).', est_visible='.$pdo->quote($tab_est_visible[$i]).'
 		 WHERE id='.$pdo->quote($tab_ligne_commande_id[$i]).';';
@@ -3748,7 +3779,13 @@ LEFT OUTER JOIN reception on reception.ref_commande_fournisseur = commande_fourn
 LEFT OUTER JOIN ligne_reception ON reception.id=ligne_reception.ref_reception
 AND ligne_commande_fournisseur.id = ligne_reception.ref_ligne_commande
 LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_stock.id ';
+		
 
+		/*
+		 * arguments permet de rassembler sous la forme de clef valeurs tous les parametres renseignés du where
+		 * ainsi on peut utiliser cette clé dans la requête sql et la valeur comme valeur du where
+		 * exemple clef = code_barre , valeur = 1234 on a WHERE code_barre = '1234'
+		 */
 		$arguments = array();
 		if (!empty($fournisseur_id) || !empty($fournisseur_nom) || !empty($commande_id) || !empty($article_code)
 		 || !empty($date_deb) || !empty($date_fin)) {
@@ -3858,10 +3895,7 @@ LEFT OUTER JOIN mouvement_stock ON ligne_reception.ref_mvt_stock = mouvement_sto
 		}
 
 		//return new \SoapFault('Server', $sql);
-		/*
-		 * select fournisseur.nom as "fournisseur_nom", commande_fournisseur.id as "commande_id", date_commande, code_barre, SUM(quantite_souhaite) as "quantite_souhaite",
-SUM(quantite_mouvement) AS "quantite_recu"
-		 */
+		
 		//id, pays, ville, voie, num_voie, code_postal, num_appartement, telephone_fixe
 		foreach ($pdo->query($sql) as $row) { // Création du tableau de réponse
 			$ligne = array('fournisseur_id'=>$row['fournisseur_id'],'fournisseur_nom' => $row['fournisseur_nom'], 'commande_id' => $row['commande_id'],
@@ -3895,19 +3929,13 @@ SUM(quantite_mouvement) AS "quantite_recu"
 			return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
 
 		$pdo = $this->container->get('bdd_service')->getPdo(); // On récup PDO depuis le service
-		$result = array();
-
 
 		// Formation de la requete SQL
+		//on recupere tous les parametres sous forme de tableau
 		$tab_commande_id = json_decode($commande_id);
 		$tab_ligne_commande_id = json_decode($ligne_commande_id);
 		$tab_article_code = json_decode($article_code);
 		$tab_quantite = json_decode($quantite);
-		foreach($tab_quantite as $quantite){
-			if($quantite < 1){
-				return new \SoapFault('Server', '[ACF002] Paramètres invalides.');
-			}
-		}
 		$tab_date_reception = json_decode($date_reception);
 		//return new \SoapFault('Server', $tab_fournisseur_id[0]);
 
@@ -3953,12 +3981,13 @@ SUM(quantite_mouvement) AS "quantite_recu"
 		//return new \SoapFault('Server', $sql);
 		$pdo->query($sql);
 
+		//variable d'incrementation
 		$i = 0;
 		foreach ($tab_ligne_commande_id as $ligne_commande_id) {
 			$article_code = $tab_article_code[$i];
 			$quantite = $tab_quantite[$i];
 
-			if(!empty($quantite)){
+			if(!empty($quantite) && $quantite >= 1){
 
 				//on recupere l'id de la reception
 				$sql_f = 'SELECT MAX(id) as "max_id" FROM reception;';
