@@ -245,7 +245,7 @@ class SoapController extends ContainerAware
 		
 		if ($codeBarre !== '') {
 			$sql = 'UPDATE article SET est_visible=false WHERE code_barre='.$pdo->quote($codeBarre);
-			$resultat = $pdo->query($sql);
+			$pdo->query($sql);
 		}
 		else {
 			return new \SoapFault('Server', '[SUA003] Paramètres invalides.');
